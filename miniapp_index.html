@@ -183,7 +183,8 @@
     if (dataCache[kind] && !force) return dataCache[kind];
     setStatus('Загружаю…');
     try {
-      const res = await fetch(`${API_URL}?type=${kind}`);
+      const uid = (kind === 'dogs' && tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user.id : '';
+      const res = await fetch(`${API_URL}?type=${kind}${uid ? '&uid=' + uid : ''}`);
       const json = await res.json();
       dataCache[kind] = json[kind] || [];
     } catch (err) {
@@ -218,8 +219,9 @@
       <div class="pop-row">${escapeHtml(d.status)} · ${escapeHtml(d.region || d.city)}</div>
       <div class="pop-badges">${badges}</div>
       <div class="pop-actions">
-        <button class="pop-btn" onclick="contactOwner('${d.id}')">✍️ Написать хозяину</button>
-        <button class="pop-btn secondary" onclick="updateMyDogLocation('${d.id}')">📍 Уточнить моё местоположение</button>
+        ${d.mine
+          ? `<button class="pop-btn" onclick="walkHereMine('${d.id}')">📍 Гуляем тут</button>`
+          : (d.hasOwner ? `<button class="pop-btn" onclick="contactOwner('${d.id}')">✍️ Написать хозяину</button>` : '')}
       </div>`;
   }
 
@@ -276,7 +278,28 @@
     if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
   }
   function contactOwner(dogId) { openBotDeepLink('contact_' + dogId); }
-  function updateMyDogLocation(dogId) { openBotDeepLink('walk_' + dogId); }
+
+  // «Гуляем тут» — п.3 ТЗ: геопозиция ставится ВСЕМ собакам владельца в его городе.
+  // Сначала пробуем прямо из мини-аппа (геолокация браузера + walkHere API),
+  // если не вышло — открываем бота с диплинком walk_<id>, там можно отправить геометку вручную.
+  function walkHereMine(dogId) {
+    if (!navigator.geolocation) { openBotDeepLink('walk_' + dogId); return; }
+    setStatus('📍 Определяю местоположение…');
+    navigator.geolocation.getCurrentPosition(async pos => {
+      setStatus('Обновляю точку…');
+      const res = await callApi('walkHere', { lat: pos.coords.latitude, lng: pos.coords.longitude });
+      if (res.ok) {
+        map.closePopup();
+        dataCache.dogs = null;
+        await renderLayer();
+        setStatus('✅ Точка на карте обновлена');
+        setTimeout(() => setStatus(null), 2200);
+      } else {
+        setStatus(null);
+        openBotDeepLink('walk_' + dogId);
+      }
+    }, () => { setStatus(null); openBotDeepLink('walk_' + dogId); }, { enableHighAccuracy: true, timeout: 8000 });
+  }
 
   // ---------- Нижний лист (форма) ----------
   function openSheet(html) {
