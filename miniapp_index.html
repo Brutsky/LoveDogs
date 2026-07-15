@@ -30,11 +30,9 @@
   .tab .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .tab.active { color: #fff; }
   .tab[data-k="dogs"].active { background: var(--paw); }
-  .tab[data-k="clinics"].active { background: var(--vet); }
-  .tab[data-k="shops"].active { background: var(--shop); }
+  .tab[data-k="places"].active { background: var(--vet); }
   .tab[data-k="dogs"] .dot { background: var(--paw); }
-  .tab[data-k="clinics"] .dot { background: var(--vet); }
-  .tab[data-k="shops"] .dot { background: var(--shop); }
+  .tab[data-k="places"] .dot { background: var(--vet); }
   .tab.active .dot { background: #fff; }
   #subfilters { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; padding-bottom: 2px; }
   #subfilters::-webkit-scrollbar { display: none; }
@@ -95,8 +93,7 @@
   <div id="topbar">
     <div id="tabs">
       <div class="tab active" data-k="dogs"><span class="dot"></span>Собаки</div>
-      <div class="tab" data-k="clinics"><span class="dot"></span>Клиники</div>
-      <div class="tab" data-k="shops"><span class="dot"></span>Магазины</div>
+      <div class="tab" data-k="places"><span class="dot"></span>Места</div>
     </div>
     <div id="subfilters"></div>
   </div>
@@ -111,8 +108,8 @@
 <div id="sheet"></div>
 
 <script>
-  // ЗАПОЛНИ: URL твоего деплоя Apps Script (Deploy → New deployment → Web app) и username бота без @
-  const API_URL = "https://script.google.com/macros/s/AKfycbwXeDHG69VD9Sn1pDkaJLASfgjUPZHYON7kVjcGIIj3Gyx_Wc5vWhzaADvqy9ZUd1cq/exec";
+  // URL рабочего деплоя Apps Script (Manage deployments → тот же URL, что и вебхук бота)
+  const API_URL = "https://script.google.com/macros/s/AKfycbwuaKkog3Ebjowds_pE4SmxjS63UIlZseNE-NE48KQSYLmNas3gkAqCS1p7TM-0tv1r/exec";
   const BOT_USERNAME = "ВАШ_БОТ_USERNAME";
 
   const tg = window.Telegram && window.Telegram.WebApp;
@@ -124,12 +121,22 @@
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 
   let currentLayer = L.layerGroup().addTo(map);
-  let dataCache = { dogs: null, clinics: null, shops: null };
+  let dataCache = { dogs: null, places: null };
   let activeTab = 'dogs';
   let subFilter = 'all';
 
-  const ICONS = { dogs: '🐕', clinics: '🏥', shops: '🛒' };
-  const COLOR_VARS = { dogs: '--paw', clinics: '--vet', shops: '--shop' };
+  // Типы мест: токен → {label, иконка}. Совпадает с сервером (PLACE_TYPE_LABELS).
+  const PLACE_TYPES = {
+    Clinics: { label: 'Ветклиника', icon: '🏥' },
+    Shops:   { label: 'Зоомагазин', icon: '🏪' },
+    Park:    { label: 'Площадка',   icon: '🌳' },
+    Cafe:    { label: 'Кафе',       icon: '☕' },
+    Rest:    { label: 'Ресторан',   icon: '🍽' },
+    Other:   { label: 'Другое',     icon: '📍' }
+  };
+
+  const ICONS = { dogs: '🐕', places: '📍' };
+  const COLOR_VARS = { dogs: '--paw' };
 
   function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
@@ -141,12 +148,18 @@
   }
 
   function pinIcon(kind, item) {
-    let color = cssVar(COLOR_VARS[kind]);
     let cls = 'marker-pin';
-    if (kind === 'dogs' && item.lost) cls += ' lost';
-    if (kind !== 'dogs' && item.rating != null) color = ratingColor(item.rating);
-    if (kind !== 'dogs' && item.closed) cls += ' closed';
-    const emoji = kind === 'dogs' && item.lost ? '🚨' : ICONS[kind];
+    let color, emoji;
+    if (kind === 'dogs') {
+      color = cssVar(COLOR_VARS.dogs);
+      if (item.lost) { cls += ' lost'; }
+      emoji = item.lost ? '🚨' : ICONS.dogs;
+    } else {
+      // Места: цвет метки = рейтинг (серый — без оценок), эмодзи = тип места
+      color = ratingColor(item.rating);
+      if (item.closed) cls += ' closed';
+      emoji = (PLACE_TYPES[item.type] || PLACE_TYPES.Other).icon;
+    }
     return L.divIcon({
       className: '', html: `<div class="${cls}" style="background:${color}"><span>${emoji}</span></div>`,
       iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -24]
@@ -160,10 +173,8 @@
   }
 
   const SUBFILTERS = {
-    // "Ищут дом" и "Доноры" на карте не нужны — ищущие дом и так среди уличных (п.4 ТЗ)
-    dogs:    [['all','Все'], ['home','Домашние'], ['street','Уличные']],
-    clinics: [['all','Все'], ['night','Круглосуточно']],
-    shops:   [['all','Все'], ['night','Круглосуточно']]
+    dogs: [['all','Все'], ['home','Домашние'], ['street','Уличные']],
+    places: [['all','Все'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
   };
 
   function renderSubfilters() {
@@ -176,7 +187,8 @@
       chip.onclick = () => { subFilter = k; renderSubfilters(); renderLayer(); };
       box.appendChild(chip);
     });
-    document.getElementById('fab').classList.toggle('show', activeTab !== 'dogs');
+    // Кнопка «+» показывается на вкладке мест (добавить место)
+    document.getElementById('fab').classList.toggle('show', activeTab === 'places');
   }
 
   async function loadData(kind, force) {
@@ -201,8 +213,8 @@
     return list;
   }
   function filterPlaces(list) {
-    if (subFilter === 'night') return list.filter(p => p.night);
-    return list;
+    if (subFilter === 'all') return list;
+    return list.filter(p => (p.type || 'Other') === subFilter);
   }
 
   function dogPopupHtml(d) {
@@ -219,15 +231,17 @@
       <div class="pop-row">${escapeHtml(d.status)} · ${escapeHtml(d.region || d.city)}</div>
       <div class="pop-badges">${badges}</div>
       <div class="pop-actions">
-        ${d.mine
+        ${d.mine && (d.status === 'У владельца')
           ? `<button class="pop-btn" onclick="walkHereMine('${d.id}')">📍 Гуляем тут</button>`
-          : (d.hasOwner ? `<button class="pop-btn" onclick="contactOwner('${d.id}')">✍️ Написать хозяину</button>` : '')}
+          : (d.hasOwner && !d.mine ? `<button class="pop-btn" onclick="contactOwner('${d.id}')">✍️ Написать хозяину</button>` : '')}
       </div>`;
   }
 
-  function placePopupHtml(p, kind) {
+  function placePopupHtml(p) {
+    const tinfo = PLACE_TYPES[p.type] || PLACE_TYPES.Other;
     const stars = p.rating != null ? '⭐'.repeat(Math.round(p.rating)) + ` ${p.rating} (${p.ratingCount})` : 'пока без отзывов';
-    return `<div class="pop-title">${ICONS[kind]} ${escapeHtml(p.name)}</div>
+    return `<div class="pop-title">${tinfo.icon} ${escapeHtml(p.name)}</div>
+      <div class="pop-row">🏷 ${escapeHtml(p.typeLabel || tinfo.label)}</div>
       <div class="pop-row">${escapeHtml(p.address || '')}</div>
       <div class="pop-row">${escapeHtml(p.phone || '')}</div>
       <div class="pop-row">${stars}</div>
@@ -236,8 +250,8 @@
         ${p.closed ? '<span class="badge warn">⛔ не работает</span>' : ''}
       </div>
       <div class="pop-actions">
-        <button class="pop-btn" onclick="openReviewSheet('${kind}','${p.id}','${escapeAttr(p.name)}')">⭐ Оставить отзыв</button>
-        <button class="pop-btn secondary" onclick="openSuggestSheet('${kind}','${p.id}','${escapeAttr(p.name)}',${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️ Уточнить данные</button>
+        <button class="pop-btn" onclick="openReviewSheet('${p.id}','${escapeAttr(p.name)}')">⭐ Оставить отзыв</button>
+        <button class="pop-btn secondary" onclick="openSuggestSheet('${p.id}','${escapeAttr(p.name)}',${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️ Уточнить данные</button>
       </div>`;
   }
 
@@ -254,10 +268,10 @@
     list.forEach(item => {
       if (!item.lat || !item.lng) return;
       const marker = L.marker([item.lat, item.lng], { icon: pinIcon(kind, item) });
-      marker.bindPopup(kind === 'dogs' ? dogPopupHtml(item) : placePopupHtml(item, kind));
+      marker.bindPopup(kind === 'dogs' ? dogPopupHtml(item) : placePopupHtml(item));
       currentLayer.addLayer(marker);
     });
-    const label = kind === 'dogs' ? 'собак' : kind === 'clinics' ? 'клиник' : 'магазинов';
+    const label = kind === 'dogs' ? 'собак' : 'мест';
     document.getElementById('count-badge').textContent = `${ICONS[kind]} ${list.length} ${label}`;
   }
 
@@ -325,8 +339,8 @@
     }
   }
 
-  // ---------- Отзыв + рейтинг (клиники/магазины) — п.10 ТЗ ----------
-  function openReviewSheet(kind, id, name) {
+  // ---------- Отзыв + рейтинг (места) ----------
+  function openReviewSheet(id, name) {
     let rating = 0;
     openSheet(`
       <h3>Отзыв о месте «${escapeHtml(name)}»</h3>
@@ -335,7 +349,7 @@
         <div class="stars" id="starsPick">☆☆☆☆☆</div>
       </div>
       <div class="field"><textarea id="reviewText" placeholder="Коротко о впечатлениях (необязательно)"></textarea></div>
-      <button class="pop-btn" onclick="submitReview('${kind}','${id}')">Отправить</button>
+      <button class="pop-btn" onclick="submitReview('${id}')">Отправить</button>
     `);
     const starsEl = document.getElementById('starsPick');
     starsEl.onclick = (e) => {
@@ -346,26 +360,32 @@
       starsEl.dataset.rating = rating;
     };
   }
-  async function submitReview(kind, id) {
+  async function submitReview(id) {
     const rating = parseInt(document.getElementById('starsPick').dataset.rating || '0', 10);
     if (!rating) { alert('Поставь оценку от 1 до 5 ⭐'); return; }
     const text = document.getElementById('reviewText').value;
-    const res = await callApi('addReview', { type: kind === 'clinics' ? 'Clinics' : 'Shops', id, rating, text });
+    const res = await callApi('addReview', { type: 'Places', id, rating, text });
     closeSheet();
-    if (res.ok) { dataCache[kind] = null; renderLayer(); } else { alert('Не получилось: ' + (res.error || '')); }
+    if (res.ok) { dataCache.places = null; renderLayer(); } else { alert('Не получилось: ' + (res.error || '')); }
   }
 
-  // ---------- Уточнить данные места → на модерацию (п.10 ТЗ) ----------
-  function openSuggestSheet(kind, id, name, current) {
+  // ---------- Уточнить данные места / удалить → на модерацию ----------
+  function openSuggestSheet(id, name, current) {
+    const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
+      `<option value="${PLACE_TYPES[tk].label}" ${current.typeLabel === PLACE_TYPES[tk].label ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`
+    ).join('');
     openSheet(`
       <h3>Уточнить данные — «${escapeHtml(name)}»</h3>
+      <div class="field"><label>Название</label><input type="text" id="sugName" value="${escapeAttr(current.name || name)}"></div>
+      <div class="field"><label>Тип места</label><select id="sugType" style="width:100%;padding:9px 10px;border-radius:10px;border:1px solid #ddd;background:var(--card);color:var(--text);font-size:14px;">${typeOpts}</select></div>
       <div class="field"><label>Адрес</label><input type="text" id="sugAddress" value="${escapeAttr(current.address || '')}"></div>
       <div class="field"><label>Телефон</label><input type="tel" id="sugPhone" value="${escapeAttr(current.phone || '')}"></div>
       <div class="field field-row"><input type="checkbox" id="sugNight" ${current.night ? 'checked' : ''}><label style="margin:0">Круглосуточно</label></div>
       <div class="field field-row"><input type="checkbox" id="sugClosed" ${current.closed ? 'checked' : ''}><label style="margin:0">Сейчас не работает</label></div>
       <button class="pop-btn secondary" onclick="useMyLocationFor('sug')">📍 Обновить геометку по моей текущей позиции</button>
       <div id="geo-status"></div>
-      <button class="pop-btn" onclick="submitSuggest('${kind}','${id}')">Отправить на проверку</button>
+      <button class="pop-btn" onclick="submitSuggest('${id}')">Отправить на проверку</button>
+      <button class="pop-btn" style="background:#d64545;margin-top:8px" onclick="submitDelete('${id}','${escapeAttr(name)}')">🗑️ Предложить удалить место</button>
     `);
   }
   let pendingGeo = null;
@@ -378,39 +398,50 @@
       { enableHighAccuracy: true, timeout: 8000 }
     );
   }
-  async function submitSuggest(kind, id) {
+  async function submitSuggest(id) {
     const changes = {
+      name: document.getElementById('sugName').value,
+      type: document.getElementById('sugType').value,
       address: document.getElementById('sugAddress').value,
       phone: document.getElementById('sugPhone').value,
       night: document.getElementById('sugNight').checked,
       closed: document.getElementById('sugClosed').checked
     };
     if (pendingGeo) changes.mapsLink = `https://www.google.com/maps?q=${pendingGeo.lat},${pendingGeo.lng}`;
-    const res = await callApi('suggestEdit', { type: kind === 'clinics' ? 'Clinics' : 'Shops', id, changes });
+    const res = await callApi('suggestEdit', { type: 'Places', id, changes });
     pendingGeo = null;
     closeSheet();
     alert(res.ok ? 'Спасибо! Отправлено модератору на проверку.' : 'Не получилось: ' + (res.error || ''));
   }
+  async function submitDelete(id, name) {
+    if (!confirm(`Предложить удалить «${name}»? Место скроется после подтверждения модератором.`)) return;
+    const res = await callApi('suggestEdit', { type: 'Places', id, changes: { _delete: true } });
+    closeSheet();
+    alert(res.ok ? 'Спасибо! Запрос на удаление отправлен модератору.' : 'Не получилось: ' + (res.error || ''));
+  }
 
-  // ---------- Добавить клинику/магазин (кнопка "+") — п.9 ТЗ ----------
+  // ---------- Добавить место (кнопка "+") ----------
   document.getElementById('fab').onclick = () => {
-    const kind = activeTab === 'clinics' ? 'clinics' : 'shops';
+    const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
+      `<option value="${tk}" ${(subFilter !== 'all' && subFilter === tk) ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`
+    ).join('');
     openSheet(`
-      <h3>Добавить ${kind === 'clinics' ? 'клинику' : 'магазин'}</h3>
+      <h3>Добавить место</h3>
+      <div class="field"><label>Тип места</label><select id="addType" style="width:100%;padding:9px 10px;border-radius:10px;border:1px solid #ddd;background:var(--card);color:var(--text);font-size:14px;">${typeOpts}</select></div>
       <div class="field"><label>Название</label><input type="text" id="addName" placeholder="Название"></div>
       <div class="field"><label>Адрес</label><input type="text" id="addAddress" placeholder="Улица, дом"></div>
       <div class="field"><label>Телефон</label><input type="tel" id="addPhone" placeholder="+995..."></div>
       <div class="field field-row"><input type="checkbox" id="addNight"><label style="margin:0">Круглосуточно</label></div>
       <button class="pop-btn secondary" onclick="useMyLocationFor('add')">📍 Отметить моей текущей геопозицией</button>
       <div id="geo-status"></div>
-      <button class="pop-btn" onclick="submitAddPlace('${kind}')">Отправить на модерацию</button>
+      <button class="pop-btn" onclick="submitAddPlace()">Отправить на модерацию</button>
     `);
   };
-  async function submitAddPlace(kind) {
+  async function submitAddPlace() {
     const name = document.getElementById('addName').value.trim();
     if (!name) { alert('Укажи название'); return; }
     const payload = {
-      type: kind === 'clinics' ? 'Clinics' : 'Shops',
+      type: document.getElementById('addType').value,
       name,
       address: document.getElementById('addAddress').value,
       phone: document.getElementById('addPhone').value,
