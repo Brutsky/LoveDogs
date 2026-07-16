@@ -85,6 +85,16 @@
   .field textarea { resize: vertical; min-height: 60px; }
   .field-row { display: flex; align-items: center; gap: 8px; }
   #sheet .pop-btn { width: 100%; padding: 11px; font-size: 14px; margin-top: 4px; }
+  .pop-actions.vertical { display: flex; flex-direction: column; gap: 8px; }
+  .dog-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .dog-card-head h3 { margin: 0; }
+  .dog-photo { width: 60px; height: 60px; border-radius: 14px; background: #eee center/cover no-repeat;
+    display: flex; align-items: center; justify-content: center; font-size: 28px; flex: 0 0 auto; }
+  .dog-photo.loaded { font-size: 0; }
+  .dog-info { margin: 6px 0; }
+  .info-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,.06); font-size: 13.5px; }
+  .info-row span { color: var(--hint); }
+  .dog-memo { background: rgba(0,0,0,.04); border-radius: 10px; padding: 9px 11px; font-size: 13px; margin: 8px 0; }
   #geo-status { font-size: 12px; color: var(--hint); margin-top: 4px; }
 </style>
 </head>
@@ -268,7 +278,12 @@
     list.forEach(item => {
       if (!item.lat || !item.lng) return;
       const marker = L.marker([item.lat, item.lng], { icon: pinIcon(kind, item) });
-      marker.bindPopup(kind === 'dogs' ? dogPopupHtml(item) : placePopupHtml(item));
+      if (kind === 'dogs') {
+        // При выборе собаки открываем карточку (нижний лист) со всем функционалом — п.7 ТЗ
+        marker.on('click', () => openDogCard(item));
+      } else {
+        marker.bindPopup(placePopupHtml(item));
+      }
       currentLayer.addLayer(marker);
     });
     const label = kind === 'dogs' ? 'собак' : 'мест';
@@ -312,6 +327,129 @@
         setStatus(null);
         openBotDeepLink('walk_' + dogId);
       }
+    }, () => { setStatus(null); openBotDeepLink('walk_' + dogId); }, { enableHighAccuracy: true, timeout: 8000 });
+  }
+
+  // ---------- Карточка собаки (нижний лист) — п.7 ТЗ ----------
+  const AGE_OPTIONS = ['Щенок', 'Молодая', 'Взрослая', 'Пожилая'];
+  const SEX_OPTIONS = ['Кобель', 'Сука'];
+  const TRISTATE = ['Да', 'Нет', 'Неизвестно'];
+  const COMMON_BREEDS = ['Метис', 'Не знаю', 'Дворняжка', 'Лабрадор', 'Немецкая овчарка', 'Хаски', 'Джек-рассел', 'Той-терьер', 'Корги', 'Бигль', 'Такса', 'Чихуахуа', 'Золотистый ретривер', 'Шпиц'];
+
+  async function openDogCard(d) {
+    const isStreet = d.status === 'Уличная' || d.status === 'Потеряна';
+    const rows = [
+      ['🏷 Порода', d.breed || '—'],
+      ['📅 Возраст', d.age || '—'],
+      ['⚥ Пол', d.sex || '—'],
+      ['📊 Статус', d.status || '—'],
+      ['🗺 Район', d.region || d.city || '—'],
+      d.sterilized ? ['🏥 Стерилизация', d.sterilized] : null,
+      d.weightKg ? ['⚖️ Вес', d.weightKg + ' кг'] : null,
+      d.vaccinated ? ['💉 Прививки', d.vaccinated] : null
+    ].filter(Boolean);
+    const badges = [
+      d.seekingHome ? '<span class="badge">🏡 ищет дом</span>' : '',
+      d.isDonor ? '<span class="badge">🩸 донор</span>' : '',
+      d.lost ? `<span class="badge warn">🚨 потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + ' дн.' : ''}</span>` : '',
+      !d.exactLocation && !d.lost ? '<span class="badge">≈ примерно район</span>' : ''
+    ].join('');
+
+    let actions = '';
+    if (d.mine) {
+      actions += `<button class="pop-btn" onclick='openDogEditSheet(${JSON.stringify(d).replace(/'/g, "&#39;")})'>✏️ Редактировать</button>`;
+      if (d.status === 'У владельца') {
+        actions += `<button class="pop-btn secondary" onclick="walkHereMine('${d.id}')">📍 Гуляем тут (обновить точку)</button>`;
+      } else {
+        actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить точную геопозицию</button>`;
+      }
+    } else if (d.hasOwner) {
+      actions += `<button class="pop-btn" onclick="contactOwner('${d.id}')">✉️ Связаться с хозяином</button>`;
+    }
+    if (isStreet && !d.mine) {
+      actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить геопозицию</button>`;
+    }
+
+    const img = d.photoId
+      ? `<div id="dogPhoto" class="dog-photo">🐕</div>`
+      : `<div class="dog-photo placeholder">🐕</div>`;
+
+    openSheet(`
+      <div class="dog-card-head">${img}<h3>${escapeHtml(d.name || 'Собака')}</h3></div>
+      <div class="pop-badges">${badges}</div>
+      <div class="dog-info">${rows.map(r => `<div class="info-row"><span>${r[0]}</span><b>${escapeHtml(r[1])}</b></div>`).join('')}</div>
+      ${d.memo ? `<div class="dog-memo">📝 ${escapeHtml(d.memo)}</div>` : ''}
+      <div class="pop-actions vertical">${actions || '<div class="pop-row">Нет доступных действий</div>'}</div>
+    `);
+
+    if (d.photoId) {
+      try {
+        const r = await fetch(`${API_URL}?type=photoUrl&file_id=${encodeURIComponent(d.photoId)}`);
+        const j = await r.json();
+        const el = document.getElementById('dogPhoto');
+        if (j.ok && j.url && el) { el.style.backgroundImage = `url('${j.url}')`; el.textContent = ''; el.classList.add('loaded'); }
+      } catch (e) {}
+    }
+  }
+
+  function openDogEditSheet(d) {
+    const opt = (arr, cur) => arr.map(v => `<option ${v === cur ? 'selected' : ''}>${v}</option>`).join('');
+    const breedList = COMMON_BREEDS.slice();
+    if (d.breed && breedList.indexOf(d.breed) < 0) breedList.unshift(d.breed);
+    openSheet(`
+      <h3>Редактировать «${escapeHtml(d.name || '')}»</h3>
+      <div class="field"><label>Имя</label><input type="text" id="edName" value="${escapeAttr(d.name || '')}"></div>
+      <div class="field"><label>Порода</label>
+        <select id="edBreedSel" style="${selStyle()}" onchange="document.getElementById('edBreedManual').style.display = this.value==='__manual__' ? 'block':'none'">
+          ${opt(breedList, d.breed)}
+          <option value="__manual__">✍️ Указать текстом…</option>
+        </select>
+        <input type="text" id="edBreedManual" placeholder="Порода (только буквы и дефис)" style="display:none;margin-top:6px">
+      </div>
+      <div class="field"><label>Возраст</label><select id="edAge" style="${selStyle()}">${opt(AGE_OPTIONS, d.age)}</select></div>
+      <div class="field"><label>Пол</label><select id="edSex" style="${selStyle()}"><option ${!d.sex?'selected':''}>—</option>${opt(SEX_OPTIONS, d.sex)}</select></div>
+      <div class="field"><label>Стерилизация</label><select id="edSter" style="${selStyle()}">${opt(TRISTATE, d.sterilized || 'Неизвестно')}</select></div>
+      <div class="field"><label>Вес (кг)</label><input type="number" step="0.1" id="edWeight" value="${escapeAttr(d.weightKg || '')}"></div>
+      <div class="field"><label>Прививки</label><select id="edVacc" style="${selStyle()}"><option ${!d.vaccinated?'selected':''}>—</option>${opt(TRISTATE, d.vaccinated)}</select></div>
+      <div class="field"><label>Заметки</label><textarea id="edMemo">${escapeHtml(d.memo || '')}</textarea></div>
+      <button class="pop-btn" onclick="submitDogEdit('${d.id}')">Сохранить</button>
+    `);
+  }
+  function selStyle() { return 'width:100%;padding:9px 10px;border-radius:10px;border:1px solid #ddd;background:var(--card);color:var(--text);font-size:14px;'; }
+
+  async function submitDogEdit(id) {
+    const breedSel = document.getElementById('edBreedSel').value;
+    let breed = breedSel === '__manual__' ? document.getElementById('edBreedManual').value.trim() : breedSel;
+    if (breedSel === '__manual__' && breed && !/^[A-Za-zА-Яа-яЁё\u10A0-\u10FF\s-]+$/.test(breed)) {
+      alert('Порода — только буквы и дефис «-», без цифр и других символов.'); return;
+    }
+    const sex = document.getElementById('edSex').value;
+    const vacc = document.getElementById('edVacc').value;
+    const changes = {
+      name: document.getElementById('edName').value,
+      breed,
+      age: document.getElementById('edAge').value,
+      sex: sex === '—' ? '' : sex,
+      sterilized: document.getElementById('edSter').value,
+      weightKg: document.getElementById('edWeight').value,
+      vaccinated: vacc === '—' ? '' : vacc,
+      memo: document.getElementById('edMemo').value
+    };
+    const res = await callApi('editDog', { dogId: id, changes });
+    closeSheet();
+    if (res.ok) { dataCache.dogs = null; renderLayer(); setStatus('✅ Анкета обновлена'); setTimeout(() => setStatus(null), 2000); }
+    else alert('Не получилось: ' + (res.error === 'bad breed' ? 'недопустимые символы в породе' : (res.error || '')));
+  }
+
+  function setDogGeoFromCard(dogId) {
+    if (!navigator.geolocation) { openBotDeepLink('walk_' + dogId); return; }
+    setStatus('📍 Определяю местоположение…');
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const res = await callApi('walkHere', { dogId, lat: pos.coords.latitude, lng: pos.coords.longitude });
+      if (res.ok) {
+        closeSheet(); dataCache.dogs = null; await renderLayer();
+        setStatus('✅ Геопозиция обновлена'); setTimeout(() => setStatus(null), 2000);
+      } else { setStatus(null); alert('Не получилось: ' + (res.error || '')); }
     }, () => { setStatus(null); openBotDeepLink('walk_' + dogId); }, { enableHighAccuracy: true, timeout: 8000 });
   }
 
