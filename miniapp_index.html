@@ -153,7 +153,7 @@
   function ratingColor(rating) {
     if (rating == null) return cssVar('--grey');
     if (rating < 3) return cssVar('--red');
-    if (rating < 4) return cssVar('--yellow');
+    if (rating <= 4) return cssVar('--yellow');
     return cssVar('--green');
   }
 
@@ -334,7 +334,19 @@
   const AGE_OPTIONS = ['Щенок', 'Молодая', 'Взрослая', 'Пожилая'];
   const SEX_OPTIONS = ['Кобель', 'Сука'];
   const TRISTATE = ['Да', 'Нет', 'Неизвестно'];
-  const COMMON_BREEDS = ['Метис', 'Не знаю', 'Дворняжка', 'Лабрадор', 'Немецкая овчарка', 'Хаски', 'Джек-рассел', 'Той-терьер', 'Корги', 'Бигль', 'Такса', 'Чихуахуа', 'Золотистый ретривер', 'Шпиц'];
+  let COMMON_BREEDS = ['Метис', 'Не знаю', 'Дворняжка', 'Лабрадор', 'Немецкая овчарка', 'Хаски', 'Джек-рассел', 'Той-терьер', 'Корги', 'Бигль', 'Такса', 'Чихуахуа', 'Золотистый ретривер', 'Шпиц'];
+  let REGIONS_LIST = [];
+  // Подтягиваем справочники пород и районов с сервера (лист Lists), с фолбэком на дефолт
+  (async function loadRefData() {
+    try {
+      const r = await fetch(`${API_URL}?type=breeds`); const j = await r.json();
+      if (j.breeds && j.breeds.length) COMMON_BREEDS = j.breeds;
+    } catch (e) {}
+    try {
+      const r2 = await fetch(`${API_URL}?type=regions`); const j2 = await r2.json();
+      if (j2.regions && j2.regions.length) REGIONS_LIST = j2.regions;
+    } catch (e) {}
+  })();
 
   async function openDogCard(d) {
     const isStreet = d.status === 'Уличная' || d.status === 'Потеряна';
@@ -407,6 +419,7 @@
         <input type="text" id="edBreedManual" placeholder="Порода (только буквы и дефис)" style="display:none;margin-top:6px">
       </div>
       <div class="field"><label>Возраст</label><select id="edAge" style="${selStyle()}">${opt(AGE_OPTIONS, d.age)}</select></div>
+      ${REGIONS_LIST.length ? `<div class="field"><label>Район</label><select id="edRegion" style="${selStyle()}"><option ${!d.region?'selected':''}>—</option>${opt(REGIONS_LIST, d.region)}</select></div>` : ''}
       <div class="field"><label>Пол</label><select id="edSex" style="${selStyle()}"><option ${!d.sex?'selected':''}>—</option>${opt(SEX_OPTIONS, d.sex)}</select></div>
       <div class="field"><label>Стерилизация</label><select id="edSter" style="${selStyle()}">${opt(TRISTATE, d.sterilized || 'Неизвестно')}</select></div>
       <div class="field"><label>Вес (кг)</label><input type="number" step="0.1" id="edWeight" value="${escapeAttr(d.weightKg || '')}"></div>
@@ -429,6 +442,7 @@
       name: document.getElementById('edName').value,
       breed,
       age: document.getElementById('edAge').value,
+      region: (function(){ var el=document.getElementById('edRegion'); return el ? (el.value === '—' ? '' : el.value) : undefined; })(),
       sex: sex === '—' ? '' : sex,
       sterilized: document.getElementById('edSter').value,
       weightKg: document.getElementById('edWeight').value,
