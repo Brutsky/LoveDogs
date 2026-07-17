@@ -5,78 +5,120 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Love Dogs · Тбилиси</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
+  /* ============ ТОКЕНЫ: «эмалевая табличка и латунный жетон» ============ */
   :root {
-    --paw:   #d9723a; --paw-soft: #f6e3d6;
-    --vet:   #2f8f7c; --shop:  #6b5fd1;
-    --red: #d64545; --yellow: #e0a72e; --green: #4a9a5c; --grey: #9a9a9a;
-    --bg:    var(--tg-theme-bg-color, #ffffff);
-    --text:  var(--tg-theme-text-color, #111111);
-    --hint:  var(--tg-theme-hint-color, #7a7a7a);
-    --btnbg: var(--tg-theme-button-color, #d9723a);
-    --btntx: var(--tg-theme-button-text-color, #ffffff);
-    --card:  var(--tg-theme-secondary-bg-color, #f4f1ea);
-    --line:  rgba(128,128,128,.18);
-    --tabbar-h: calc(58px + env(safe-area-inset-bottom));
+    /* семантика (имена сохранены — используются в JS-шаблонах) */
+    --paw:      #e29c33;                /* латунь: собаки, первичные действия */
+    --paw-deep: #b87a1d;
+    --paw-soft: #f6e7c8;
+    --vet:      #1f5b4b;                /* хвоя: места */
+    --shop:     #1f5b4b;
+    --red:      #d24b3c;                /* потеряшки, опасные действия */
+    --yellow:   #d9a13b;
+    --green:    #2e7d5b;
+    --grey:     #a49a8a;
+
+    --bg:    var(--tg-theme-bg-color, #f8f4ec);
+    --text:  var(--tg-theme-text-color, #272219);
+    --hint:  var(--tg-theme-hint-color, #877e6e);
+    --card:  var(--tg-theme-secondary-bg-color, #ffffff);
+    --btnbg: var(--paw);
+    --btntx: #2b2008;
+    --line:  rgba(39,34,25,.13);
+    --line:  color-mix(in srgb, var(--text) 12%, transparent);
+    --shadow-s: 0 1px 2px rgba(39,34,25,.06), 0 4px 14px rgba(39,34,25,.06);
+    --shadow-m: 0 2px 6px rgba(39,34,25,.10), 0 10px 30px rgba(39,34,25,.14);
+    --r-card: 18px;
+    --r-ctl: 13px;
+    --font-body: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-disp: "Unbounded", "Manrope", sans-serif;
+    --tabbar-h: calc(62px + env(safe-area-inset-bottom));
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+    font-family: var(--font-body); font-size: 14px; line-height: 1.45; overflow: hidden;
+    -webkit-font-smoothing: antialiased; }
   #app { height: 100vh; height: 100dvh; position: relative; }
+  button { font-family: var(--font-body); }
+  :focus-visible { outline: 2px solid var(--paw); outline-offset: 2px; border-radius: 6px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
 
   /* ================= КАРТА (главный экран) ================= */
-  #map { position: absolute; inset: 0 0 var(--tabbar-h) 0; }
-  #map-topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 700; padding: 10px 12px 6px;
-    background: linear-gradient(var(--bg) 55%, transparent); pointer-events: none; }
+  #map { position: absolute; inset: 0 0 var(--tabbar-h) 0; background: var(--bg); }
+  #map-topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 700; padding: 10px 12px 14px;
+    pointer-events: none; }
   #map-topbar > * { pointer-events: auto; }
-  #tabs { display: flex; gap: 6px; }
-  .tab { flex: 1; text-align: center; padding: 9px 4px; border-radius: 12px; font-size: 13px; font-weight: 600;
-    background: var(--card); color: var(--hint); transition: all .15s ease;
-    display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; user-select: none;
-    box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  #tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px;
+    background: rgba(248,244,236,.85);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-s); border: 1px solid var(--line); }
+  .tab { flex: 1; text-align: center; padding: 9px 4px; border-radius: 999px; font-size: 13px; font-weight: 700;
+    color: var(--hint); transition: background .18s ease, color .18s ease;
+    display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; user-select: none; }
   .tab.active { color: #fff; }
-  .tab[data-k="dogs"].active { background: var(--paw); }
+  .tab[data-k="dogs"].active { background: var(--paw); color: var(--btntx); }
   .tab[data-k="places"].active { background: var(--vet); }
-  #subfilters { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; padding-bottom: 4px; }
+  #subfilters { display: flex; gap: 6px; margin-top: 9px; overflow-x: auto; padding: 2px; }
   #subfilters::-webkit-scrollbar { display: none; }
-  .chip { white-space: nowrap; font-size: 12px; padding: 6px 11px; border-radius: 999px; background: var(--card);
-    color: var(--hint); cursor: pointer; user-select: none; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
-  .chip.active { background: var(--text); color: var(--bg); }
-  #status { position: absolute; top: 96px; left: 50%; transform: translateX(-50%); z-index: 750;
-    background: var(--card); color: var(--text); font-size: 12.5px; padding: 7px 14px; border-radius: 999px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.15); pointer-events: none; opacity: 0; transition: opacity .2s ease; max-width: 86%; text-align: center; }
+  .chip { white-space: nowrap; font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: 999px;
+    background: rgba(248,244,236,.88);
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    color: var(--hint); cursor: pointer; user-select: none; border: 1px solid var(--line);
+    transition: background .15s ease, color .15s ease; }
+  .chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  #status { position: absolute; top: 108px; left: 50%; transform: translateX(-50%); z-index: 750;
+    background: var(--text); color: var(--bg); font-size: 12.5px; font-weight: 600; padding: 8px 16px;
+    border-radius: 999px; box-shadow: var(--shadow-m); pointer-events: none; opacity: 0;
+    transition: opacity .2s ease; max-width: 86%; text-align: center; }
   #status.show { opacity: 1; }
-  #count-badge { position: absolute; bottom: calc(var(--tabbar-h) + 12px); left: 12px; z-index: 600;
-    background: var(--card); color: var(--text); font-size: 12.5px; font-weight: 600; padding: 7px 12px;
-    border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
-  #fab { position: absolute; bottom: calc(var(--tabbar-h) + 12px); right: 12px; z-index: 600; width: 48px; height: 48px;
-    border-radius: 50%; background: var(--btnbg); color: var(--btntx); border: none; font-size: 24px;
-    box-shadow: 0 3px 10px rgba(0,0,0,.25); cursor: pointer; display: none; align-items: center; justify-content: center; }
+  #count-badge { position: absolute; bottom: calc(var(--tabbar-h) + 14px); left: 14px; z-index: 600;
+    background: rgba(248,244,236,.9);
+    background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); color: var(--text); font-size: 12px; font-weight: 700;
+    letter-spacing: .01em; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--line);
+    box-shadow: var(--shadow-s); }
+  #fab { position: absolute; bottom: calc(var(--tabbar-h) + 14px); right: 14px; z-index: 600;
+    width: 52px; height: 52px; border-radius: 18px; background: var(--vet); color: #fff; border: none;
+    font-size: 26px; font-weight: 400; box-shadow: var(--shadow-m); cursor: pointer; display: none;
+    align-items: center; justify-content: center; transition: transform .12s ease; }
+  #fab:active { transform: scale(.94); }
   #fab.show { display: flex; }
 
-  .leaflet-popup-content-wrapper { border-radius: 14px; }
-  .leaflet-popup-content { margin: 12px 14px; font-size: 13.5px; line-height: 1.45; width: 240px !important; }
-  .marker-pin { width: 26px; height: 26px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
-    display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,.35); border: 2px solid #fff; }
-  .marker-pin span { transform: rotate(45deg); font-size: 13px; }
-  .marker-pin.lost { animation: pulse 1.4s infinite; }
-  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(214,69,69,.55);} 70% { box-shadow: 0 0 0 12px rgba(214,69,69,0);} 100% { box-shadow: 0 0 0 0 rgba(214,69,69,0);} }
+  /* Маркеры-«жетоны»: эмалевый кружок с латунным ободком */
+  .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: var(--shadow-m); }
+  .leaflet-popup-content { margin: 13px 15px; font-size: 13.5px; line-height: 1.45; width: 240px !important;
+    font-family: var(--font-body); color: var(--text); }
+  .marker-pin { width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2.5px solid #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 10px rgba(0,0,0,.22); }
+  .marker-pin span { font-size: 14px; }
+  .marker-pin.lost { animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(210,75,60,.5);} 70% { box-shadow: 0 0 0 13px rgba(210,75,60,0);} 100% { box-shadow: 0 0 0 0 rgba(210,75,60,0);} }
   .marker-pin.closed { opacity: .45; }
 
-  /* Режим выбора точки на карте */
+  /* Режим выбора точки */
   #pick-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 800;
-    font-size: 34px; pointer-events: none; display: none; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
-  #pick-bar { position: absolute; left: 12px; right: 12px; bottom: calc(var(--tabbar-h) + 12px); z-index: 800;
-    background: var(--bg); border-radius: 16px; padding: 12px; box-shadow: 0 4px 18px rgba(0,0,0,.25); display: none; }
-  #pick-bar .pick-hint { font-size: 12.5px; color: var(--hint); margin-bottom: 8px; text-align: center; }
+    font-size: 36px; pointer-events: none; display: none; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
+  #pick-bar { position: absolute; left: 14px; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 14px);
+    z-index: 800; background: var(--card); border-radius: var(--r-card); padding: 14px;
+    box-shadow: var(--shadow-m); display: none; border: 1px solid var(--line); }
+  #pick-bar .pick-hint { font-size: 12.5px; color: var(--hint); margin-bottom: 10px; text-align: center; }
   #pick-bar .row { display: flex; gap: 8px; }
   body.picking #pick-pin, body.picking #pick-bar { display: block; }
   body.picking #map-topbar, body.picking #fab, body.picking #count-badge, body.picking #tabbar { display: none; }
   body.picking #map { inset: 0; }
 
-  /* Хром карты (шапка-фильтры, счётчик, fab) виден ТОЛЬКО на экране карты */
+  /* Хром карты — только на экране карты */
   body:not([data-screen="map"]) #map-topbar,
   body:not([data-screen="map"]) #count-badge,
   body:not([data-screen="map"]) #fab,
@@ -84,113 +126,163 @@
 
   /* ================= ЭКРАНЫ-СПИСКИ ================= */
   .screen { position: absolute; inset: 0 0 var(--tabbar-h) 0; background: var(--bg); z-index: 650;
-    overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; padding: 14px 14px 24px; }
+    overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; padding: 18px 16px 28px; }
   .screen.show { display: block; }
-  .screen h2 { font-size: 20px; margin: 2px 0 12px; letter-spacing: -.2px; }
-  .sec-label { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
-    color: var(--hint); margin: 18px 0 8px; }
-  .card { background: var(--card); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
-  .card.tappable { cursor: pointer; transition: transform .08s ease; }
+  .screen h2 { font-family: var(--font-disp); font-size: 19px; font-weight: 600; letter-spacing: -.01em;
+    margin: 2px 0 14px; }
+  .sec-label { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--hint); margin: 22px 0 9px; }
+  .card { background: var(--card); border-radius: var(--r-card); padding: 14px 15px; margin-bottom: 10px;
+    border: 1px solid var(--line); box-shadow: var(--shadow-s); }
+  .card.tappable { cursor: pointer; transition: transform .1s ease; }
   .card.tappable:active { transform: scale(.985); }
   .row-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .list-title { font-size: 15px; font-weight: 700; }
-  .list-sub { font-size: 12.5px; color: var(--hint); margin-top: 2px; }
-  .badge { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: rgba(128,128,128,.14); color: var(--text); }
-  .badge.warn { background: #fde3e3; color: #a33; }
-  .badge.ok { background: #e2f2e6; color: #2c6e3d; }
-  .badge.brand { background: var(--paw-soft); color: #9a4f1f; }
-  .pop-badges, .badges { margin-top: 6px; display: flex; gap: 5px; flex-wrap: wrap; }
-  .empty { text-align: center; color: var(--hint); font-size: 13.5px; padding: 26px 10px; }
-  .empty .big { font-size: 34px; margin-bottom: 8px; }
+  .list-title { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+  .list-sub { font-size: 12.5px; color: var(--hint); margin-top: 3px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    background: rgba(39,34,25,.07);
+    background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--text); }
+  .badge.warn { background: rgba(210,75,60,.14);
+    background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
+  .badge.ok { background: rgba(46,125,91,.14);
+    background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+  .badge.brand { background: var(--paw-soft); color: var(--paw-deep); }
+  .pop-badges, .badges { margin-top: 7px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .empty { text-align: center; color: var(--hint); font-size: 13.5px; padding: 34px 12px; }
+  .empty .big { font-size: 38px; margin-bottom: 10px; }
 
-  .searchbox { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 12px;
-    padding: 9px 12px; margin-bottom: 10px; }
-  .searchbox input { flex: 1; border: none; background: transparent; color: var(--text); font-size: 14px; outline: none; }
-  .seg-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
+  .searchbox { display: flex; align-items: center; gap: 9px; background: var(--card); border-radius: var(--r-ctl);
+    padding: 11px 13px; margin-bottom: 10px; border: 1px solid var(--line); }
+  .searchbox input { flex: 1; border: none; background: transparent; color: var(--text); font-size: 14px;
+    font-family: var(--font-body); outline: none; }
+  .searchbox input::placeholder { color: var(--hint); }
+  .seg-scroll { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; margin-bottom: 6px; }
   .seg-scroll::-webkit-scrollbar { display: none; }
+  .seg-scroll .chip { background: var(--card); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .seg-scroll .chip.active { background: var(--text); color: var(--bg); }
 
-  .pop-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+  .pop-title { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
   .pop-row { color: var(--hint); font-size: 13px; }
-  .pop-actions { margin-top: 9px; display: flex; flex-direction: column; gap: 6px; }
-  .pop-btn { border: none; border-radius: 10px; padding: 10px 10px; font-size: 13px; font-weight: 600;
-    background: var(--btnbg); color: var(--btntx); cursor: pointer; width: 100%; }
-  .pop-btn.secondary { background: rgba(128,128,128,.14); color: var(--text); }
+  .pop-row a { color: var(--vet); font-weight: 600; }
+
+  /* Кнопки */
+  .pop-btn { border: none; border-radius: var(--r-ctl); padding: 12px 12px; font-size: 13.5px; font-weight: 800;
+    letter-spacing: .01em; background: var(--btnbg); color: var(--btntx); cursor: pointer; width: 100%;
+    transition: transform .1s ease, filter .15s ease; }
+  .pop-btn:active { transform: scale(.98); filter: brightness(.96); }
+  .pop-btn.secondary { background: rgba(39,34,25,.07);
+    background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--text); }
   .pop-btn.danger { background: var(--red); color: #fff; }
-  .pop-btn.small { width: auto; padding: 7px 12px; font-size: 12.5px; }
+  .pop-btn.small { width: auto; padding: 9px 13px; font-size: 12.5px; }
+  .pop-actions { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
   .btn-row { display: flex; gap: 8px; }
   .btn-row .pop-btn { flex: 1; }
 
-  .stars { cursor: pointer; font-size: 22px; letter-spacing: 3px; user-select: none; }
+  .stars { cursor: pointer; font-size: 24px; letter-spacing: 4px; user-select: none; }
   .stars-small { font-size: 12.5px; }
 
   /* донорские фильтры */
-  #donor-panel { background: var(--card); border-radius: 14px; padding: 12px; margin-bottom: 10px; display: none; }
+  #donor-panel { background: var(--card); border-radius: var(--r-card); padding: 13px 14px; margin-bottom: 10px;
+    display: none; border: 1px solid var(--line); }
   #donor-panel.show { display: block; }
-  #donor-panel .fline { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13.5px; }
+  #donor-panel .fline { display: flex; align-items: center; justify-content: space-between; padding: 7px 0;
+    font-size: 13.5px; font-weight: 600; }
   input[type="range"] { width: 55%; accent-color: var(--paw); }
-  .switch { position: relative; width: 42px; height: 24px; }
+  .switch { position: relative; width: 44px; height: 26px; }
   .switch input { opacity: 0; width: 0; height: 0; }
-  .slider-t { position: absolute; inset: 0; background: rgba(128,128,128,.3); border-radius: 999px; transition: .15s; }
-  .slider-t:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: #fff;
-    border-radius: 50%; transition: .15s; }
+  .slider-t { position: absolute; inset: 0; background: rgba(39,34,25,.2);
+    background: color-mix(in srgb, var(--text) 18%, transparent);
+    border-radius: 999px; transition: background .15s; }
+  .slider-t:before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
   .switch input:checked + .slider-t { background: var(--paw); }
   .switch input:checked + .slider-t:before { transform: translateX(18px); }
 
   /* профиль */
-  .avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--paw-soft); display: flex;
-    align-items: center; justify-content: center; font-size: 26px; flex: 0 0 auto; }
-  .info-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; gap: 12px; }
+  .avatar { width: 58px; height: 58px; border-radius: 50%; background: var(--paw-soft);
+    border: 2px solid color-mix(in srgb, var(--paw) 45%, transparent);
+    display: flex; align-items: center; justify-content: center; font-size: 26px; flex: 0 0 auto; }
+  .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line);
+    font-size: 13.5px; gap: 12px; }
   .info-row:last-child { border-bottom: none; }
   .info-row span { color: var(--hint); flex-shrink: 0; }
-  .info-row b { text-align: right; word-break: break-word; }
+  .info-row b { text-align: right; word-break: break-word; font-weight: 700; }
 
   /* ================= НИЖНЯЯ НАВИГАЦИЯ ================= */
   #tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: var(--tabbar-h); z-index: 900;
-    background: var(--bg); border-top: 1px solid var(--line); display: flex;
-    padding-bottom: env(safe-area-inset-bottom); }
-  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    font-size: 10.5px; font-weight: 600; color: var(--hint); cursor: pointer; user-select: none; }
-  .nav-item .ico { font-size: 21px; line-height: 1; transition: transform .12s ease; }
-  .nav-item.active { color: var(--paw); }
-  .nav-item.active .ico { transform: translateY(-1px) scale(1.12); }
-  .nav-dot { position: absolute; margin-left: 22px; margin-top: -22px; width: 8px; height: 8px; border-radius: 50%;
-    background: var(--red); display: none; }
+    background: rgba(248,244,236,.92);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--line); display: flex; padding-bottom: env(safe-area-inset-bottom); }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; font-size: 10.5px; font-weight: 700; letter-spacing: .02em; color: var(--hint);
+    cursor: pointer; user-select: none; position: relative; }
+  .nav-item .ico { font-size: 21px; line-height: 1; transition: transform .15s ease; }
+  .nav-item.active { color: var(--paw-deep); }
+  .nav-item.active::before { content: ""; position: absolute; top: 7px; width: 44px; height: 30px;
+    border-radius: 999px; background: var(--paw-soft); z-index: -1; }
+  .nav-item.active .ico { transform: translateY(-1px); }
+  .nav-dot { position: absolute; margin-left: 22px; margin-top: -22px; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--red); display: none; border: 1.5px solid var(--bg); }
   .nav-dot.show { display: block; }
 
-  /* ================= НИЖНИЙ ЛИСТ ================= */
-  #sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1000; display: none; }
+  /* ================= НИЖНИЙ ЛИСТ: «паспорт двора» ================= */
+  #sheet-overlay { position: fixed; inset: 0; background: rgba(30,25,17,.42); z-index: 1000; display: none; }
   #sheet-overlay.show { display: block; }
-  #sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg); border-radius: 18px 18px 0 0;
-    z-index: 1001; padding: 10px 16px calc(16px + env(safe-area-inset-bottom)); transform: translateY(105%);
-    transition: transform .22s ease; max-height: 86vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg);
+    border-radius: 22px 22px 0 0; z-index: 1001;
+    padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
+    transform: translateY(105%); transition: transform .24s cubic-bezier(.32,.72,.33,1);
+    max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    box-shadow: 0 -8px 40px rgba(30,25,17,.25); }
   #sheet.show { transform: translateY(0); }
-  #sheet:before { content: ""; display: block; width: 38px; height: 4px; border-radius: 999px;
-    background: rgba(128,128,128,.35); margin: 0 auto 12px; }
-  #sheet h3 { margin: 0 0 12px; font-size: 17px; }
-  .field { margin-bottom: 10px; }
-  .field label { font-size: 12px; color: var(--hint); display: block; margin-bottom: 4px; }
+  #sheet:before { content: ""; display: block; width: 40px; height: 4px; border-radius: 999px;
+    background: rgba(39,34,25,.24);
+    background: color-mix(in srgb, var(--text) 22%, transparent); margin: 2px auto 14px; }
+  #sheet h3 { font-family: var(--font-disp); font-size: 16px; font-weight: 600; letter-spacing: -.01em;
+    margin: 0 0 14px; }
+  .field { margin-bottom: 11px; }
+  .field label { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--hint); display: block; margin-bottom: 5px; }
   .field input[type=text], .field input[type=tel], .field input[type=number], .field textarea, .field select {
-    width: 100%; padding: 10px 11px; border-radius: 10px; border: 1px solid var(--line); background: var(--card);
-    color: var(--text); font-size: 14px; font-family: inherit; appearance: none; }
-  .field textarea { resize: vertical; min-height: 60px; }
+    width: 100%; padding: 11px 12px; border-radius: var(--r-ctl); border: 1px solid var(--line);
+    background: var(--card); color: var(--text); font-size: 14px; font-family: var(--font-body);
+    appearance: none; }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: none; border-color: var(--paw); box-shadow: 0 0 0 3px color-mix(in srgb, var(--paw) 22%, transparent); }
+  .field textarea { resize: vertical; min-height: 64px; }
   .field-row { display: flex; align-items: center; gap: 8px; }
   .pop-actions.vertical { display: flex; flex-direction: column; gap: 8px; }
-  .dog-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-  .dog-card-head h3 { margin: 0; }
-  .dog-photo { width: 62px; height: 62px; border-radius: 16px; background: var(--paw-soft) center/cover no-repeat;
+
+  /* Шапка карточки собаки — латунный жетон с пробитым отверстием и перфорацией */
+  .dog-card-head { display: flex; align-items: center; gap: 13px; margin: 0 -18px 12px;
+    padding: 14px 18px 16px;
+    background: linear-gradient(160deg, #eeb04a, var(--paw) 55%, var(--paw-deep));
+    position: relative; }
+  .dog-card-head::before { content: ""; position: absolute; top: 12px; right: 16px; width: 13px; height: 13px;
+    border-radius: 50%; background: var(--bg); box-shadow: inset 0 1px 2px rgba(0,0,0,.28); }
+  .dog-card-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 0;
+    border-bottom: 2px dashed color-mix(in srgb, var(--paw-deep) 55%, transparent); }
+  .dog-card-head h3 { margin: 0; color: #2b2008; font-family: var(--font-disp); font-size: 17px; }
+  .dog-photo { width: 64px; height: 64px; border-radius: 50%; background: #fff7e6 center/cover no-repeat;
+    border: 2.5px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.18);
     display: flex; align-items: center; justify-content: center; font-size: 28px; flex: 0 0 auto; }
   .dog-photo.loaded { font-size: 0; }
-  .dog-memo { background: rgba(128,128,128,.08); border-radius: 10px; padding: 9px 11px; font-size: 13px; margin: 8px 0; }
-  #geo-status, .geo-note { font-size: 12px; color: var(--hint); margin-top: 4px; }
+  .dog-memo { background: rgba(39,34,25,.05);
+    background: color-mix(in srgb, var(--text) 5%, transparent); border-radius: var(--r-ctl);
+    padding: 10px 12px; font-size: 13px; margin: 9px 0; }
+  #geo-status, .geo-note { font-size: 12px; color: var(--hint); margin-top: 5px; }
   .seg-pick { display: flex; gap: 6px; flex-wrap: wrap; }
-  .seg-pick .opt { padding: 8px 12px; border-radius: 10px; background: var(--card); border: 1.5px solid transparent;
-    font-size: 13px; cursor: pointer; user-select: none; }
-  .seg-pick .opt.active { border-color: var(--paw); color: var(--paw); font-weight: 700; background: var(--paw-soft); }
-  .review-item { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .seg-pick .opt { padding: 9px 13px; border-radius: var(--r-ctl); background: var(--card);
+    border: 1.5px solid var(--line); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none;
+    transition: border-color .15s, color .15s, background .15s; }
+  .seg-pick .opt.active { border-color: var(--paw); color: var(--paw-deep); font-weight: 800;
+    background: var(--paw-soft); }
+  .review-item { padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
   .review-item:last-child { border-bottom: none; }
-  .review-item .who { font-weight: 600; }
+  .review-item .who { font-weight: 800; }
   .review-item .txt { color: var(--text); margin-top: 2px; }
-  .review-item .when { color: var(--hint); font-size: 11.5px; }
+  .review-item .when { color: var(--hint); font-size: 11.5px; margin-top: 2px; }
 </style>
 </head>
 <body data-screen="map">
@@ -311,11 +403,12 @@ function ratingColor(r) {
   return cssVar('--green');
 }
 function pinIcon(kind, item) {
+  // Маркер-«жетон»: эмалевый кружок; потеряшки — сигнальный с пульсом, мои — тёмная латунь
   let cls = 'marker-pin', color, emoji;
   if (kind === 'dogs') {
     color = cssVar('--paw');
-    if (item.lost) cls += ' lost';
-    if (item.mine) color = '#b8542a';
+    if (item.lost) { cls += ' lost'; color = cssVar('--red'); }
+    else if (item.mine) color = cssVar('--paw-deep');
     emoji = item.lost ? '🚨' : (item.mine ? '💛' : '🐕');
   } else {
     color = ratingColor(item.rating);
@@ -323,7 +416,7 @@ function pinIcon(kind, item) {
     emoji = (PLACE_TYPES[item.type] || PLACE_TYPES.Other).icon;
   }
   return L.divIcon({ className: '', html: `<div class="${cls}" style="background:${color}"><span>${emoji}</span></div>`,
-    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -24] });
+    iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -18] });
 }
 
 const SUBFILTERS = {
@@ -629,17 +722,42 @@ async function submitDogEdit(id) {
   else alert('Не получилось: ' + (res.error === 'bad breed' ? 'недопустимые символы в породе' : (res.error || '')));
 }
 
-async function walkHereMine(dogId) {
+function walkHereMine(dogId) {
+  // Точка «Гуляем тут» ставится/снимается у ВСЕХ домашних собак владельца в его городе
+  openSheet(`
+    <h3>📍 Гуляем тут</h3>
+    <div class="geo-note" style="margin-bottom:12px">Точка станет видна другим на карте — так соседи смогут познакомиться. Действие применяется ко всем твоим домашним собакам в городе.</div>
+    <div class="pop-actions vertical">
+      <button class="pop-btn" onclick="walkSetGeo('${dogId}')">📍 Моя текущая позиция</button>
+      <button class="pop-btn secondary" onclick="walkPickOnMap()">🗺 Выбрать точку на карте</button>
+      <button class="pop-btn secondary" onclick="walkClear()">🙅 Не указывать место (скрыть точку)</button>
+    </div>
+  `);
+}
+async function walkApply(payload, okText) {
+  const res = await callApi('walkHere', payload);
+  if (res.ok) {
+    haptic(); closeSheet(); map.closePopup();
+    dataCache.dogs = null; await renderLayer(); renderDogsScreen();
+    setStatus(okText, 2400);
+  } else { setStatus(null); alert('Не получилось: ' + (res.error || '')); }
+  return res.ok;
+}
+async function walkSetGeo(dogId) {
   setStatus('📍 Определяю местоположение…');
   const geo = await getGeo();
   if (!geo) { setStatus(null); openBotDeepLink('walk_' + dogId); return; }
   setStatus('Обновляю точку…');
-  const res = await callApi('walkHere', geo);
-  if (res.ok) {
-    haptic(); closeSheet(); map.closePopup();
-    dataCache.dogs = null; await renderLayer();
-    setStatus('✅ Точка на карте обновлена', 2200);
-  } else { setStatus(null); openBotDeepLink('walk_' + dogId); }
+  await walkApply(geo, '✅ Точка на карте обновлена');
+}
+async function walkPickOnMap() {
+  const choice = await pickOnMap(null);
+  if (!choice) return;
+  await walkApply(choice, '✅ Точка на карте обновлена');
+}
+async function walkClear() {
+  if (!confirm('Скрыть точное место? Собаки останутся на карте, но только по своему району.')) return;
+  await walkApply({ clear: true }, '🙅 Точка скрыта — собаки видны по району');
 }
 async function setDogGeoFromCard(dogId) {
   closeSheet();
