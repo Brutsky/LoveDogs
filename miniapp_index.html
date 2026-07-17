@@ -76,6 +76,12 @@
   body.picking #map-topbar, body.picking #fab, body.picking #count-badge, body.picking #tabbar { display: none; }
   body.picking #map { inset: 0; }
 
+  /* Хром карты (шапка-фильтры, счётчик, fab) виден ТОЛЬКО на экране карты */
+  body:not([data-screen="map"]) #map-topbar,
+  body:not([data-screen="map"]) #count-badge,
+  body:not([data-screen="map"]) #fab,
+  body:not([data-screen="map"]) #status { display: none !important; }
+
   /* ================= ЭКРАНЫ-СПИСКИ ================= */
   .screen { position: absolute; inset: 0 0 var(--tabbar-h) 0; background: var(--bg); z-index: 650;
     overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; padding: 14px 14px 24px; }
@@ -187,7 +193,7 @@
   .review-item .when { color: var(--hint); font-size: 11.5px; }
 </style>
 </head>
-<body>
+<body data-screen="map">
 <div id="app">
   <!-- ===== Карта — главный экран ===== -->
   <div id="map"></div>
@@ -215,6 +221,7 @@
     <h2>🐾 Собаки</h2>
     <div class="searchbox">🔍<input id="dogSearch" type="text" placeholder="Кличка, порода или № бирки" oninput="renderDogsScreen()"></div>
     <div class="seg-scroll" id="dogSegments"></div>
+    <div class="field" style="margin-bottom:8px"><select id="dogRegion" onchange="renderDogsScreen()" style="width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:13.5px"><option value="">🗺 Все районы</option></select></div>
     <div id="donor-panel">
       <div class="fline"><span>⚖️ Вес от <b id="dwLabel">0</b> кг</span>
         <input type="range" min="0" max="60" step="5" value="0" id="donorWeight" oninput="document.getElementById('dwLabel').textContent=this.value; renderDogsScreen()"></div>
@@ -227,7 +234,7 @@
   </div>
 
   <div class="screen" id="screen-sitters">
-    <h2>🧑 Догситтеры</h2>
+    <h2>🧑 Догситтеры <span id="sitterCity" style="font-size:13px;color:var(--hint);font-weight:400"></span></h2>
     <div id="sitterSelfSlot"></div>
     <div class="seg-scroll" id="sitterFilters"></div>
     <div id="sittersList"><div class="empty">Загружаю…</div></div>
@@ -413,6 +420,7 @@ document.querySelectorAll('#tabs .tab').forEach(tab => {
 // ================== НАВИГАЦИЯ ==================
 function showScreen(name) {
   activeScreen = name;
+  document.body.dataset.screen = name;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('show'));
   document.querySelectorAll('#tabbar .nav-item').forEach(n => n.classList.toggle('active', n.dataset.screen === name));
   if (name !== 'map') document.getElementById('screen-' + name).classList.add('show');
@@ -512,19 +520,39 @@ async function openDogCard(d) {
     !d.exactLocation && !d.lost ? '<span class="badge">≈ примерно район</span>' : ''
   ].join('');
 
+  // Роли — зеркало логики бота (showDogCard):
+  // домашняя моя / под опекой (в т.ч. уличная, где я записан опекуном) / чужая
+  const isHomeMine = d.mine && d.status === 'У владельца';
+  const isGuardianMine = d.mine && (d.status === 'У опекуна' || d.status === 'Уличная');
   let actions = '';
-  actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">🗺 Показать на карте</button>`;
+  if (d.lat) actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">🗺 Показать на карте</button>`;
   if (d.mine) {
     actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Редактировать анкету</button>`;
-    if (d.status === 'У владельца') actions += `<button class="pop-btn secondary" onclick="walkHereMine('${d.id}')">📍 Гуляем тут</button>`;
-    else actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить геопозицию</button>`;
+    if (isHomeMine) {
+      actions += `<button class="pop-btn secondary" onclick="walkHereMine('${d.id}')">📍 Гуляем тут</button>`;
+      actions += d.isDonor
+        ? `<button class="pop-btn secondary" onclick="removeDonor('${d.id}')">🚫 Убрать из доноров</button>`
+        : `<button class="pop-btn secondary" onclick="openDonorSheet('${d.id}','${escapeAttr(d.name || '')}')">🩸 Стать донором крови</button>`;
+    } else {
+      actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить геопозицию</button>`;
+    }
+    if (isGuardianMine) {
+      actions += d.seekingHome
+        ? `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', false)">🏡 Снять «ищет дом»</button>`
+        : `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', true)">🏡 Отметить «ищет дом»</button>`;
+      actions += `<button class="pop-btn secondary" onclick="giveUpCare('${d.id}','${escapeAttr(d.name || '')}')">🙅 Отказаться от опеки</button>`;
+    }
     if (!d.lost) actions += `<button class="pop-btn danger" onclick="markLost('${d.id}')">🚨 Собака потерялась</button>`;
     else actions += `<button class="pop-btn" style="background:var(--green)" onclick="markFound('${d.id}')">🎉 Нашлась!</button>`;
     actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}')">🗑 Удалить анкету</button>`;
-  } else if (d.hasOwner) {
-    actions += `<button class="pop-btn" onclick="contactOwner('${d.id}')">✉️ Связаться с хозяином</button>`;
+  } else {
+    if (d.hasOwner) actions += `<button class="pop-btn" onclick="contactOwner('${d.id}')">✉️ Связаться с хозяином</button>`;
+    // Взять опекунство: как в боте — если хозяина нет вовсе или собака не домашняя
+    if (!d.hasOwner || d.status !== 'У владельца') {
+      actions += `<button class="pop-btn secondary" onclick="takeCare('${d.id}','${escapeAttr(d.name || '')}')">🤲 Взять опекунство</button>`;
+    }
+    if (isStreet) actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить геопозицию</button>`;
   }
-  if (isStreet && !d.mine) actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить геопозицию</button>`;
 
   openSheet(`
     <div class="dog-card-head"><div id="dogPhoto" class="dog-photo">🐕</div><h3>${escapeHtml(d.name || 'Собака')}</h3></div>
@@ -658,6 +686,58 @@ async function submitDeleteDog(dogId) {
   else alert('Не получилось: ' + (res.error || ''));
 }
 
+// ---- Донорство / опека / «ищет дом» (зеркало кнопок бота) ----
+function openDonorSheet(dogId, name) {
+  const d = findDog(dogId) || {};
+  openSheet(`
+    <h3>🩸 «${escapeHtml(name)}» — донор крови</h3>
+    <div class="geo-note" style="margin-bottom:10px">Донорство доступно домашним собакам. Данные увидят те, кто ищет донора для переливания.</div>
+    <div class="field"><label>Вес (кг)</label><input type="number" step="0.5" id="dnWeight" value="${escapeAttr(d.weightKg || '')}"></div>
+    <div class="field"><label>Прививки</label><select id="dnVacc">${selOpts(TRISTATE, d.vaccinated || 'Неизвестно')}</select></div>
+    <div class="field"><label>Условия (когда можете, район, компенсация…)</label>
+      <textarea id="dnMemo" placeholder="Например: будни после 18:00, только Ваке/Сабуртало">${escapeHtml(d.donorMemo || '')}</textarea></div>
+    <button class="pop-btn" onclick="submitDonor('${dogId}')">🩸 Записать в доноры</button>
+  `);
+}
+async function submitDonor(dogId) {
+  const res = await callApi('setDonor', {
+    dogId, enable: true,
+    weightKg: document.getElementById('dnWeight').value,
+    vaccinated: document.getElementById('dnVacc').value,
+    memo: document.getElementById('dnMemo').value
+  });
+  closeSheet();
+  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🩸 Записали в доноры — спасибо!', 2400); }
+  else alert('Не получилось: ' + (res.error === 'home only' ? 'донорство доступно только домашним собакам' : (res.error || '')));
+}
+async function removeDonor(dogId) {
+  if (!confirm('Убрать собаку из списка доноров?')) return;
+  const res = await callApi('setDonor', { dogId, enable: false });
+  closeSheet();
+  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('Убрали из доноров', 2000); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+async function toggleSeeking(dogId, on) {
+  const res = await callApi('setSeeking', { dogId, on });
+  closeSheet();
+  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(on ? '🏡 Отметили — пусть найдётся дом!' : 'Сняли метку «ищет дом»', 2200); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+async function giveUpCare(dogId, name) {
+  if (!confirm(`Точно отказаться от опеки над «${name}»? Собака снова станет «уличной» без опекуна.`)) return;
+  const res = await callApi('giveUpCare', { dogId });
+  closeSheet();
+  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('Готово, ты больше не опекун', 2200); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+async function takeCare(dogId, name) {
+  if (!confirm(`Взять опекунство над «${name}»? Ты станешь отвечать за анкету и геопозицию.`)) return;
+  const res = await callApi('takeCare', { dogId });
+  closeSheet();
+  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🤲 Готово, теперь ты опекун!', 2200); }
+  else alert('Не получилось: ' + (res.error === 'limit' ? 'достигнут лимит анкет' : (res.error || '')));
+}
+
 // ================== ДОБАВЛЕНИЕ СОБАКИ ==================
 let addDogDraft = null;
 function openAddDogSheet(draft) {
@@ -756,9 +836,16 @@ function renderDogSegments() {
     box.appendChild(chip);
   });
 }
+function fillRegionFilter() {
+  const sel = document.getElementById('dogRegion');
+  if (sel.options.length > 1 || !REGIONS_LIST.length) return;
+  REGIONS_LIST.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; sel.appendChild(o); });
+}
 function renderDogsScreen() {
+  fillRegionFilter();
   const list = dataCache.dogs || [];
   const q = (document.getElementById('dogSearch').value || '').trim().toLowerCase();
+  const reg = document.getElementById('dogRegion').value;
   document.getElementById('donor-panel').classList.toggle('show', dogSegment === 'donors');
   let filtered = list;
   if (dogSegment === 'mine') filtered = list.filter(d => d.mine);
@@ -773,6 +860,7 @@ function renderDogsScreen() {
       && (!vacc || d.vaccinated === 'Да')
       && (!ster || d.sterilized === 'Да'));
   }
+  if (reg) filtered = filtered.filter(d => d.region === reg);
   if (q) filtered = filtered.filter(d =>
     (d.name || '').toLowerCase().includes(q) ||
     (d.breed || '').toLowerCase().includes(q) ||
@@ -787,12 +875,13 @@ function renderDogsScreen() {
     box.innerHTML = addBtn + `<div class="empty"><div class="big">🐾</div>${q ? 'По запросу ничего не нашлось' : msgs[dogSegment]}</div>`;
     return;
   }
+  const statusIco = s => s === 'У владельца' ? '🏠' : (s === 'У опекуна' ? '🤝' : '🌳');
   box.innerHTML = addBtn + filtered.map(d => `
     <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
       <div class="row-between">
         <div>
           <div class="list-title">${d.lost ? '🚨 ' : ''}${escapeHtml(d.name || 'Без клички')}</div>
-          <div class="list-sub">${escapeHtml(d.breed || 'порода не указана')} · ${escapeHtml(d.status)}${d.region ? ' · ' + escapeHtml(d.region) : ''}</div>
+          <div class="list-sub">${statusIco(d.status)} ${escapeHtml(d.status)} · ${escapeHtml(d.breed || 'порода не указана')}${d.region ? ' · ' + escapeHtml(d.region) : (d.city && d.city !== 'Тбилиси' ? ' · ' + escapeHtml(d.city) : '')}</div>
         </div>
         <div style="font-size:22px">${d.mine ? '💛' : '🐕'}</div>
       </div>
@@ -801,6 +890,7 @@ function renderDogsScreen() {
         ${d.isDonor ? '<span class="badge">🩸 донор ' + (d.weightKg ? d.weightKg + ' кг' : '') + '</span>' : ''}
         ${d.lost ? `<span class="badge warn">потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + ' дн.' : ''}</span>` : ''}
         ${d.tagNumber ? '<span class="badge">🔖 ' + escapeHtml(d.tagNumber) + '</span>' : ''}
+        ${!d.lat ? '<span class="badge">🗺 нет на карте — без координат</span>' : ''}
       </div>
     </div>`).join('');
 }
@@ -815,12 +905,20 @@ const SITTER_SERVICES = {
   withLiving:  { icon: '🛋', short: 'С проживанием', label: 'Ситтер с проживанием',
     hint: 'Ситтер живёт на территории собаки, пока вас нет' }
 };
-let sittersCache = null;
+let sittersCache = null;   // список активных ситтеров моего города
+let mySitterProfile = null; // моя анкета (даже неактивная) — для формы редактирования
 let sitterFilter = 'all';
+function openTgUser(username) {
+  if (!username) return;
+  const url = 'https://t.me/' + username;
+  if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
+}
 async function loadSitters(force) {
   if (sittersCache && !force) { renderSitters(); return; }
   const res = await callApi('getSitters', {});
   sittersCache = res.ok ? res.sitters : [];
+  mySitterProfile = res.ok ? res.mine : null;
+  document.getElementById('sitterCity').textContent = res.ok && res.city ? '· ' + res.city : '';
   renderSitters(res.ok ? null : (res.error || 'ошибка'));
 }
 function renderSitterFilters() {
@@ -846,13 +944,12 @@ function renderSitters(err) {
   const selfSlot = document.getElementById('sitterSelfSlot');
   const box = document.getElementById('sittersList');
   if (err) { box.innerHTML = `<div class="empty">Не получилось загрузить (${escapeHtml(err)})</div>`; return; }
-  const meSitter = (sittersCache || []).find(s => s.self);
-  selfSlot.innerHTML = meSitter
+  selfSlot.innerHTML = (mySitterProfile && mySitterProfile.active)
     ? `<div class="btn-row" style="margin-bottom:12px">
         <button class="pop-btn secondary" onclick="openBecomeSitterSheet(true)">✏️ Моя анкета</button>
         <button class="pop-btn secondary" onclick="stopSitter()">🚫 Больше не ситтер</button>
       </div>`
-    : `<button class="pop-btn" style="margin-bottom:12px" onclick="openBecomeSitterSheet()">🙋 Стать догситтером</button>`;
+    : `<button class="pop-btn" style="margin-bottom:12px" onclick="openBecomeSitterSheet(!!mySitterProfile)">🙋 ${mySitterProfile ? 'Вернуться в ситтеры' : 'Стать догситтером'}</button>`;
   let list = sittersCache || [];
   if (sitterFilter !== 'all') list = list.filter(s => s[sitterFilter]);
   if (!list.length) {
@@ -870,15 +967,16 @@ function renderSitters(err) {
       ${s.desc ? `<div class="list-sub" style="margin-top:6px">${escapeHtml(s.desc)}</div>` : ''}
       ${s.price ? `<div class="list-sub">💰 ${escapeHtml(s.price)}</div>` : ''}
       <div class="btn-row" style="margin-top:10px">
-        ${s.phone ? `<a class="pop-btn secondary" style="text-align:center;text-decoration:none;line-height:1.3" href="tel:${escapeAttr(s.phone)}">📞 Позвонить</a>` : ''}
-        ${!s.self ? `<button class="pop-btn" onclick="openReviewSheet('${s.id}','${escapeAttr(s.name || 'Ситтер')}','DogSitter')">⭐ Оценить</button>` : ''}
-        ${s.ratingCount ? `<button class="pop-btn secondary small" onclick="showReviews('DogSitter','${s.id}','${escapeAttr(s.name || '')}')">💬</button>` : ''}
+        ${s.tg && !s.self ? `<button class="pop-btn" onclick="openTgUser('${escapeAttr(s.tg)}')">✍️ Написать</button>` : ''}
+        ${s.phone ? `<a class="pop-btn secondary" style="text-align:center;text-decoration:none;line-height:1.3" href="tel:${escapeAttr(s.phone)}">📞</a>` : ''}
+        ${!s.self ? `<button class="pop-btn secondary" onclick="openReviewSheet('${s.id}','${escapeAttr(s.name || 'Ситтер')}','DogSitter')">⭐ Оценить</button>` : ''}
+        ${s.ratingCount ? `<button class="pop-btn secondary small" onclick="showReviews('DogSitter','${s.id}','${escapeAttr(s.name || '')}')">💬 Отзывы</button>` : ''}
       </div>
     </div>`;
   }).join('');
 }
 function openBecomeSitterSheet(isEdit) {
-  const cur = isEdit ? ((sittersCache || []).find(s => s.self) || {}) : {};
+  const cur = isEdit ? (mySitterProfile || {}) : {};
   const svcToggles = Object.keys(SITTER_SERVICES).map(k => `
     <div class="fline" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:7px 0">
       <div>
