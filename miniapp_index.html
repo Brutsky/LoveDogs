@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Собачники · Карта</title>
+<title>Love Dogs · Тбилиси</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
-    --paw:   #d9723a; --vet:   #2f8f7c; --shop:  #6b5fd1;
+    --paw:   #d9723a; --paw-soft: #f6e3d6;
+    --vet:   #2f8f7c; --shop:  #6b5fd1;
     --red: #d64545; --yellow: #e0a72e; --green: #4a9a5c; --grey: #9a9a9a;
     --bg:    var(--tg-theme-bg-color, #ffffff);
     --text:  var(--tg-theme-text-color, #111111);
@@ -17,100 +18,232 @@
     --btnbg: var(--tg-theme-button-color, #d9723a);
     --btntx: var(--tg-theme-button-text-color, #ffffff);
     --card:  var(--tg-theme-secondary-bg-color, #f4f1ea);
+    --line:  rgba(128,128,128,.18);
+    --tabbar-h: calc(58px + env(safe-area-inset-bottom));
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
-  #app { display: flex; flex-direction: column; height: 100vh; }
-  #topbar { padding: 10px 12px 8px; background: var(--bg); z-index: 500; }
+  #app { height: 100vh; height: 100dvh; position: relative; }
+
+  /* ================= КАРТА (главный экран) ================= */
+  #map { position: absolute; inset: 0 0 var(--tabbar-h) 0; }
+  #map-topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 700; padding: 10px 12px 6px;
+    background: linear-gradient(var(--bg) 55%, transparent); pointer-events: none; }
+  #map-topbar > * { pointer-events: auto; }
   #tabs { display: flex; gap: 6px; }
   .tab { flex: 1; text-align: center; padding: 9px 4px; border-radius: 12px; font-size: 13px; font-weight: 600;
     background: var(--card); color: var(--hint); transition: all .15s ease;
-    display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; user-select: none; }
-  .tab .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; user-select: none;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08); }
   .tab.active { color: #fff; }
   .tab[data-k="dogs"].active { background: var(--paw); }
   .tab[data-k="places"].active { background: var(--vet); }
-  .tab[data-k="dogs"] .dot { background: var(--paw); }
-  .tab[data-k="places"] .dot { background: var(--vet); }
-  .tab.active .dot { background: #fff; }
-  #subfilters { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; padding-bottom: 2px; }
+  #subfilters { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; padding-bottom: 4px; }
   #subfilters::-webkit-scrollbar { display: none; }
   .chip { white-space: nowrap; font-size: 12px; padding: 6px 11px; border-radius: 999px; background: var(--card);
-    color: var(--hint); cursor: pointer; user-select: none; }
+    color: var(--hint); cursor: pointer; user-select: none; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
   .chip.active { background: var(--text); color: var(--bg); }
-  #map { flex: 1; position: relative; }
+  #status { position: absolute; top: 96px; left: 50%; transform: translateX(-50%); z-index: 750;
+    background: var(--card); color: var(--text); font-size: 12.5px; padding: 7px 14px; border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15); pointer-events: none; opacity: 0; transition: opacity .2s ease; max-width: 86%; text-align: center; }
+  #status.show { opacity: 1; }
+  #count-badge { position: absolute; bottom: calc(var(--tabbar-h) + 12px); left: 12px; z-index: 600;
+    background: var(--card); color: var(--text); font-size: 12.5px; font-weight: 600; padding: 7px 12px;
+    border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  #fab { position: absolute; bottom: calc(var(--tabbar-h) + 12px); right: 12px; z-index: 600; width: 48px; height: 48px;
+    border-radius: 50%; background: var(--btnbg); color: var(--btntx); border: none; font-size: 24px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.25); cursor: pointer; display: none; align-items: center; justify-content: center; }
+  #fab.show { display: flex; }
+
   .leaflet-popup-content-wrapper { border-radius: 14px; }
   .leaflet-popup-content { margin: 12px 14px; font-size: 13.5px; line-height: 1.45; width: 240px !important; }
-  .pop-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
-  .pop-row { color: #555; }
-  .pop-badges { margin-top: 6px; display: flex; gap: 5px; flex-wrap: wrap; }
-  .badge { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: #eee; color: #444; }
-  .badge.warn { background: #fde3e3; color: #a33; }
-  .pop-actions { margin-top: 9px; display: flex; flex-direction: column; gap: 6px; }
-  .pop-btn { border: none; border-radius: 10px; padding: 8px 10px; font-size: 12.5px; font-weight: 600;
-    background: var(--btnbg); color: var(--btntx); cursor: pointer; }
-  .pop-btn.secondary { background: #eee; color: #333; }
-  .stars { cursor: pointer; font-size: 18px; letter-spacing: 2px; }
   .marker-pin { width: 26px; height: 26px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
     display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,.35); border: 2px solid #fff; }
   .marker-pin span { transform: rotate(45deg); font-size: 13px; }
-  .marker-pin.lost { animation: pulse 1.4s infinite; box-shadow: 0 0 0 0 rgba(214,69,69,.6); }
+  .marker-pin.lost { animation: pulse 1.4s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(214,69,69,.55);} 70% { box-shadow: 0 0 0 12px rgba(214,69,69,0);} 100% { box-shadow: 0 0 0 0 rgba(214,69,69,0);} }
   .marker-pin.closed { opacity: .45; }
-  #status { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 600;
-    background: var(--card); color: var(--hint); font-size: 12.5px; padding: 6px 14px; border-radius: 999px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.12); pointer-events: none; opacity: 0; transition: opacity .2s ease; }
-  #status.show { opacity: 1; }
-  #count-badge { position: absolute; bottom: 14px; left: 14px; z-index: 500; background: var(--card); color: var(--text);
-    font-size: 12.5px; font-weight: 600; padding: 7px 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
-  #fab { position: absolute; bottom: 14px; right: 14px; z-index: 500; width: 48px; height: 48px; border-radius: 50%;
-    background: var(--btnbg); color: var(--btntx); border: none; font-size: 24px; box-shadow: 0 3px 10px rgba(0,0,0,.25);
-    cursor: pointer; display: none; align-items: center; justify-content: center; }
-  #fab.show { display: flex; }
 
-  /* ---- Форма (добавление места / отзыв / уточнение данных) ---- */
-  #sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 900; display: none; }
+  /* Режим выбора точки на карте */
+  #pick-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 800;
+    font-size: 34px; pointer-events: none; display: none; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
+  #pick-bar { position: absolute; left: 12px; right: 12px; bottom: calc(var(--tabbar-h) + 12px); z-index: 800;
+    background: var(--bg); border-radius: 16px; padding: 12px; box-shadow: 0 4px 18px rgba(0,0,0,.25); display: none; }
+  #pick-bar .pick-hint { font-size: 12.5px; color: var(--hint); margin-bottom: 8px; text-align: center; }
+  #pick-bar .row { display: flex; gap: 8px; }
+  body.picking #pick-pin, body.picking #pick-bar { display: block; }
+  body.picking #map-topbar, body.picking #fab, body.picking #count-badge, body.picking #tabbar { display: none; }
+  body.picking #map { inset: 0; }
+
+  /* ================= ЭКРАНЫ-СПИСКИ ================= */
+  .screen { position: absolute; inset: 0 0 var(--tabbar-h) 0; background: var(--bg); z-index: 650;
+    overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; padding: 14px 14px 24px; }
+  .screen.show { display: block; }
+  .screen h2 { font-size: 20px; margin: 2px 0 12px; letter-spacing: -.2px; }
+  .sec-label { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--hint); margin: 18px 0 8px; }
+  .card { background: var(--card); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
+  .card.tappable { cursor: pointer; transition: transform .08s ease; }
+  .card.tappable:active { transform: scale(.985); }
+  .row-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .list-title { font-size: 15px; font-weight: 700; }
+  .list-sub { font-size: 12.5px; color: var(--hint); margin-top: 2px; }
+  .badge { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: rgba(128,128,128,.14); color: var(--text); }
+  .badge.warn { background: #fde3e3; color: #a33; }
+  .badge.ok { background: #e2f2e6; color: #2c6e3d; }
+  .badge.brand { background: var(--paw-soft); color: #9a4f1f; }
+  .pop-badges, .badges { margin-top: 6px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .empty { text-align: center; color: var(--hint); font-size: 13.5px; padding: 26px 10px; }
+  .empty .big { font-size: 34px; margin-bottom: 8px; }
+
+  .searchbox { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 12px;
+    padding: 9px 12px; margin-bottom: 10px; }
+  .searchbox input { flex: 1; border: none; background: transparent; color: var(--text); font-size: 14px; outline: none; }
+  .seg-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
+  .seg-scroll::-webkit-scrollbar { display: none; }
+
+  .pop-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+  .pop-row { color: var(--hint); font-size: 13px; }
+  .pop-actions { margin-top: 9px; display: flex; flex-direction: column; gap: 6px; }
+  .pop-btn { border: none; border-radius: 10px; padding: 10px 10px; font-size: 13px; font-weight: 600;
+    background: var(--btnbg); color: var(--btntx); cursor: pointer; width: 100%; }
+  .pop-btn.secondary { background: rgba(128,128,128,.14); color: var(--text); }
+  .pop-btn.danger { background: var(--red); color: #fff; }
+  .pop-btn.small { width: auto; padding: 7px 12px; font-size: 12.5px; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .pop-btn { flex: 1; }
+
+  .stars { cursor: pointer; font-size: 22px; letter-spacing: 3px; user-select: none; }
+  .stars-small { font-size: 12.5px; }
+
+  /* донорские фильтры */
+  #donor-panel { background: var(--card); border-radius: 14px; padding: 12px; margin-bottom: 10px; display: none; }
+  #donor-panel.show { display: block; }
+  #donor-panel .fline { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13.5px; }
+  input[type="range"] { width: 55%; accent-color: var(--paw); }
+  .switch { position: relative; width: 42px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider-t { position: absolute; inset: 0; background: rgba(128,128,128,.3); border-radius: 999px; transition: .15s; }
+  .slider-t:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: #fff;
+    border-radius: 50%; transition: .15s; }
+  .switch input:checked + .slider-t { background: var(--paw); }
+  .switch input:checked + .slider-t:before { transform: translateX(18px); }
+
+  /* профиль */
+  .avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--paw-soft); display: flex;
+    align-items: center; justify-content: center; font-size: 26px; flex: 0 0 auto; }
+  .info-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; gap: 12px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-row span { color: var(--hint); flex-shrink: 0; }
+  .info-row b { text-align: right; word-break: break-word; }
+
+  /* ================= НИЖНЯЯ НАВИГАЦИЯ ================= */
+  #tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: var(--tabbar-h); z-index: 900;
+    background: var(--bg); border-top: 1px solid var(--line); display: flex;
+    padding-bottom: env(safe-area-inset-bottom); }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font-size: 10.5px; font-weight: 600; color: var(--hint); cursor: pointer; user-select: none; }
+  .nav-item .ico { font-size: 21px; line-height: 1; transition: transform .12s ease; }
+  .nav-item.active { color: var(--paw); }
+  .nav-item.active .ico { transform: translateY(-1px) scale(1.12); }
+  .nav-dot { position: absolute; margin-left: 22px; margin-top: -22px; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red); display: none; }
+  .nav-dot.show { display: block; }
+
+  /* ================= НИЖНИЙ ЛИСТ ================= */
+  #sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1000; display: none; }
   #sheet-overlay.show { display: block; }
   #sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg); border-radius: 18px 18px 0 0;
-    z-index: 901; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); transform: translateY(100%);
-    transition: transform .22s ease; max-height: 80vh; overflow-y: auto; }
+    z-index: 1001; padding: 10px 16px calc(16px + env(safe-area-inset-bottom)); transform: translateY(105%);
+    transition: transform .22s ease; max-height: 86vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   #sheet.show { transform: translateY(0); }
-  #sheet h3 { margin: 0 0 12px; font-size: 16px; }
+  #sheet:before { content: ""; display: block; width: 38px; height: 4px; border-radius: 999px;
+    background: rgba(128,128,128,.35); margin: 0 auto 12px; }
+  #sheet h3 { margin: 0 0 12px; font-size: 17px; }
   .field { margin-bottom: 10px; }
   .field label { font-size: 12px; color: var(--hint); display: block; margin-bottom: 4px; }
-  .field input[type=text], .field input[type=tel], .field textarea {
-    width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid #ddd; background: var(--card);
-    color: var(--text); font-size: 14px; font-family: inherit; }
+  .field input[type=text], .field input[type=tel], .field input[type=number], .field textarea, .field select {
+    width: 100%; padding: 10px 11px; border-radius: 10px; border: 1px solid var(--line); background: var(--card);
+    color: var(--text); font-size: 14px; font-family: inherit; appearance: none; }
   .field textarea { resize: vertical; min-height: 60px; }
   .field-row { display: flex; align-items: center; gap: 8px; }
-  #sheet .pop-btn { width: 100%; padding: 11px; font-size: 14px; margin-top: 4px; }
   .pop-actions.vertical { display: flex; flex-direction: column; gap: 8px; }
   .dog-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
   .dog-card-head h3 { margin: 0; }
-  .dog-photo { width: 60px; height: 60px; border-radius: 14px; background: #eee center/cover no-repeat;
+  .dog-photo { width: 62px; height: 62px; border-radius: 16px; background: var(--paw-soft) center/cover no-repeat;
     display: flex; align-items: center; justify-content: center; font-size: 28px; flex: 0 0 auto; }
   .dog-photo.loaded { font-size: 0; }
-  .dog-info { margin: 6px 0; }
-  .info-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,.06); font-size: 13.5px; }
-  .info-row span { color: var(--hint); }
-  .dog-memo { background: rgba(0,0,0,.04); border-radius: 10px; padding: 9px 11px; font-size: 13px; margin: 8px 0; }
-  #geo-status { font-size: 12px; color: var(--hint); margin-top: 4px; }
+  .dog-memo { background: rgba(128,128,128,.08); border-radius: 10px; padding: 9px 11px; font-size: 13px; margin: 8px 0; }
+  #geo-status, .geo-note { font-size: 12px; color: var(--hint); margin-top: 4px; }
+  .seg-pick { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg-pick .opt { padding: 8px 12px; border-radius: 10px; background: var(--card); border: 1.5px solid transparent;
+    font-size: 13px; cursor: pointer; user-select: none; }
+  .seg-pick .opt.active { border-color: var(--paw); color: var(--paw); font-weight: 700; background: var(--paw-soft); }
+  .review-item { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .review-item:last-child { border-bottom: none; }
+  .review-item .who { font-weight: 600; }
+  .review-item .txt { color: var(--text); margin-top: 2px; }
+  .review-item .when { color: var(--hint); font-size: 11.5px; }
 </style>
 </head>
 <body>
 <div id="app">
-  <div id="topbar">
+  <!-- ===== Карта — главный экран ===== -->
+  <div id="map"></div>
+  <div id="map-topbar">
     <div id="tabs">
-      <div class="tab active" data-k="dogs"><span class="dot"></span>Собаки</div>
-      <div class="tab" data-k="places"><span class="dot"></span>Места</div>
+      <div class="tab active" data-k="dogs">🐕 Собаки</div>
+      <div class="tab" data-k="places">📍 Места</div>
     </div>
     <div id="subfilters"></div>
   </div>
-  <div id="map">
-    <div id="status">Загружаю…</div>
-    <div id="count-badge">—</div>
-    <button id="fab">+</button>
+  <div id="status"></div>
+  <div id="count-badge">—</div>
+  <button id="fab">+</button>
+  <div id="pick-pin">📍</div>
+  <div id="pick-bar">
+    <div class="pick-hint">Двигай карту — точка встанет по центру экрана</div>
+    <div class="row">
+      <button class="pop-btn secondary" onclick="cancelMapPick()">Отмена</button>
+      <button class="pop-btn" onclick="confirmMapPick()">✅ Точка здесь</button>
+    </div>
+  </div>
+
+  <!-- ===== Экраны ===== -->
+  <div class="screen" id="screen-dogs">
+    <h2>🐾 Собаки</h2>
+    <div class="searchbox">🔍<input id="dogSearch" type="text" placeholder="Кличка, порода или № бирки" oninput="renderDogsScreen()"></div>
+    <div class="seg-scroll" id="dogSegments"></div>
+    <div id="donor-panel">
+      <div class="fline"><span>⚖️ Вес от <b id="dwLabel">0</b> кг</span>
+        <input type="range" min="0" max="60" step="5" value="0" id="donorWeight" oninput="document.getElementById('dwLabel').textContent=this.value; renderDogsScreen()"></div>
+      <div class="fline"><span>💉 Только привитые</span>
+        <label class="switch"><input type="checkbox" id="donorVacc" onchange="renderDogsScreen()"><span class="slider-t"></span></label></div>
+      <div class="fline"><span>🏥 Только стерилизованные</span>
+        <label class="switch"><input type="checkbox" id="donorSter" onchange="renderDogsScreen()"><span class="slider-t"></span></label></div>
+    </div>
+    <div id="dogsList"></div>
+  </div>
+
+  <div class="screen" id="screen-sitters">
+    <h2>🧑 Догситтеры</h2>
+    <div id="sitterSelfSlot"></div>
+    <div class="seg-scroll" id="sitterFilters"></div>
+    <div id="sittersList"><div class="empty">Загружаю…</div></div>
+  </div>
+
+  <div class="screen" id="screen-profile">
+    <h2>👤 Профиль</h2>
+    <div id="profileBody"><div class="empty">Загружаю…</div></div>
+  </div>
+
+  <!-- ===== Нижняя навигация ===== -->
+  <div id="tabbar">
+    <div class="nav-item active" data-screen="map"><span class="ico">🗺</span>Карта</div>
+    <div class="nav-item" data-screen="dogs"><span class="ico">🐾</span>Собаки<span class="nav-dot" id="lostDot"></span></div>
+    <div class="nav-item" data-screen="sitters"><span class="ico">🧑</span>Ситтеры</div>
+    <div class="nav-item" data-screen="profile"><span class="ico">👤</span>Профиль</div>
   </div>
 </div>
 
@@ -118,497 +251,930 @@
 <div id="sheet"></div>
 
 <script>
-  // URL рабочего деплоя Apps Script (Manage deployments → тот же URL, что и вебхук бота)
-  const API_URL = "https://script.google.com/macros/s/AKfycbwuaKkog3Ebjowds_pE4SmxjS63UIlZseNE-NE48KQSYLmNas3gkAqCS1p7TM-0tv1r/exec";
-  const BOT_USERNAME = "ВАШ_БОТ_USERNAME";
+// URL рабочего деплоя Apps Script (Manage deployments → тот же URL, что и вебхук бота)
+const API_URL = "https://script.google.com/macros/s/AKfycbwuaKkog3Ebjowds_pE4SmxjS63UIlZseNE-NE48KQSYLmNas3gkAqCS1p7TM-0tv1r/exec";
+const BOT_USERNAME = "ВАШ_БОТ_USERNAME";
 
-  const tg = window.Telegram && window.Telegram.WebApp;
-  if (tg) { tg.ready(); tg.expand(); }
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user.id : '';
 
-  const TBILISI_CENTER = [41.7151, 44.8271];
-  const map = L.map('map', { zoomControl: false, attributionControl: false }).setView(TBILISI_CENTER, 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-  L.control.zoom({ position: 'bottomright' }).addTo(map);
+// ================== КАРТА ==================
+const TBILISI_CENTER = [41.7151, 44.8271];
+const map = L.map('map', { zoomControl: false, attributionControl: false }).setView(TBILISI_CENTER, 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-  let currentLayer = L.layerGroup().addTo(map);
-  let dataCache = { dogs: null, places: null };
-  let activeTab = 'dogs';
-  let subFilter = 'all';
+let currentLayer = L.layerGroup().addTo(map);
+let dataCache = { dogs: null, places: null };
+let activeTab = 'dogs';     // слой карты
+let subFilter = 'all';
+let activeScreen = 'map';
+let me = null;              // профиль (getMe)
 
-  // Типы мест: токен → {label, иконка}. Совпадает с сервером (PLACE_TYPE_LABELS).
-  const PLACE_TYPES = {
-    Clinics: { label: 'Ветклиника', icon: '🏥' },
-    Shops:   { label: 'Зоомагазин', icon: '🏪' },
-    Park:    { label: 'Площадка',   icon: '🌳' },
-    Cafe:    { label: 'Кафе',       icon: '☕' },
-    Rest:    { label: 'Ресторан',   icon: '🍽' },
-    Other:   { label: 'Другое',     icon: '📍' }
-  };
+const PLACE_TYPES = {
+  Clinics: { label: 'Ветклиника', icon: '🏥' },
+  Shops:   { label: 'Зоомагазин', icon: '🏪' },
+  Park:    { label: 'Площадка',   icon: '🌳' },
+  Cafe:    { label: 'Кафе',       icon: '☕' },
+  Rest:    { label: 'Ресторан',   icon: '🍽' },
+  Other:   { label: 'Другое',     icon: '📍' }
+};
+const AGE_OPTIONS = ['Щенок', 'Молодая', 'Взрослая', 'Пожилая'];
+const SEX_OPTIONS = ['Кобель', 'Сука'];
+const TRISTATE = ['Да', 'Нет', 'Неизвестно'];
+let COMMON_BREEDS = ['Метис', 'Не знаю', 'Дворняжка', 'Лабрадор', 'Немецкая овчарка', 'Хаски', 'Корги', 'Бигль', 'Такса', 'Чихуахуа', 'Золотистый ретривер', 'Шпиц'];
+let REGIONS_LIST = [];
 
-  const ICONS = { dogs: '🐕', places: '📍' };
-  const COLOR_VARS = { dogs: '--paw' };
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function escapeHtml(s) { return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s) { return escapeHtml(s); }
+function setStatus(text, ms) {
+  const el = document.getElementById('status');
+  if (!text) { el.classList.remove('show'); return; }
+  el.textContent = text; el.classList.add('show');
+  if (ms) setTimeout(() => el.classList.remove('show'), ms);
+}
+function haptic(kind) { try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(kind || 'success'); } catch (e) {} }
 
-  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-
-  function ratingColor(rating) {
-    if (rating == null) return cssVar('--grey');
-    if (rating < 3) return cssVar('--red');
-    if (rating <= 4) return cssVar('--yellow');
-    return cssVar('--green');
+function ratingColor(r) {
+  if (r == null) return cssVar('--grey');
+  if (r < 3) return cssVar('--red');
+  if (r <= 4) return cssVar('--yellow');
+  return cssVar('--green');
+}
+function pinIcon(kind, item) {
+  let cls = 'marker-pin', color, emoji;
+  if (kind === 'dogs') {
+    color = cssVar('--paw');
+    if (item.lost) cls += ' lost';
+    if (item.mine) color = '#b8542a';
+    emoji = item.lost ? '🚨' : (item.mine ? '💛' : '🐕');
+  } else {
+    color = ratingColor(item.rating);
+    if (item.closed) cls += ' closed';
+    emoji = (PLACE_TYPES[item.type] || PLACE_TYPES.Other).icon;
   }
+  return L.divIcon({ className: '', html: `<div class="${cls}" style="background:${color}"><span>${emoji}</span></div>`,
+    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -24] });
+}
 
-  function pinIcon(kind, item) {
-    let cls = 'marker-pin';
-    let color, emoji;
-    if (kind === 'dogs') {
-      color = cssVar(COLOR_VARS.dogs);
-      if (item.lost) { cls += ' lost'; }
-      emoji = item.lost ? '🚨' : ICONS.dogs;
-    } else {
-      // Места: цвет метки = рейтинг (серый — без оценок), эмодзи = тип места
-      color = ratingColor(item.rating);
-      if (item.closed) cls += ' closed';
-      emoji = (PLACE_TYPES[item.type] || PLACE_TYPES.Other).icon;
-    }
-    return L.divIcon({
-      className: '', html: `<div class="${cls}" style="background:${color}"><span>${emoji}</span></div>`,
-      iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -24]
-    });
-  }
-
-  function setStatus(text) {
-    const el = document.getElementById('status');
-    if (!text) { el.classList.remove('show'); return; }
-    el.textContent = text; el.classList.add('show');
-  }
-
-  const SUBFILTERS = {
-    dogs: [['all','Все'], ['home','Домашние'], ['street','Уличные']],
-    places: [['all','Все'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
-  };
-
-  function renderSubfilters() {
-    const box = document.getElementById('subfilters');
-    box.innerHTML = '';
-    SUBFILTERS[activeTab].forEach(([k, label]) => {
-      const chip = document.createElement('div');
-      chip.className = 'chip' + (subFilter === k ? ' active' : '');
-      chip.textContent = label;
-      chip.onclick = () => { subFilter = k; renderSubfilters(); renderLayer(); };
-      box.appendChild(chip);
-    });
-    // Кнопка «+» показывается на вкладке мест (добавить место)
-    document.getElementById('fab').classList.toggle('show', activeTab === 'places');
-  }
-
-  async function loadData(kind, force) {
-    if (dataCache[kind] && !force) return dataCache[kind];
-    setStatus('Загружаю…');
-    try {
-      const uid = (kind === 'dogs' && tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user.id : '';
-      const res = await fetch(`${API_URL}?type=${kind}${uid ? '&uid=' + uid : ''}`);
-      const json = await res.json();
-      dataCache[kind] = json[kind] || [];
-    } catch (err) {
-      dataCache[kind] = [];
-      setStatus('Не получилось загрузить данные 😔');
-      setTimeout(() => setStatus(null), 2500);
-    }
-    return dataCache[kind];
-  }
-
-  function filterDogs(list) {
-    if (subFilter === 'home') return list.filter(d => d.status === 'У владельца' || d.status === 'У опекуна');
-    if (subFilter === 'street') return list.filter(d => d.status === 'Уличная' || d.status === 'Потеряна');
-    return list;
-  }
-  function filterPlaces(list) {
-    if (subFilter === 'all') return list;
-    return list.filter(p => (p.type || 'Other') === subFilter);
-  }
-
-  function dogPopupHtml(d) {
-    const badges = [
-      d.sex ? `<span class="badge">${d.sex}</span>` : '',
-      d.seekingHome ? `<span class="badge">🏡 ищет дом</span>` : '',
-      d.isDonor ? `<span class="badge">🩸 донор</span>` : '',
-      d.sterilized === 'Да' ? `<span class="badge">🏥 стерилизован</span>` : '',
-      d.lost ? `<span class="badge warn">🚨 потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + ' дн.' : ''}</span>` : '',
-      !d.exactLocation && !d.lost ? `<span class="badge">≈ примерно район</span>` : ''
-    ].join('');
-    return `<div class="pop-title">${escapeHtml(d.name)}</div>
-      <div class="pop-row">${escapeHtml(d.breed || 'порода не указана')} · ${escapeHtml(d.age || '—')}</div>
-      <div class="pop-row">${escapeHtml(d.status)} · ${escapeHtml(d.region || d.city)}</div>
-      <div class="pop-badges">${badges}</div>
-      <div class="pop-actions">
-        ${d.mine && (d.status === 'У владельца')
-          ? `<button class="pop-btn" onclick="walkHereMine('${d.id}')">📍 Гуляем тут</button>`
-          : (d.hasOwner && !d.mine ? `<button class="pop-btn" onclick="contactOwner('${d.id}')">✍️ Написать хозяину</button>` : '')}
-      </div>`;
-  }
-
-  function placePopupHtml(p) {
-    const tinfo = PLACE_TYPES[p.type] || PLACE_TYPES.Other;
-    const stars = p.rating != null ? '⭐'.repeat(Math.round(p.rating)) + ` ${p.rating} (${p.ratingCount})` : 'пока без отзывов';
-    return `<div class="pop-title">${tinfo.icon} ${escapeHtml(p.name)}</div>
-      <div class="pop-row">🏷 ${escapeHtml(p.typeLabel || tinfo.label)}</div>
-      <div class="pop-row">${escapeHtml(p.address || '')}</div>
-      <div class="pop-row">${escapeHtml(p.phone || '')}</div>
-      <div class="pop-row">${stars}</div>
-      <div class="pop-badges">
-        ${p.night ? '<span class="badge">🌙 круглосуточно</span>' : ''}
-        ${p.closed ? '<span class="badge warn">⛔ не работает</span>' : ''}
-      </div>
-      <div class="pop-actions">
-        <button class="pop-btn" onclick="openReviewSheet('${p.id}','${escapeAttr(p.name)}')">⭐ Оставить отзыв</button>
-        <button class="pop-btn secondary" onclick="openSuggestSheet('${p.id}','${escapeAttr(p.name)}',${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️ Уточнить данные</button>
-      </div>`;
-  }
-
-  function escapeHtml(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
-
-  async function renderLayer() {
-    const kind = activeTab;
-    const raw = await loadData(kind);
-    setStatus(null);
-    let list = kind === 'dogs' ? filterDogs(raw) : filterPlaces(raw);
-
-    currentLayer.clearLayers();
-    list.forEach(item => {
-      if (!item.lat || !item.lng) return;
-      const marker = L.marker([item.lat, item.lng], { icon: pinIcon(kind, item) });
-      if (kind === 'dogs') {
-        // При выборе собаки открываем карточку (нижний лист) со всем функционалом — п.7 ТЗ
-        marker.on('click', () => openDogCard(item));
-      } else {
-        marker.bindPopup(placePopupHtml(item));
-      }
-      currentLayer.addLayer(marker);
-    });
-    const label = kind === 'dogs' ? 'собак' : 'мест';
-    document.getElementById('count-badge').textContent = `${ICONS[kind]} ${list.length} ${label}`;
-  }
-
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.onclick = () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeTab = tab.dataset.k;
-      subFilter = 'all';
-      renderSubfilters();
-      renderLayer();
-    };
+const SUBFILTERS = {
+  dogs: [['all','Все'], ['mine','💛 Мои'], ['home','Домашние'], ['street','Уличные'], ['lost','🚨 Потеряшки']],
+  places: [['all','Все'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
+};
+function renderSubfilters() {
+  const box = document.getElementById('subfilters');
+  box.innerHTML = '';
+  SUBFILTERS[activeTab].forEach(([k, label]) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (subFilter === k ? ' active' : '');
+    chip.textContent = label;
+    chip.onclick = () => { subFilter = k; renderSubfilters(); renderLayer(); };
+    box.appendChild(chip);
   });
+  document.getElementById('fab').classList.toggle('show', activeScreen === 'map' && activeTab === 'places');
+}
 
-  // ---------- Диплинки в бот (контакт с хозяином, уточнение геопозиции) — п.7 ТЗ ----------
-  function openBotDeepLink(payload) {
-    const url = `https://t.me/${BOT_USERNAME}?start=${payload}`;
-    if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
+async function loadData(kind, force) {
+  if (dataCache[kind] && !force) return dataCache[kind];
+  setStatus('Загружаю…');
+  try {
+    const uid = (kind === 'dogs' && MY_UID) ? MY_UID : '';
+    const res = await fetch(`${API_URL}?type=${kind}${uid ? '&uid=' + uid : ''}`);
+    const json = await res.json();
+    dataCache[kind] = json[kind] || [];
+    setStatus(null);
+  } catch (err) {
+    dataCache[kind] = [];
+    setStatus('Не получилось загрузить данные 😔', 2500);
   }
-  function contactOwner(dogId) { openBotDeepLink('contact_' + dogId); }
+  return dataCache[kind];
+}
 
-  // «Гуляем тут» — п.3 ТЗ: геопозиция ставится ВСЕМ собакам владельца в его городе.
-  // Сначала пробуем прямо из мини-аппа (геолокация браузера + walkHere API),
-  // если не вышло — открываем бота с диплинком walk_<id>, там можно отправить геометку вручную.
-  function walkHereMine(dogId) {
-    if (!navigator.geolocation) { openBotDeepLink('walk_' + dogId); return; }
-    setStatus('📍 Определяю местоположение…');
-    navigator.geolocation.getCurrentPosition(async pos => {
-      setStatus('Обновляю точку…');
-      const res = await callApi('walkHere', { lat: pos.coords.latitude, lng: pos.coords.longitude });
-      if (res.ok) {
-        map.closePopup();
-        dataCache.dogs = null;
-        await renderLayer();
-        setStatus('✅ Точка на карте обновлена');
-        setTimeout(() => setStatus(null), 2200);
-      } else {
-        setStatus(null);
-        openBotDeepLink('walk_' + dogId);
-      }
-    }, () => { setStatus(null); openBotDeepLink('walk_' + dogId); }, { enableHighAccuracy: true, timeout: 8000 });
-  }
+function filterDogsMap(list) {
+  if (subFilter === 'mine') return list.filter(d => d.mine);
+  if (subFilter === 'home') return list.filter(d => d.status === 'У владельца' || d.status === 'У опекуна');
+  if (subFilter === 'street') return list.filter(d => d.status === 'Уличная');
+  if (subFilter === 'lost') return list.filter(d => d.lost);
+  return list;
+}
+function filterPlacesMap(list) {
+  if (subFilter === 'all') return list;
+  return list.filter(p => (p.type || 'Other') === subFilter);
+}
 
-  // ---------- Карточка собаки (нижний лист) — п.7 ТЗ ----------
-  const AGE_OPTIONS = ['Щенок', 'Молодая', 'Взрослая', 'Пожилая'];
-  const SEX_OPTIONS = ['Кобель', 'Сука'];
-  const TRISTATE = ['Да', 'Нет', 'Неизвестно'];
-  let COMMON_BREEDS = ['Метис', 'Не знаю', 'Дворняжка', 'Лабрадор', 'Немецкая овчарка', 'Хаски', 'Джек-рассел', 'Той-терьер', 'Корги', 'Бигль', 'Такса', 'Чихуахуа', 'Золотистый ретривер', 'Шпиц'];
-  let REGIONS_LIST = [];
-  // Подтягиваем справочники пород и районов с сервера (лист Lists), с фолбэком на дефолт
-  (async function loadRefData() {
-    try {
-      const r = await fetch(`${API_URL}?type=breeds`); const j = await r.json();
-      if (j.breeds && j.breeds.length) COMMON_BREEDS = j.breeds;
-    } catch (e) {}
-    try {
-      const r2 = await fetch(`${API_URL}?type=regions`); const j2 = await r2.json();
-      if (j2.regions && j2.regions.length) REGIONS_LIST = j2.regions;
-    } catch (e) {}
-  })();
+function placePopupHtml(p) {
+  const tinfo = PLACE_TYPES[p.type] || PLACE_TYPES.Other;
+  const stars = p.rating != null ? '⭐'.repeat(Math.round(p.rating)) + ` ${p.rating} (${p.ratingCount})` : (p.ratingCount ? `мало оценок (${p.ratingCount})` : 'пока без отзывов');
+  return `<div class="pop-title">${tinfo.icon} ${escapeHtml(p.name)}</div>
+    <div class="pop-row">🏷 ${escapeHtml(p.typeLabel || tinfo.label)}</div>
+    ${p.address ? `<div class="pop-row">${escapeHtml(p.address)}</div>` : ''}
+    ${p.phone ? `<div class="pop-row">📞 <a href="tel:${escapeAttr(p.phone)}">${escapeHtml(p.phone)}</a></div>` : ''}
+    <div class="pop-row">${stars}</div>
+    <div class="pop-badges">
+      ${p.night ? '<span class="badge">🌙 круглосуточно</span>' : ''}
+      ${p.closed ? '<span class="badge warn">⛔ не работает</span>' : ''}
+    </div>
+    <div class="pop-actions">
+      <button class="pop-btn" onclick="openReviewSheet('${p.id}','${escapeAttr(p.name)}','Places')">⭐ Оставить отзыв</button>
+      <button class="pop-btn secondary" onclick="showReviews('Places','${p.id}','${escapeAttr(p.name)}')">💬 Читать отзывы</button>
+      <button class="pop-btn secondary" onclick='openSuggestSheet(${JSON.stringify(p).replace(/'/g, "&#39;")})'>✏️ Уточнить данные</button>
+    </div>`;
+}
 
-  async function openDogCard(d) {
-    const isStreet = d.status === 'Уличная' || d.status === 'Потеряна';
-    const rows = [
-      ['🏷 Порода', d.breed || '—'],
-      ['📅 Возраст', d.age || '—'],
-      ['⚥ Пол', d.sex || '—'],
-      ['📊 Статус', d.status || '—'],
-      ['🗺 Район', d.region || d.city || '—'],
-      d.sterilized ? ['🏥 Стерилизация', d.sterilized] : null,
-      d.weightKg ? ['⚖️ Вес', d.weightKg + ' кг'] : null,
-      d.vaccinated ? ['💉 Прививки', d.vaccinated] : null
-    ].filter(Boolean);
-    const badges = [
-      d.seekingHome ? '<span class="badge">🏡 ищет дом</span>' : '',
-      d.isDonor ? '<span class="badge">🩸 донор</span>' : '',
-      d.lost ? `<span class="badge warn">🚨 потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + ' дн.' : ''}</span>` : '',
-      !d.exactLocation && !d.lost ? '<span class="badge">≈ примерно район</span>' : ''
-    ].join('');
+async function renderLayer() {
+  const kind = activeTab;
+  const raw = await loadData(kind);
+  let list = kind === 'dogs' ? filterDogsMap(raw) : filterPlacesMap(raw);
+  currentLayer.clearLayers();
+  list.forEach(item => {
+    if (!item.lat || !item.lng) return;
+    const marker = L.marker([item.lat, item.lng], { icon: pinIcon(kind, item) });
+    if (kind === 'dogs') marker.on('click', () => openDogCard(item));
+    else marker.bindPopup(placePopupHtml(item));
+    currentLayer.addLayer(marker);
+  });
+  document.getElementById('count-badge').textContent = kind === 'dogs' ? `🐕 ${list.length} собак` : `📍 ${list.length} мест`;
+  document.getElementById('lostDot').classList.toggle('show', !!(dataCache.dogs || []).some(d => d.lost));
+}
 
-    let actions = '';
-    if (d.mine) {
-      actions += `<button class="pop-btn" onclick='openDogEditSheet(${JSON.stringify(d).replace(/'/g, "&#39;")})'>✏️ Редактировать</button>`;
-      if (d.status === 'У владельца') {
-        actions += `<button class="pop-btn secondary" onclick="walkHereMine('${d.id}')">📍 Гуляем тут (обновить точку)</button>`;
-      } else {
-        actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить точную геопозицию</button>`;
-      }
-    } else if (d.hasOwner) {
-      actions += `<button class="pop-btn" onclick="contactOwner('${d.id}')">✉️ Связаться с хозяином</button>`;
-    }
-    if (isStreet && !d.mine) {
-      actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить геопозицию</button>`;
-    }
-
-    const img = d.photoId
-      ? `<div id="dogPhoto" class="dog-photo">🐕</div>`
-      : `<div class="dog-photo placeholder">🐕</div>`;
-
-    openSheet(`
-      <div class="dog-card-head">${img}<h3>${escapeHtml(d.name || 'Собака')}</h3></div>
-      <div class="pop-badges">${badges}</div>
-      <div class="dog-info">${rows.map(r => `<div class="info-row"><span>${r[0]}</span><b>${escapeHtml(r[1])}</b></div>`).join('')}</div>
-      ${d.memo ? `<div class="dog-memo">📝 ${escapeHtml(d.memo)}</div>` : ''}
-      <div class="pop-actions vertical">${actions || '<div class="pop-row">Нет доступных действий</div>'}</div>
-    `);
-
-    if (d.photoId) {
-      try {
-        const r = await fetch(`${API_URL}?type=photoUrl&file_id=${encodeURIComponent(d.photoId)}`);
-        const j = await r.json();
-        const el = document.getElementById('dogPhoto');
-        if (j.ok && j.url && el) { el.style.backgroundImage = `url('${j.url}')`; el.textContent = ''; el.classList.add('loaded'); }
-      } catch (e) {}
-    }
-  }
-
-  function openDogEditSheet(d) {
-    const opt = (arr, cur) => arr.map(v => `<option ${v === cur ? 'selected' : ''}>${v}</option>`).join('');
-    const breedList = COMMON_BREEDS.slice();
-    if (d.breed && breedList.indexOf(d.breed) < 0) breedList.unshift(d.breed);
-    openSheet(`
-      <h3>Редактировать «${escapeHtml(d.name || '')}»</h3>
-      <div class="field"><label>Имя</label><input type="text" id="edName" value="${escapeAttr(d.name || '')}"></div>
-      <div class="field"><label>Порода</label>
-        <select id="edBreedSel" style="${selStyle()}" onchange="document.getElementById('edBreedManual').style.display = this.value==='__manual__' ? 'block':'none'">
-          ${opt(breedList, d.breed)}
-          <option value="__manual__">✍️ Указать текстом…</option>
-        </select>
-        <input type="text" id="edBreedManual" placeholder="Порода (только буквы и дефис)" style="display:none;margin-top:6px">
-      </div>
-      <div class="field"><label>Возраст</label><select id="edAge" style="${selStyle()}">${opt(AGE_OPTIONS, d.age)}</select></div>
-      ${REGIONS_LIST.length ? `<div class="field"><label>Район</label><select id="edRegion" style="${selStyle()}"><option ${!d.region?'selected':''}>—</option>${opt(REGIONS_LIST, d.region)}</select></div>` : ''}
-      <div class="field"><label>Пол</label><select id="edSex" style="${selStyle()}"><option ${!d.sex?'selected':''}>—</option>${opt(SEX_OPTIONS, d.sex)}</select></div>
-      <div class="field"><label>Стерилизация</label><select id="edSter" style="${selStyle()}">${opt(TRISTATE, d.sterilized || 'Неизвестно')}</select></div>
-      <div class="field"><label>Вес (кг)</label><input type="number" step="0.1" id="edWeight" value="${escapeAttr(d.weightKg || '')}"></div>
-      <div class="field"><label>Прививки</label><select id="edVacc" style="${selStyle()}"><option ${!d.vaccinated?'selected':''}>—</option>${opt(TRISTATE, d.vaccinated)}</select></div>
-      <div class="field"><label>Заметки</label><textarea id="edMemo">${escapeHtml(d.memo || '')}</textarea></div>
-      <button class="pop-btn" onclick="submitDogEdit('${d.id}')">Сохранить</button>
-    `);
-  }
-  function selStyle() { return 'width:100%;padding:9px 10px;border-radius:10px;border:1px solid #ddd;background:var(--card);color:var(--text);font-size:14px;'; }
-
-  async function submitDogEdit(id) {
-    const breedSel = document.getElementById('edBreedSel').value;
-    let breed = breedSel === '__manual__' ? document.getElementById('edBreedManual').value.trim() : breedSel;
-    if (breedSel === '__manual__' && breed && !/^[A-Za-zА-Яа-яЁё\u10A0-\u10FF\s-]+$/.test(breed)) {
-      alert('Порода — только буквы и дефис «-», без цифр и других символов.'); return;
-    }
-    const sex = document.getElementById('edSex').value;
-    const vacc = document.getElementById('edVacc').value;
-    const changes = {
-      name: document.getElementById('edName').value,
-      breed,
-      age: document.getElementById('edAge').value,
-      region: (function(){ var el=document.getElementById('edRegion'); return el ? (el.value === '—' ? '' : el.value) : undefined; })(),
-      sex: sex === '—' ? '' : sex,
-      sterilized: document.getElementById('edSter').value,
-      weightKg: document.getElementById('edWeight').value,
-      vaccinated: vacc === '—' ? '' : vacc,
-      memo: document.getElementById('edMemo').value
-    };
-    const res = await callApi('editDog', { dogId: id, changes });
-    closeSheet();
-    if (res.ok) { dataCache.dogs = null; renderLayer(); setStatus('✅ Анкета обновлена'); setTimeout(() => setStatus(null), 2000); }
-    else alert('Не получилось: ' + (res.error === 'bad breed' ? 'недопустимые символы в породе' : (res.error || '')));
-  }
-
-  function setDogGeoFromCard(dogId) {
-    if (!navigator.geolocation) { openBotDeepLink('walk_' + dogId); return; }
-    setStatus('📍 Определяю местоположение…');
-    navigator.geolocation.getCurrentPosition(async pos => {
-      const res = await callApi('walkHere', { dogId, lat: pos.coords.latitude, lng: pos.coords.longitude });
-      if (res.ok) {
-        closeSheet(); dataCache.dogs = null; await renderLayer();
-        setStatus('✅ Геопозиция обновлена'); setTimeout(() => setStatus(null), 2000);
-      } else { setStatus(null); alert('Не получилось: ' + (res.error || '')); }
-    }, () => { setStatus(null); openBotDeepLink('walk_' + dogId); }, { enableHighAccuracy: true, timeout: 8000 });
-  }
-
-  // ---------- Нижний лист (форма) ----------
-  function openSheet(html) {
-    document.getElementById('sheet').innerHTML = html;
-    document.getElementById('sheet-overlay').classList.add('show');
-    document.getElementById('sheet').classList.add('show');
-  }
-  function closeSheet() {
-    document.getElementById('sheet-overlay').classList.remove('show');
-    document.getElementById('sheet').classList.remove('show');
-  }
-
-  async function callApi(action, payload) {
-    const initData = tg ? tg.initData : '';
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action, initData, payload })
-      });
-      return await res.json();
-    } catch (e) {
-      return { ok: false, error: 'network' };
-    }
-  }
-
-  // ---------- Отзыв + рейтинг (места) ----------
-  function openReviewSheet(id, name) {
-    let rating = 0;
-    openSheet(`
-      <h3>Отзыв о месте «${escapeHtml(name)}»</h3>
-      <div class="field">
-        <label>Оценка</label>
-        <div class="stars" id="starsPick">☆☆☆☆☆</div>
-      </div>
-      <div class="field"><textarea id="reviewText" placeholder="Коротко о впечатлениях (необязательно)"></textarea></div>
-      <button class="pop-btn" onclick="submitReview('${id}')">Отправить</button>
-    `);
-    const starsEl = document.getElementById('starsPick');
-    starsEl.onclick = (e) => {
-      const rect = starsEl.getBoundingClientRect();
-      const pct = (e.clientX - rect.left) / rect.width;
-      rating = Math.max(1, Math.min(5, Math.ceil(pct * 5)));
-      starsEl.textContent = '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
-      starsEl.dataset.rating = rating;
-    };
-  }
-  async function submitReview(id) {
-    const rating = parseInt(document.getElementById('starsPick').dataset.rating || '0', 10);
-    if (!rating) { alert('Поставь оценку от 1 до 5 ⭐'); return; }
-    const text = document.getElementById('reviewText').value;
-    const res = await callApi('addReview', { type: 'Places', id, rating, text });
-    closeSheet();
-    if (res.ok) { dataCache.places = null; renderLayer(); } else { alert('Не получилось: ' + (res.error || '')); }
-  }
-
-  // ---------- Уточнить данные места / удалить → на модерацию ----------
-  function openSuggestSheet(id, name, current) {
-    const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
-      `<option value="${PLACE_TYPES[tk].label}" ${current.typeLabel === PLACE_TYPES[tk].label ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`
-    ).join('');
-    openSheet(`
-      <h3>Уточнить данные — «${escapeHtml(name)}»</h3>
-      <div class="field"><label>Название</label><input type="text" id="sugName" value="${escapeAttr(current.name || name)}"></div>
-      <div class="field"><label>Тип места</label><select id="sugType" style="width:100%;padding:9px 10px;border-radius:10px;border:1px solid #ddd;background:var(--card);color:var(--text);font-size:14px;">${typeOpts}</select></div>
-      <div class="field"><label>Адрес</label><input type="text" id="sugAddress" value="${escapeAttr(current.address || '')}"></div>
-      <div class="field"><label>Телефон</label><input type="tel" id="sugPhone" value="${escapeAttr(current.phone || '')}"></div>
-      <div class="field field-row"><input type="checkbox" id="sugNight" ${current.night ? 'checked' : ''}><label style="margin:0">Круглосуточно</label></div>
-      <div class="field field-row"><input type="checkbox" id="sugClosed" ${current.closed ? 'checked' : ''}><label style="margin:0">Сейчас не работает</label></div>
-      <button class="pop-btn secondary" onclick="useMyLocationFor('sug')">📍 Обновить геометку по моей текущей позиции</button>
-      <div id="geo-status"></div>
-      <button class="pop-btn" onclick="submitSuggest('${id}')">Отправить на проверку</button>
-      <button class="pop-btn" style="background:#d64545;margin-top:8px" onclick="submitDelete('${id}','${escapeAttr(name)}')">🗑️ Предложить удалить место</button>
-    `);
-  }
-  let pendingGeo = null;
-  function useMyLocationFor(prefix) {
-    const st = document.getElementById('geo-status');
-    st.textContent = 'Определяю местоположение…';
-    navigator.geolocation.getCurrentPosition(
-      pos => { pendingGeo = { lat: pos.coords.latitude, lng: pos.coords.longitude }; st.textContent = '✅ Геометка получена'; },
-      err => { st.textContent = 'Не удалось получить геолокацию: ' + err.message; },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
-  }
-  async function submitSuggest(id) {
-    const changes = {
-      name: document.getElementById('sugName').value,
-      type: document.getElementById('sugType').value,
-      address: document.getElementById('sugAddress').value,
-      phone: document.getElementById('sugPhone').value,
-      night: document.getElementById('sugNight').checked,
-      closed: document.getElementById('sugClosed').checked
-    };
-    if (pendingGeo) changes.mapsLink = `https://www.google.com/maps?q=${pendingGeo.lat},${pendingGeo.lng}`;
-    const res = await callApi('suggestEdit', { type: 'Places', id, changes });
-    pendingGeo = null;
-    closeSheet();
-    alert(res.ok ? 'Спасибо! Отправлено модератору на проверку.' : 'Не получилось: ' + (res.error || ''));
-  }
-  async function submitDelete(id, name) {
-    if (!confirm(`Предложить удалить «${name}»? Место скроется после подтверждения модератором.`)) return;
-    const res = await callApi('suggestEdit', { type: 'Places', id, changes: { _delete: true } });
-    closeSheet();
-    alert(res.ok ? 'Спасибо! Запрос на удаление отправлен модератору.' : 'Не получилось: ' + (res.error || ''));
-  }
-
-  // ---------- Добавить место (кнопка "+") ----------
-  document.getElementById('fab').onclick = () => {
-    const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
-      `<option value="${tk}" ${(subFilter !== 'all' && subFilter === tk) ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`
-    ).join('');
-    openSheet(`
-      <h3>Добавить место</h3>
-      <div class="field"><label>Тип места</label><select id="addType" style="width:100%;padding:9px 10px;border-radius:10px;border:1px solid #ddd;background:var(--card);color:var(--text);font-size:14px;">${typeOpts}</select></div>
-      <div class="field"><label>Название</label><input type="text" id="addName" placeholder="Название"></div>
-      <div class="field"><label>Адрес</label><input type="text" id="addAddress" placeholder="Улица, дом"></div>
-      <div class="field"><label>Телефон</label><input type="tel" id="addPhone" placeholder="+995..."></div>
-      <div class="field field-row"><input type="checkbox" id="addNight"><label style="margin:0">Круглосуточно</label></div>
-      <button class="pop-btn secondary" onclick="useMyLocationFor('add')">📍 Отметить моей текущей геопозицией</button>
-      <div id="geo-status"></div>
-      <button class="pop-btn" onclick="submitAddPlace()">Отправить на модерацию</button>
-    `);
+document.querySelectorAll('#tabs .tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('#tabs .tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeTab = tab.dataset.k;
+    subFilter = 'all';
+    renderSubfilters();
+    renderLayer();
   };
-  async function submitAddPlace() {
-    const name = document.getElementById('addName').value.trim();
-    if (!name) { alert('Укажи название'); return; }
-    const payload = {
-      type: document.getElementById('addType').value,
-      name,
-      address: document.getElementById('addAddress').value,
-      phone: document.getElementById('addPhone').value,
-      night: document.getElementById('addNight').checked
-    };
-    if (pendingGeo) { payload.lat = pendingGeo.lat; payload.lng = pendingGeo.lng; }
-    const res = await callApi('addPlace', payload);
-    pendingGeo = null;
-    closeSheet();
-    if (res.ok) { alert('Спасибо! Появится на карте после проверки модератором.'); }
-    else alert('Не получилось: ' + (res.error || ''));
-  }
+});
 
-  renderSubfilters();
-  renderLayer();
+// ================== НАВИГАЦИЯ ==================
+function showScreen(name) {
+  activeScreen = name;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('show'));
+  document.querySelectorAll('#tabbar .nav-item').forEach(n => n.classList.toggle('active', n.dataset.screen === name));
+  if (name !== 'map') document.getElementById('screen-' + name).classList.add('show');
+  document.getElementById('fab').classList.toggle('show', name === 'map' && activeTab === 'places');
+  if (name === 'dogs') initDogsScreen();
+  if (name === 'sitters') loadSitters();
+  if (name === 'profile') loadProfile();
+  if (name === 'map') setTimeout(() => map.invalidateSize(), 60);
+}
+document.querySelectorAll('#tabbar .nav-item').forEach(n => n.onclick = () => showScreen(n.dataset.screen));
+
+// ================== API ==================
+async function callApi(action, payload) {
+  const initData = tg ? tg.initData : '';
+  try {
+    const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action, initData, payload }) });
+    return await res.json();
+  } catch (e) { return { ok: false, error: 'network' }; }
+}
+function openBotDeepLink(payloadStr) {
+  const url = `https://t.me/${BOT_USERNAME}?start=${payloadStr}`;
+  if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
+}
+function contactOwner(dogId) { openBotDeepLink('contact_' + dogId); }
+
+// ================== ЛИСТ ==================
+function openSheet(html) {
+  document.getElementById('sheet').innerHTML = html;
+  document.getElementById('sheet-overlay').classList.add('show');
+  document.getElementById('sheet').classList.add('show');
+}
+function closeSheet() {
+  document.getElementById('sheet-overlay').classList.remove('show');
+  document.getElementById('sheet').classList.remove('show');
+}
+function selOpts(arr, cur, emptyLabel) {
+  let s = emptyLabel !== undefined ? `<option value="" ${!cur ? 'selected' : ''}>${emptyLabel}</option>` : '';
+  return s + arr.map(v => `<option ${v === cur ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
+}
+
+// ================== ВЫБОР ТОЧКИ НА КАРТЕ ==================
+let pickResolve = null;
+function pickOnMap(startLatLng) {
+  return new Promise(resolve => {
+    pickResolve = resolve;
+    closeSheet();
+    if (activeScreen !== 'map') showScreen('map');
+    document.body.classList.add('picking');
+    setTimeout(() => map.invalidateSize(), 60);
+    if (startLatLng) map.setView(startLatLng, Math.max(map.getZoom(), 15));
+  });
+}
+function confirmMapPick() {
+  document.body.classList.remove('picking');
+  setTimeout(() => map.invalidateSize(), 60);
+  const c = map.getCenter();
+  const r = pickResolve; pickResolve = null;
+  if (r) r({ lat: +c.lat.toFixed(6), lng: +c.lng.toFixed(6) });
+}
+function cancelMapPick() {
+  document.body.classList.remove('picking');
+  setTimeout(() => map.invalidateSize(), 60);
+  const r = pickResolve; pickResolve = null;
+  if (r) r(null);
+}
+function getGeo() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null), { enableHighAccuracy: true, timeout: 8000 });
+  });
+}
+
+// ================== КАРТОЧКА СОБАКИ ==================
+function findDog(id) { return (dataCache.dogs || []).find(d => d.id.toString() === id.toString()); }
+
+async function openDogCard(d) {
+  const isStreet = d.status === 'Уличная';
+  const rows = [
+    ['🏷 Порода', d.breed || '—'],
+    d.tagNumber ? ['🔖 Бирка', d.tagNumber + (d.tagColor ? ' · ' + d.tagColor : '')] : null,
+    ['📅 Возраст', d.age || '—'],
+    ['⚥ Пол', d.sex || '—'],
+    ['📊 Статус', d.status || '—'],
+    ['🗺 Район', ((d.city || '') + (d.region ? ', ' + d.region : '')) || '—'],
+    d.sterilized ? ['🏥 Стерилизация', d.sterilized] : null,
+    d.weightKg ? ['⚖️ Вес', d.weightKg + ' кг'] : null,
+    d.vaccinated ? ['💉 Прививки', d.vaccinated] : null,
+    d.isDonor ? ['🩸 Донор', d.donorMemo || 'да'] : null
+  ].filter(Boolean);
+  const badges = [
+    d.mine ? '<span class="badge brand">💛 моя</span>' : '',
+    d.seekingHome ? '<span class="badge ok">🏡 ищет дом</span>' : '',
+    d.isDonor ? '<span class="badge">🩸 донор</span>' : '',
+    d.lost ? `<span class="badge warn">🚨 потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + ' дн.' : ''}</span>` : '',
+    !d.exactLocation && !d.lost ? '<span class="badge">≈ примерно район</span>' : ''
+  ].join('');
+
+  let actions = '';
+  actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">🗺 Показать на карте</button>`;
+  if (d.mine) {
+    actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Редактировать анкету</button>`;
+    if (d.status === 'У владельца') actions += `<button class="pop-btn secondary" onclick="walkHereMine('${d.id}')">📍 Гуляем тут</button>`;
+    else actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить геопозицию</button>`;
+    if (!d.lost) actions += `<button class="pop-btn danger" onclick="markLost('${d.id}')">🚨 Собака потерялась</button>`;
+    else actions += `<button class="pop-btn" style="background:var(--green)" onclick="markFound('${d.id}')">🎉 Нашлась!</button>`;
+    actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}')">🗑 Удалить анкету</button>`;
+  } else if (d.hasOwner) {
+    actions += `<button class="pop-btn" onclick="contactOwner('${d.id}')">✉️ Связаться с хозяином</button>`;
+  }
+  if (isStreet && !d.mine) actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить геопозицию</button>`;
+
+  openSheet(`
+    <div class="dog-card-head"><div id="dogPhoto" class="dog-photo">🐕</div><h3>${escapeHtml(d.name || 'Собака')}</h3></div>
+    <div class="badges">${badges}</div>
+    <div class="dog-info">${rows.map(r => `<div class="info-row"><span>${r[0]}</span><b>${escapeHtml(r[1])}</b></div>`).join('')}</div>
+    ${d.memo ? `<div class="dog-memo">📝 ${escapeHtml(d.memo)}</div>` : ''}
+    <div class="pop-actions vertical">${actions}</div>
+  `);
+
+  if (d.photoId) {
+    try {
+      const r = await fetch(`${API_URL}?type=photoUrl&file_id=${encodeURIComponent(d.photoId)}`);
+      const j = await r.json();
+      const el = document.getElementById('dogPhoto');
+      if (j.ok && j.url && el) { el.style.backgroundImage = `url('${j.url}')`; el.classList.add('loaded'); }
+    } catch (e) {}
+  }
+}
+
+function showDogOnMap(id) {
+  const d = findDog(id);
+  if (!d || !d.lat) return;
+  closeSheet();
+  showScreen('map');
+  document.querySelectorAll('#tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.k === 'dogs'));
+  activeTab = 'dogs'; subFilter = 'all';
+  renderSubfilters(); renderLayer();
+  map.setView([d.lat, d.lng], 16);
+}
+
+function openDogEditSheet(d) {
+  const breedList = COMMON_BREEDS.slice();
+  if (d.breed && breedList.indexOf(d.breed) < 0) breedList.unshift(d.breed);
+  openSheet(`
+    <h3>Редактировать «${escapeHtml(d.name || '')}»</h3>
+    <div class="field"><label>Имя</label><input type="text" id="edName" value="${escapeAttr(d.name || '')}"></div>
+    <div class="field"><label>Порода</label>
+      <select id="edBreedSel" onchange="document.getElementById('edBreedManual').style.display = this.value==='__manual__' ? 'block':'none'">
+        ${selOpts(breedList, d.breed)}
+        <option value="__manual__">✍️ Указать текстом…</option>
+      </select>
+      <input type="text" id="edBreedManual" placeholder="Порода (только буквы и дефис)" style="display:none;margin-top:6px">
+    </div>
+    <div class="field"><label>Возраст</label><select id="edAge">${selOpts(AGE_OPTIONS, d.age)}</select></div>
+    ${REGIONS_LIST.length ? `<div class="field"><label>Район</label><select id="edRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
+    <div class="field"><label>Пол</label><select id="edSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
+    <div class="field"><label>Стерилизация</label><select id="edSter">${selOpts(TRISTATE, d.sterilized || 'Неизвестно')}</select></div>
+    <div class="field"><label>Вес (кг)</label><input type="number" step="0.1" id="edWeight" value="${escapeAttr(d.weightKg || '')}"></div>
+    <div class="field"><label>Прививки</label><select id="edVacc">${selOpts(TRISTATE, d.vaccinated, '—')}</select></div>
+    <div class="field"><label>Заметки</label><textarea id="edMemo">${escapeHtml(d.memo || '')}</textarea></div>
+    <button class="pop-btn" onclick="submitDogEdit('${d.id}')">Сохранить</button>
+  `);
+}
+async function submitDogEdit(id) {
+  const breedSel = document.getElementById('edBreedSel').value;
+  let breed = breedSel === '__manual__' ? document.getElementById('edBreedManual').value.trim() : breedSel;
+  if (breedSel === '__manual__' && breed && !/^[A-Za-zА-Яа-яЁё\u10A0-\u10FF\s-]+$/.test(breed)) {
+    alert('Порода — только буквы и дефис «-», без цифр и других символов.'); return;
+  }
+  const changes = {
+    name: document.getElementById('edName').value,
+    breed,
+    age: document.getElementById('edAge').value,
+    region: (function(){ const el = document.getElementById('edRegion'); return el ? el.value : undefined; })(),
+    sex: document.getElementById('edSex').value,
+    sterilized: document.getElementById('edSter').value,
+    weightKg: document.getElementById('edWeight').value,
+    vaccinated: document.getElementById('edVacc').value,
+    memo: document.getElementById('edMemo').value
+  };
+  const res = await callApi('editDog', { dogId: id, changes });
+  closeSheet();
+  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('✅ Анкета обновлена', 2000); }
+  else alert('Не получилось: ' + (res.error === 'bad breed' ? 'недопустимые символы в породе' : (res.error || '')));
+}
+
+async function walkHereMine(dogId) {
+  setStatus('📍 Определяю местоположение…');
+  const geo = await getGeo();
+  if (!geo) { setStatus(null); openBotDeepLink('walk_' + dogId); return; }
+  setStatus('Обновляю точку…');
+  const res = await callApi('walkHere', geo);
+  if (res.ok) {
+    haptic(); closeSheet(); map.closePopup();
+    dataCache.dogs = null; await renderLayer();
+    setStatus('✅ Точка на карте обновлена', 2200);
+  } else { setStatus(null); openBotDeepLink('walk_' + dogId); }
+}
+async function setDogGeoFromCard(dogId) {
+  closeSheet();
+  const choice = await pickOnMap(null);
+  if (!choice) return;
+  const res = await callApi('walkHere', { dogId, lat: choice.lat, lng: choice.lng });
+  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); setStatus('✅ Геопозиция обновлена', 2000); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+
+async function markLost(dogId) {
+  if (!confirm('Отметить собаку как потерявшуюся? Она появится на карте с тревожной меткой 🚨')) return;
+  setStatus('📍 Пробую взять место, где видели в последний раз…');
+  const geo = await getGeo();
+  const res = await callApi('setLost', Object.assign({ dogId }, geo || {}));
+  setStatus(null);
+  closeSheet();
+  if (res.ok) { haptic('warning'); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🚨 Отмечено. Пусть найдётся скорее!', 2600); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+async function markFound(dogId) {
+  const res = await callApi('setFound', { dogId });
+  closeSheet();
+  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🎉 Ура! Снята метка «потерялась»', 2400); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+function askDeleteDog(dogId, name) {
+  openSheet(`
+    <h3>Удалить анкету «${escapeHtml(name)}»?</h3>
+    <div class="field"><label>Почему? (обязательно — уйдёт админам на проверку)</label>
+      <textarea id="delReason" placeholder="Например: переехали, анкета-дубль…"></textarea></div>
+    <div class="btn-row">
+      <button class="pop-btn secondary" onclick="closeSheet()">Отмена</button>
+      <button class="pop-btn danger" onclick="submitDeleteDog('${dogId}')">🗑 Удалить</button>
+    </div>
+  `);
+}
+async function submitDeleteDog(dogId) {
+  const reason = document.getElementById('delReason').value.trim();
+  if (!reason) { alert('Напиши причину — так модераторам проще.'); return; }
+  const res = await callApi('deleteDog', { dogId, reason });
+  closeSheet();
+  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('Анкета удалена', 2000); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+
+// ================== ДОБАВЛЕНИЕ СОБАКИ ==================
+let addDogDraft = null;
+function openAddDogSheet(draft) {
+  addDogDraft = draft || addDogDraft || { status: 'У владельца' };
+  const d = addDogDraft;
+  const statuses = [['У владельца','🏠 Домашняя'], ['Уличная','🌳 Уличная'], ['У опекуна','🤝 У опекуна']];
+  openSheet(`
+    <h3>🐕 Новая собака</h3>
+    <div class="field"><label>Кто это?</label>
+      <div class="seg-pick" id="adStatus">${statuses.map(([v, l]) =>
+        `<div class="opt ${d.status === v ? 'active' : ''}" data-v="${v}">${l}</div>`).join('')}</div>
+    </div>
+    <div class="field"><label>Кличка *</label><input type="text" id="adName" value="${escapeAttr(d.name || '')}" placeholder="Как зовут?"></div>
+    <div class="field"><label>Порода</label>
+      <select id="adBreedSel" onchange="document.getElementById('adBreedManual').style.display = this.value==='__manual__' ? 'block':'none'">
+        ${selOpts(COMMON_BREEDS, d.breed, '—')}
+        <option value="__manual__">✍️ Указать текстом…</option>
+      </select>
+      <input type="text" id="adBreedManual" placeholder="Порода (только буквы и дефис)" style="display:none;margin-top:6px" value="${escapeAttr(d.breedManual || '')}">
+    </div>
+    <div class="field"><label>Пол</label><select id="adSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
+    <div class="field"><label>Возраст</label><select id="adAge">${selOpts(AGE_OPTIONS, d.age, '—')}</select></div>
+    ${REGIONS_LIST.length ? `<div class="field"><label>Район (Тбилиси)</label><select id="adRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
+    <div class="field"><label>Стерилизация</label><select id="adSter">${selOpts(TRISTATE, d.sterilized || 'Неизвестно')}</select></div>
+    <div class="field"><label>Бирка (если есть)</label>
+      <div class="field-row">
+        <input type="text" id="adTagNum" placeholder="Номер" value="${escapeAttr(d.tagNumber || '')}">
+        <input type="text" id="adTagColor" placeholder="Цвет" value="${escapeAttr(d.tagColor || '')}">
+      </div>
+    </div>
+    <div class="field"><label>Заметки</label><textarea id="adMemo" placeholder="Характер, приметы, что важно знать…">${escapeHtml(d.memo || '')}</textarea></div>
+    <button class="pop-btn secondary" onclick="addDogPickGeo()">${d.lat ? '📍 Точка выбрана — изменить' : '📍 Отметить точку на карте'}</button>
+    <div class="geo-note">${d.lat ? '✅ ' + d.lat + ', ' + d.lng : 'Необязательно: без точки собака встанет по центру района'}</div>
+    <div style="height:8px"></div>
+    <button class="pop-btn" onclick="submitAddDog()">Сохранить</button>
+    <div class="geo-note" style="text-align:center;margin-top:8px">📷 Фото добавляется через бота — открой анкету после сохранения</div>
+  `);
+  document.querySelectorAll('#adStatus .opt').forEach(o => o.onclick = () => {
+    document.querySelectorAll('#adStatus .opt').forEach(x => x.classList.remove('active'));
+    o.classList.add('active');
+    addDogDraft.status = o.dataset.v;
+  });
+}
+function collectAddDogDraft() {
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  addDogDraft = Object.assign(addDogDraft || {}, {
+    name: g('adName'), breed: g('adBreedSel'), breedManual: g('adBreedManual'),
+    sex: g('adSex'), age: g('adAge'), region: g('adRegion'),
+    sterilized: g('adSter'), tagNumber: g('adTagNum'), tagColor: g('adTagColor'), memo: g('adMemo')
+  });
+}
+async function addDogPickGeo() {
+  collectAddDogDraft();
+  const choice = await pickOnMap(addDogDraft.lat ? [addDogDraft.lat, addDogDraft.lng] : null);
+  if (choice) { addDogDraft.lat = choice.lat; addDogDraft.lng = choice.lng; }
+  openAddDogSheet();
+}
+async function submitAddDog() {
+  collectAddDogDraft();
+  const d = addDogDraft;
+  if (!d.name || !d.name.trim()) { alert('Кличка обязательна 🐶'); return; }
+  let breed = d.breed === '__manual__' ? (d.breedManual || '').trim() : d.breed;
+  if (d.breed === '__manual__' && breed && !/^[A-Za-zА-Яа-яЁё\u10A0-\u10FF\s-]+$/.test(breed)) {
+    alert('Порода — только буквы и дефис.'); return;
+  }
+  const payload = {
+    status: d.status, name: d.name.trim(), breed, sex: d.sex, age: d.age,
+    region: d.region || '', sterilized: d.sterilized, tagNumber: d.tagNumber,
+    tagColor: d.tagColor, memo: d.memo, lat: d.lat || '', lng: d.lng || ''
+  };
+  const res = await callApi('addDog', payload);
+  if (res.ok) {
+    haptic(); addDogDraft = null; closeSheet();
+    dataCache.dogs = null; await renderLayer(); renderDogsScreen();
+    setStatus('✅ Собака добавлена!', 2200);
+  } else if (res.error === 'limit') alert('Достигнут лимит анкет на одного человека.');
+  else alert('Не получилось: ' + (res.error || ''));
+}
+
+// ================== ЭКРАН «СОБАКИ» ==================
+let dogSegment = 'mine';
+const DOG_SEGMENTS = [['mine','💛 Мои'], ['lost','🚨 Потеряшки'], ['seeking','🏡 Ищут дом'], ['donors','🩸 Доноры'], ['all','Все']];
+async function initDogsScreen() {
+  await loadData('dogs');
+  renderDogSegments();
+  renderDogsScreen();
+}
+function renderDogSegments() {
+  const box = document.getElementById('dogSegments');
+  box.innerHTML = '';
+  DOG_SEGMENTS.forEach(([k, label]) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (dogSegment === k ? ' active' : '');
+    chip.textContent = label;
+    chip.onclick = () => { dogSegment = k; renderDogSegments(); renderDogsScreen(); };
+    box.appendChild(chip);
+  });
+}
+function renderDogsScreen() {
+  const list = dataCache.dogs || [];
+  const q = (document.getElementById('dogSearch').value || '').trim().toLowerCase();
+  document.getElementById('donor-panel').classList.toggle('show', dogSegment === 'donors');
+  let filtered = list;
+  if (dogSegment === 'mine') filtered = list.filter(d => d.mine);
+  if (dogSegment === 'lost') filtered = list.filter(d => d.lost);
+  if (dogSegment === 'seeking') filtered = list.filter(d => d.seekingHome);
+  if (dogSegment === 'donors') {
+    const minW = +document.getElementById('donorWeight').value;
+    const vacc = document.getElementById('donorVacc').checked;
+    const ster = document.getElementById('donorSter').checked;
+    filtered = list.filter(d => d.isDonor
+      && (Number(d.weightKg) || 0) >= minW
+      && (!vacc || d.vaccinated === 'Да')
+      && (!ster || d.sterilized === 'Да'));
+  }
+  if (q) filtered = filtered.filter(d =>
+    (d.name || '').toLowerCase().includes(q) ||
+    (d.breed || '').toLowerCase().includes(q) ||
+    (d.tagNumber || '').toString().toLowerCase() === q);
+
+  const box = document.getElementById('dogsList');
+  const addBtn = dogSegment === 'mine'
+    ? `<button class="pop-btn" style="margin-bottom:12px" onclick="openAddDogSheet({status:'У владельца'})">➕ Добавить собаку</button>` : '';
+  if (!filtered.length) {
+    const msgs = { mine: 'У тебя пока нет анкет — добавь первую! 🐶', lost: 'Потеряшек нет — и это отлично 🎉',
+      seeking: 'Сейчас никто не ищет дом', donors: 'По этим фильтрам никого — попробуй ослабить', all: 'Ничего не нашлось' };
+    box.innerHTML = addBtn + `<div class="empty"><div class="big">🐾</div>${q ? 'По запросу ничего не нашлось' : msgs[dogSegment]}</div>`;
+    return;
+  }
+  box.innerHTML = addBtn + filtered.map(d => `
+    <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
+      <div class="row-between">
+        <div>
+          <div class="list-title">${d.lost ? '🚨 ' : ''}${escapeHtml(d.name || 'Без клички')}</div>
+          <div class="list-sub">${escapeHtml(d.breed || 'порода не указана')} · ${escapeHtml(d.status)}${d.region ? ' · ' + escapeHtml(d.region) : ''}</div>
+        </div>
+        <div style="font-size:22px">${d.mine ? '💛' : '🐕'}</div>
+      </div>
+      <div class="badges">
+        ${d.seekingHome ? '<span class="badge ok">🏡 ищет дом</span>' : ''}
+        ${d.isDonor ? '<span class="badge">🩸 донор ' + (d.weightKg ? d.weightKg + ' кг' : '') + '</span>' : ''}
+        ${d.lost ? `<span class="badge warn">потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + ' дн.' : ''}</span>` : ''}
+        ${d.tagNumber ? '<span class="badge">🔖 ' + escapeHtml(d.tagNumber) + '</span>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+// ================== ЭКРАН «СИТТЕРЫ» ==================
+// Форматы услуг: ключ ↔ столбцы I/J/K листа DogSitter
+const SITTER_SERVICES = {
+  justWalking: { icon: '🚶', short: 'Выгул', label: 'Приходящий выгул',
+    hint: 'Ситтер приходит в установленное время: погулять с собакой и насыпать корм' },
+  ownPlace:    { icon: '🏠', short: 'У ситтера', label: 'Передержка у ситтера',
+    hint: 'Собака живёт у ситтера дома' },
+  withLiving:  { icon: '🛋', short: 'С проживанием', label: 'Ситтер с проживанием',
+    hint: 'Ситтер живёт на территории собаки, пока вас нет' }
+};
+let sittersCache = null;
+let sitterFilter = 'all';
+async function loadSitters(force) {
+  if (sittersCache && !force) { renderSitters(); return; }
+  const res = await callApi('getSitters', {});
+  sittersCache = res.ok ? res.sitters : [];
+  renderSitters(res.ok ? null : (res.error || 'ошибка'));
+}
+function renderSitterFilters() {
+  const box = document.getElementById('sitterFilters');
+  box.innerHTML = '';
+  const opts = [['all', 'Все']].concat(Object.keys(SITTER_SERVICES).map(k => [k, SITTER_SERVICES[k].icon + ' ' + SITTER_SERVICES[k].short]));
+  opts.forEach(([k, label]) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (sitterFilter === k ? ' active' : '');
+    chip.textContent = label;
+    chip.onclick = () => { sitterFilter = k; renderSitters(); };
+    box.appendChild(chip);
+  });
+}
+function sitterServiceBadges(s) {
+  return Object.keys(SITTER_SERVICES)
+    .filter(k => s[k])
+    .map(k => `<span class="badge brand">${SITTER_SERVICES[k].icon} ${SITTER_SERVICES[k].label}</span>`)
+    .join('');
+}
+function renderSitters(err) {
+  renderSitterFilters();
+  const selfSlot = document.getElementById('sitterSelfSlot');
+  const box = document.getElementById('sittersList');
+  if (err) { box.innerHTML = `<div class="empty">Не получилось загрузить (${escapeHtml(err)})</div>`; return; }
+  const meSitter = (sittersCache || []).find(s => s.self);
+  selfSlot.innerHTML = meSitter
+    ? `<div class="btn-row" style="margin-bottom:12px">
+        <button class="pop-btn secondary" onclick="openBecomeSitterSheet(true)">✏️ Моя анкета</button>
+        <button class="pop-btn secondary" onclick="stopSitter()">🚫 Больше не ситтер</button>
+      </div>`
+    : `<button class="pop-btn" style="margin-bottom:12px" onclick="openBecomeSitterSheet()">🙋 Стать догситтером</button>`;
+  let list = sittersCache || [];
+  if (sitterFilter !== 'all') list = list.filter(s => s[sitterFilter]);
+  if (!list.length) {
+    box.innerHTML = `<div class="empty"><div class="big">🧑</div>${sitterFilter === 'all' ? 'Ситтеров пока нет — стань первым!' : 'В этом формате пока никто не работает'}</div>`;
+    return;
+  }
+  box.innerHTML = list.map(s => {
+    const rating = s.rating != null ? `⭐ ${s.rating} (${s.ratingCount})` : (s.ratingCount ? `мало оценок (${s.ratingCount})` : 'без оценок');
+    return `<div class="card">
+      <div class="row-between">
+        <div class="list-title">${s.self ? '💛 ' : '🙋 '}${escapeHtml(s.name || 'Ситтер')}</div>
+        <span class="badge">${rating}</span>
+      </div>
+      <div class="badges">${sitterServiceBadges(s)}</div>
+      ${s.desc ? `<div class="list-sub" style="margin-top:6px">${escapeHtml(s.desc)}</div>` : ''}
+      ${s.price ? `<div class="list-sub">💰 ${escapeHtml(s.price)}</div>` : ''}
+      <div class="btn-row" style="margin-top:10px">
+        ${s.phone ? `<a class="pop-btn secondary" style="text-align:center;text-decoration:none;line-height:1.3" href="tel:${escapeAttr(s.phone)}">📞 Позвонить</a>` : ''}
+        ${!s.self ? `<button class="pop-btn" onclick="openReviewSheet('${s.id}','${escapeAttr(s.name || 'Ситтер')}','DogSitter')">⭐ Оценить</button>` : ''}
+        ${s.ratingCount ? `<button class="pop-btn secondary small" onclick="showReviews('DogSitter','${s.id}','${escapeAttr(s.name || '')}')">💬</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function openBecomeSitterSheet(isEdit) {
+  const cur = isEdit ? ((sittersCache || []).find(s => s.self) || {}) : {};
+  const svcToggles = Object.keys(SITTER_SERVICES).map(k => `
+    <div class="fline" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:7px 0">
+      <div>
+        <div style="font-size:13.5px;font-weight:600">${SITTER_SERVICES[k].icon} ${SITTER_SERVICES[k].label}</div>
+        <div style="font-size:11.5px;color:var(--hint)">${SITTER_SERVICES[k].hint}</div>
+      </div>
+      <label class="switch" style="flex:0 0 auto;margin-top:4px"><input type="checkbox" id="svc_${k}" ${cur[k] ? 'checked' : ''}><span class="slider-t"></span></label>
+    </div>`).join('');
+  openSheet(`
+    <h3>${isEdit ? '✏️ Моя анкета ситтера' : '🙋 Стать догситтером'}</h3>
+    <div class="field"><label>Форматы работы * (хотя бы один)</label>
+      <div style="background:var(--card);border-radius:12px;padding:4px 12px">${svcToggles}</div>
+    </div>
+    <div class="field"><label>Пара слов о себе и опыте *</label>
+      <textarea id="sitBio" placeholder="Например: гуляю с собаками 3 года, живу в Ваке, умею с тревожными…">${escapeHtml(cur.desc || '')}</textarea></div>
+    <div class="field"><label>Телефон для связи</label><input type="tel" id="sitPhone" value="${escapeAttr(cur.phone || (me && me.profile && me.profile.tel !== 'Не указан' ? me.profile.tel : '') || '')}" placeholder="+995…"></div>
+    <div class="field"><label>Цена / условия</label><input type="text" id="sitPrice" value="${escapeAttr(cur.price || '')}" placeholder="Например: 20 лари за прогулку"></div>
+    <button class="pop-btn" onclick="submitBecomeSitter()">${isEdit ? 'Сохранить' : 'Опубликовать анкету'}</button>
+  `);
+}
+async function submitBecomeSitter() {
+  const bio = document.getElementById('sitBio').value.trim();
+  if (!bio) { alert('Расскажи немного о себе — это твоя визитка.'); return; }
+  const services = {};
+  Object.keys(SITTER_SERVICES).forEach(k => services[k] = document.getElementById('svc_' + k).checked);
+  if (!services.justWalking && !services.ownPlace && !services.withLiving) {
+    alert('Выбери хотя бы один формат работы — так хозяевам понятнее.'); return;
+  }
+  const res = await callApi('becomeSitter', Object.assign({
+    bio, phone: document.getElementById('sitPhone').value.trim(),
+    price: document.getElementById('sitPrice').value.trim()
+  }, services));
+  closeSheet();
+  if (res.ok) { haptic(); sittersCache = null; loadSitters(true); setStatus('✅ Анкета опубликована!', 2200); }
+  else alert('Не получилось: ' + (res.error === 'service required' ? 'выбери хотя бы один формат' : (res.error || '')));
+}
+async function stopSitter() {
+  if (!confirm('Убрать себя из списка ситтеров? Данные сохранятся — вернуться можно в любой момент.')) return;
+  const res = await callApi('stopSitter', {});
+  if (res.ok) { haptic(); sittersCache = null; loadSitters(true); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+
+// ================== ОТЗЫВЫ ==================
+function openReviewSheet(id, name, itemType) {
+  openSheet(`
+    <h3>Отзыв — «${escapeHtml(name)}»</h3>
+    <div class="field"><label>Оценка</label><div class="stars" id="starsPick">☆☆☆☆☆</div></div>
+    <div class="field"><textarea id="reviewText" placeholder="Коротко о впечатлениях (необязательно)"></textarea></div>
+    <button class="pop-btn" onclick="submitReview('${id}','${itemType}')">Отправить</button>
+  `);
+  const starsEl = document.getElementById('starsPick');
+  starsEl.onclick = (e) => {
+    const rect = starsEl.getBoundingClientRect();
+    const rating = Math.max(1, Math.min(5, Math.ceil(((e.clientX - rect.left) / rect.width) * 5)));
+    starsEl.textContent = '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
+    starsEl.dataset.rating = rating;
+  };
+}
+async function submitReview(id, itemType) {
+  const rating = parseInt(document.getElementById('starsPick').dataset.rating || '0', 10);
+  if (!rating) { alert('Поставь оценку от 1 до 5 ⭐'); return; }
+  const text = document.getElementById('reviewText').value;
+  const res = await callApi('addReview', { type: itemType, id, rating, text });
+  closeSheet();
+  if (res.ok) {
+    haptic();
+    if (itemType === 'DogSitter') { sittersCache = null; loadSitters(true); }
+    else { dataCache.places = null; renderLayer(); }
+    setStatus('✅ Спасибо за отзыв!', 2000);
+  } else alert('Не получилось: ' + (res.error === 'self review' ? 'себя оценивать нельзя 🙂' : (res.error || '')));
+}
+async function showReviews(itemType, id, name) {
+  openSheet(`<h3>💬 Отзывы — «${escapeHtml(name)}»</h3><div class="empty">Загружаю…</div>`);
+  const res = await callApi('getReviews', { type: itemType, id });
+  const items = res.ok ? (res.reviews || []) : [];
+  openSheet(`
+    <h3>💬 Отзывы — «${escapeHtml(name)}»</h3>
+    ${items.length ? items.map(r => `
+      <div class="review-item">
+        <div class="row-between"><span class="who">${escapeHtml(r.username || 'Аноним')}</span>
+          <span class="stars-small">${'⭐'.repeat(r.rating)}</span></div>
+        ${r.text ? `<div class="txt">${escapeHtml(r.text)}</div>` : ''}
+        <div class="when">${escapeHtml(r.date || '')}</div>
+      </div>`).join('') : '<div class="empty">Пока пусто — будь первым 🙂</div>'}
+  `);
+}
+
+// ================== МЕСТА: уточнение / добавление ==================
+let pendingGeo = null;
+function openSuggestSheet(current) {
+  const id = current.id, name = current.name;
+  const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
+    `<option value="${PLACE_TYPES[tk].label}" ${current.typeLabel === PLACE_TYPES[tk].label ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`).join('');
+  map.closePopup();
+  openSheet(`
+    <h3>Уточнить данные — «${escapeHtml(name)}»</h3>
+    <div class="field"><label>Название</label><input type="text" id="sugName" value="${escapeAttr(current.name || '')}"></div>
+    <div class="field"><label>Тип места</label><select id="sugType">${typeOpts}</select></div>
+    <div class="field"><label>Адрес</label><input type="text" id="sugAddress" value="${escapeAttr(current.address || '')}"></div>
+    <div class="field"><label>Телефон</label><input type="tel" id="sugPhone" value="${escapeAttr(current.phone || '')}"></div>
+    <div class="field field-row"><input type="checkbox" id="sugNight" ${current.night ? 'checked' : ''}><label style="margin:0">Круглосуточно</label></div>
+    <div class="field field-row"><input type="checkbox" id="sugClosed" ${current.closed ? 'checked' : ''}><label style="margin:0">Сейчас не работает</label></div>
+    <button class="pop-btn secondary" onclick="suggestPickGeo('${id}')">📍 Поправить точку на карте</button>
+    <div id="geo-status"></div>
+    <button class="pop-btn" onclick="submitSuggest('${id}')">Отправить на проверку</button>
+    <button class="pop-btn danger" style="margin-top:8px" onclick="submitDelete('${id}','${escapeAttr(name)}')">🗑️ Предложить удалить место</button>
+  `);
+}
+async function suggestPickGeo(id) {
+  const vals = collectSuggestVals();
+  const p = (dataCache.places || []).find(x => x.id.toString() === id.toString());
+  const choice = await pickOnMap(p && p.lat ? [p.lat, p.lng] : null);
+  const cur = Object.assign({}, p, vals, { id, night: vals.night, closed: vals.closed, typeLabel: vals.type });
+  openSuggestSheet(cur);
+  if (choice) { pendingGeo = choice; document.getElementById('geo-status').textContent = '✅ Новая точка выбрана'; }
+}
+function collectSuggestVals() {
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  return {
+    name: g('sugName'), type: g('sugType'), address: g('sugAddress'), phone: g('sugPhone'),
+    night: !!(document.getElementById('sugNight') || {}).checked,
+    closed: !!(document.getElementById('sugClosed') || {}).checked
+  };
+}
+async function submitSuggest(id) {
+  const changes = collectSuggestVals();
+  if (pendingGeo) changes.mapsLink = `https://www.google.com/maps?q=${pendingGeo.lat},${pendingGeo.lng}`;
+  const res = await callApi('suggestEdit', { type: 'Places', id, changes });
+  pendingGeo = null;
+  closeSheet();
+  if (res.ok) { haptic(); setStatus('✅ Отправлено модератору', 2400); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+async function submitDelete(id, name) {
+  if (!confirm(`Предложить удалить «${name}»? Место скроется после подтверждения модератором.`)) return;
+  const res = await callApi('suggestEdit', { type: 'Places', id, changes: { _delete: true } });
+  closeSheet();
+  if (res.ok) { haptic(); setStatus('Запрос на удаление отправлен', 2400); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+
+document.getElementById('fab').onclick = () => {
+  const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
+    `<option value="${tk}" ${(subFilter !== 'all' && subFilter === tk) ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`).join('');
+  openSheet(`
+    <h3>Добавить место</h3>
+    <div class="field"><label>Тип места</label><select id="addType">${typeOpts}</select></div>
+    <div class="field"><label>Название *</label><input type="text" id="addName" placeholder="Название"></div>
+    <div class="field"><label>Адрес</label><input type="text" id="addAddress" placeholder="Улица, дом"></div>
+    <div class="field"><label>Телефон</label><input type="tel" id="addPhone" placeholder="+995…"></div>
+    <div class="field field-row"><input type="checkbox" id="addNight"><label style="margin:0">Круглосуточно</label></div>
+    <button class="pop-btn secondary" onclick="addPlacePickGeo()">📍 Отметить точку на карте</button>
+    <div id="geo-status">${pendingGeo ? '✅ Точка выбрана' : ''}</div>
+    <button class="pop-btn" onclick="submitAddPlace()">Отправить на модерацию</button>
+  `);
+};
+let addPlaceDraft = null;
+async function addPlacePickGeo() {
+  addPlaceDraft = {
+    type: document.getElementById('addType').value, name: document.getElementById('addName').value,
+    address: document.getElementById('addAddress').value, phone: document.getElementById('addPhone').value,
+    night: document.getElementById('addNight').checked
+  };
+  const choice = await pickOnMap(null);
+  if (choice) pendingGeo = choice;
+  document.getElementById('fab').onclick();
+  if (addPlaceDraft) {
+    document.getElementById('addType').value = addPlaceDraft.type;
+    document.getElementById('addName').value = addPlaceDraft.name;
+    document.getElementById('addAddress').value = addPlaceDraft.address;
+    document.getElementById('addPhone').value = addPlaceDraft.phone;
+    document.getElementById('addNight').checked = addPlaceDraft.night;
+    addPlaceDraft = null;
+  }
+};
+async function submitAddPlace() {
+  const name = document.getElementById('addName').value.trim();
+  if (!name) { alert('Укажи название'); return; }
+  const payload = {
+    type: document.getElementById('addType').value, name,
+    address: document.getElementById('addAddress').value,
+    phone: document.getElementById('addPhone').value,
+    night: document.getElementById('addNight').checked
+  };
+  if (pendingGeo) { payload.lat = pendingGeo.lat; payload.lng = pendingGeo.lng; }
+  const res = await callApi('addPlace', payload);
+  pendingGeo = null;
+  closeSheet();
+  if (res.ok) { haptic(); setStatus('✅ Появится на карте после проверки', 2600); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+
+// ================== ПРОФИЛЬ ==================
+async function loadProfile(force) {
+  if (me && !force) { renderProfile(); return; }
+  const res = await callApi('getMe', {});
+  if (!res.ok) { document.getElementById('profileBody').innerHTML = `<div class="empty">Не получилось загрузить профиль (${escapeHtml(res.error || '')})</div>`; return; }
+  me = res;
+  renderProfile();
+}
+function renderProfile() {
+  const p = me.profile;
+  const langNames = { RU: '🇷🇺 Русский', GE: '🇬🇪 ქართული', EN: '🇬🇧 English' };
+  const resources = (me.resources || []).map(r => `
+    <div class="card tappable" onclick="${r.url ? `window.open('${escapeAttr(r.url)}','_blank')` : ''}">
+      <div class="list-title" style="font-size:14px">🔗 ${escapeHtml(r.title)}</div>
+      ${r.url ? `<div class="list-sub">${escapeHtml(r.url)}</div>` : ''}
+    </div>`).join('');
+  document.getElementById('profileBody').innerHTML = `
+    <div class="card">
+      <div class="dog-card-head">
+        <div class="avatar">${p.moderator ? '🛡' : '🐾'}</div>
+        <div>
+          <div class="list-title">${escapeHtml(p.name || '—')}</div>
+          <div class="list-sub">${escapeHtml(p.username || '')}${p.moderator ? ' · модератор' : ''}</div>
+        </div>
+      </div>
+      <div class="info-row"><span>🏙 Город</span><b>${escapeHtml(p.city || '—')}</b></div>
+      <div class="info-row"><span>📞 Телефон</span><b>${escapeHtml(p.tel || '—')}</b></div>
+      <div class="info-row"><span>🌐 Язык бота</span><b>${langNames[p.lang] || p.lang}</b></div>
+      <div class="info-row"><span>👁 Юзернейм в «Кто рядом?»</span><b>${p.showTg === 'Показан' ? 'показан' : 'скрыт'}</b></div>
+      <div class="info-row"><span>🐕 Моих собак</span><b>${me.myDogsCount || 0}</b></div>
+      <button class="pop-btn" style="margin-top:12px" onclick="openProfileEdit()">✏️ Редактировать</button>
+    </div>
+
+    <div class="sec-label">Действия</div>
+    <div class="card tappable" onclick="showScreen('dogs'); dogSegment='mine'; renderDogSegments(); renderDogsScreen();">
+      <div class="list-title" style="font-size:14px">🐕 Мои собаки</div>
+      <div class="list-sub">анкеты, геопозиция, редактирование</div>
+    </div>
+    <div class="card tappable" onclick="openBotDeepLink('')">
+      <div class="list-title" style="font-size:14px">🤖 Открыть бота</div>
+      <div class="list-sub">фото собак, «Кто рядом?», поддержка проекта</div>
+    </div>
+
+    ${resources ? `<div class="sec-label">📚 Полезные материалы</div>${resources}` : ''}
+  `;
+}
+function openProfileEdit() {
+  const p = me.profile;
+  const cities = me.cities || [];
+  openSheet(`
+    <h3>✏️ Профиль</h3>
+    <div class="field"><label>Имя</label><input type="text" id="prName" value="${escapeAttr(p.name || '')}"></div>
+    <div class="field"><label>Телефон</label><input type="tel" id="prTel" value="${escapeAttr(p.tel === 'Не указан' ? '' : (p.tel || ''))}" placeholder="+995…"></div>
+    ${cities.length ? `<div class="field"><label>Город</label><select id="prCity">${selOpts(cities, p.city)}</select></div>` : ''}
+    <div class="field"><label>Язык бота</label><select id="prLang">
+      <option value="RU" ${p.lang === 'RU' ? 'selected' : ''}>🇷🇺 Русский</option>
+      <option value="GE" ${p.lang === 'GE' ? 'selected' : ''}>🇬🇪 ქართული</option>
+      <option value="EN" ${p.lang === 'EN' ? 'selected' : ''}>🇬🇧 English</option>
+    </select></div>
+    <div class="field field-row">
+      <input type="checkbox" id="prShowTg" ${p.showTg === 'Показан' ? 'checked' : ''}>
+      <label style="margin:0">Показывать мой юзернейм в «Кто рядом?»</label>
+    </div>
+    <button class="pop-btn" onclick="submitProfileEdit()">Сохранить</button>
+  `);
+}
+async function submitProfileEdit() {
+  const cityEl = document.getElementById('prCity');
+  const res = await callApi('updateProfile', { changes: {
+    name: document.getElementById('prName').value,
+    tel: document.getElementById('prTel').value,
+    city: cityEl ? cityEl.value : undefined,
+    lang: document.getElementById('prLang').value,
+    showTg: document.getElementById('prShowTg').checked ? 'Показан' : 'Скрыт'
+  }});
+  closeSheet();
+  if (res.ok) { haptic(); me = null; loadProfile(true); setStatus('✅ Профиль обновлён', 2000); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+
+// ================== СТАРТ ==================
+(async function loadRefData() {
+  try {
+    const r = await fetch(`${API_URL}?type=breeds`); const j = await r.json();
+    if (j.breeds && j.breeds.length) COMMON_BREEDS = j.breeds;
+  } catch (e) {}
+  try {
+    const r2 = await fetch(`${API_URL}?type=regions`); const j2 = await r2.json();
+    if (j2.regions && j2.regions.length) REGIONS_LIST = j2.regions;
+  } catch (e) {}
+})();
+
+(function initFromQuery() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('layer') === 'lost') { activeTab = 'dogs'; subFilter = 'lost'; }
+    if (params.get('screen')) showScreen(params.get('screen'));
+  } catch (e) {}
+})();
+
+renderSubfilters();
+renderLayer();
+callApi('getMe', {}).then(res => { if (res.ok) me = res; });
 </script>
 </body>
 </html>
