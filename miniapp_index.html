@@ -361,7 +361,10 @@ const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initData
 // ================== КАРТА ==================
 const TBILISI_CENTER = [41.7151, 44.8271];
 const map = L.map('map', { zoomControl: false, attributionControl: false }).setView(TBILISI_CENTER, 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+// Стандартная подложка Google Maps (lyrs=m — «карта»; h=гибрид, s=спутник при желании)
+L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=ru&x={x}&y={y}&z={z}', {
+  maxZoom: 20, subdomains: ['0', '1', '2', '3']
+}).addTo(map);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
 let currentLayer = L.layerGroup().addTo(map);
@@ -375,6 +378,8 @@ const PLACE_TYPES = {
   Clinics: { label: 'Ветклиника', icon: '🏥' },
   Shops:   { label: 'Зоомагазин', icon: '🏪' },
   Park:    { label: 'Площадка',   icon: '🌳' },
+  Groom:   { label: 'Груминг',    icon: '✂️' },
+  Kennel:  { label: 'Питомник',   icon: '🐶' },
   Cafe:    { label: 'Кафе',       icon: '☕' },
   Rest:    { label: 'Ресторан',   icon: '🍽' },
   Other:   { label: 'Другое',     icon: '📍' }
@@ -421,7 +426,7 @@ function pinIcon(kind, item) {
 
 const SUBFILTERS = {
   dogs: [['all','Все'], ['mine','💛 Мои'], ['home','Домашние'], ['street','Уличные'], ['lost','🚨 Потеряшки']],
-  places: [['all','Все'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
+  places: [['all','Все'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Groom','✂️'], ['Kennel','🐶'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
 };
 function renderSubfilters() {
   const box = document.getElementById('subfilters');
@@ -1222,7 +1227,7 @@ function collectSuggestVals() {
 }
 async function submitSuggest(id) {
   const changes = collectSuggestVals();
-  if (pendingGeo) changes.mapsLink = `https://www.google.com/maps?q=${pendingGeo.lat},${pendingGeo.lng}`;
+  if (pendingGeo) { changes.lat = pendingGeo.lat; changes.lng = pendingGeo.lng; } // координаты как у собак
   const res = await callApi('suggestEdit', { type: 'Places', id, changes });
   pendingGeo = null;
   closeSheet();
