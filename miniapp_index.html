@@ -311,7 +311,7 @@
   <!-- ===== Экраны ===== -->
   <div class="screen" id="screen-dogs">
     <h2>🐾 Собаки</h2>
-    <div class="searchbox">🔍<input id="dogSearch" type="text" placeholder="Кличка, порода или № бирки" oninput="renderDogsScreen()"></div>
+    <div class="searchbox">🔍<input id="dogSearch" type="text" placeholder="Кличка, порода, окрас или № бирки (от 4 знаков)" oninput="renderDogsScreen()"></div>
     <div class="seg-scroll" id="dogSegments"></div>
     <div class="field" style="margin-bottom:8px"><select id="dogRegion" onchange="renderDogsScreen()" style="width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:13.5px"><option value="">🗺 Все районы</option></select></div>
     <div id="donor-panel">
@@ -390,6 +390,18 @@ const TRISTATE = ['Да', 'Нет', 'Неизвестно'];
 let COMMON_BREEDS = ['Метис', 'Не знаю', 'Дворняжка', 'Лабрадор', 'Немецкая овчарка', 'Хаски', 'Корги', 'Бигль', 'Такса', 'Чихуахуа', 'Золотистый ретривер', 'Шпиц'];
 let REGIONS_LIST = [];
 
+// Нормализация номера бирки: верхний регистр, только буквы/цифры,
+// кириллические омоглифы → латиница (А=A, В=B, Е=E, К=K, М=M, Н=H, О=O, Р=P, С=C, Т=T, У=Y, Х=X)
+const TAG_HOMOGLYPHS = { 'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','У':'Y','Х':'X' };
+function normalizeTag(s) {
+  s = (s ?? '').toString().toUpperCase();
+  let out = '';
+  for (const chRaw of s) {
+    const ch = TAG_HOMOGLYPHS[chRaw] || chRaw;
+    if (/[A-Z0-9\u0400-\u04FF\u10A0-\u10FF]/.test(ch)) out += ch;
+  }
+  return out;
+}
 function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function escapeHtml(s) { return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
@@ -600,6 +612,7 @@ async function openDogCard(d) {
   const isStreet = d.status === 'Уличная';
   const rows = [
     ['🏷 Порода', d.breed || '—'],
+    d.color ? ['🎨 Окрас', d.color] : null,
     d.tagNumber ? ['🔖 Бирка', d.tagNumber + (d.tagColor ? ' · ' + d.tagColor : '')] : null,
     ['📅 Возраст', d.age || '—'],
     ['⚥ Пол', d.sex || '—'],
@@ -694,6 +707,7 @@ function openDogEditSheet(d) {
       </select>
       <input type="text" id="edBreedManual" placeholder="Порода (только буквы и дефис)" style="display:none;margin-top:6px">
     </div>
+    <div class="field"><label>Окрас</label><input type="text" id="edColor" value="${escapeAttr(d.color || '')}" placeholder="Например: рыжий, чёрно-белый"></div>
     <div class="field"><label>Возраст</label><select id="edAge">${selOpts(AGE_OPTIONS, d.age)}</select></div>
     ${REGIONS_LIST.length ? `<div class="field"><label>Район</label><select id="edRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
     <div class="field"><label>Пол</label><select id="edSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
@@ -713,6 +727,7 @@ async function submitDogEdit(id) {
   const changes = {
     name: document.getElementById('edName').value,
     breed,
+    color: document.getElementById('edColor').value,
     age: document.getElementById('edAge').value,
     region: (function(){ const el = document.getElementById('edRegion'); return el ? el.value : undefined; })(),
     sex: document.getElementById('edSex').value,
@@ -881,6 +896,7 @@ function openAddDogSheet(draft) {
       </select>
       <input type="text" id="adBreedManual" placeholder="Порода (только буквы и дефис)" style="display:none;margin-top:6px" value="${escapeAttr(d.breedManual || '')}">
     </div>
+    <div class="field"><label>Окрас</label><input type="text" id="adColor" value="${escapeAttr(d.color || '')}" placeholder="Например: рыжий, чёрно-белый"></div>
     <div class="field"><label>Пол</label><select id="adSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
     <div class="field"><label>Возраст</label><select id="adAge">${selOpts(AGE_OPTIONS, d.age, '—')}</select></div>
     ${REGIONS_LIST.length ? `<div class="field"><label>Район (Тбилиси)</label><select id="adRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
@@ -907,7 +923,7 @@ function openAddDogSheet(draft) {
 function collectAddDogDraft() {
   const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
   addDogDraft = Object.assign(addDogDraft || {}, {
-    name: g('adName'), breed: g('adBreedSel'), breedManual: g('adBreedManual'),
+    name: g('adName'), breed: g('adBreedSel'), breedManual: g('adBreedManual'), color: g('adColor'),
     sex: g('adSex'), age: g('adAge'), region: g('adRegion'),
     sterilized: g('adSter'), tagNumber: g('adTagNum'), tagColor: g('adTagColor'), memo: g('adMemo')
   });
@@ -927,7 +943,7 @@ async function submitAddDog() {
     alert('Порода — только буквы и дефис.'); return;
   }
   const payload = {
-    status: d.status, name: d.name.trim(), breed, sex: d.sex, age: d.age,
+    status: d.status, name: d.name.trim(), breed, color: d.color, sex: d.sex, age: d.age,
     region: d.region || '', sterilized: d.sterilized, tagNumber: d.tagNumber,
     tagColor: d.tagColor, memo: d.memo, lat: d.lat || '', lng: d.lng || ''
   };
@@ -984,10 +1000,14 @@ function renderDogsScreen() {
       && (!ster || d.sterilized === 'Да'));
   }
   if (reg) filtered = filtered.filter(d => d.region === reg);
-  if (q) filtered = filtered.filter(d =>
-    (d.name || '').toLowerCase().includes(q) ||
-    (d.breed || '').toLowerCase().includes(q) ||
-    (d.tagNumber || '').toString().toLowerCase() === q);
+  if (q) {
+    const tagQ = normalizeTag(q); // бирка: частичное совпадение от 4 знаков, кириллица=латиница
+    filtered = filtered.filter(d =>
+      (d.name || '').toLowerCase().includes(q) ||
+      (d.breed || '').toLowerCase().includes(q) ||
+      (d.color || '').toLowerCase().includes(q) ||
+      (tagQ.length >= 4 && normalizeTag(d.tagNumber).includes(tagQ)));
+  }
 
   const box = document.getElementById('dogsList');
   const addBtn = dogSegment === 'mine'
