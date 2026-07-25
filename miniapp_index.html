@@ -555,6 +555,12 @@ function openBotDeepLink(payloadStr) {
   if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
 }
 function contactOwner(dogId) { openBotDeepLink('contact_' + dogId); }
+function shareDog(dogId, name) {
+  // Диалог шаринга Telegram с диплинком на карточку — «увидел собаку → скинул соседям»
+  const deep = `https://t.me/${BOT_USERNAME}?start=dog_${dogId}`;
+  const share = `https://t.me/share/url?url=${encodeURIComponent(deep)}&text=${encodeURIComponent('🐕 ' + name + ' — карточка в Love Dogs')}`;
+  if (tg && tg.openTelegramLink) tg.openTelegramLink(share); else window.open(share, '_blank');
+}
 
 // ================== ЛИСТ ==================
 function openSheet(html) {
@@ -637,6 +643,7 @@ async function openDogCard(d) {
   const isGuardianMine = d.mine && (d.status === 'У опекуна' || d.status === 'Уличная');
   let actions = '';
   if (d.lat) actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">🗺 Показать на карте</button>`;
+  actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">↗️ Поделиться собакой</button>`;
   if (d.mine) {
     actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Редактировать анкету</button>`;
     if (isHomeMine) {
@@ -957,10 +964,11 @@ async function submitAddDog() {
 }
 
 // ================== ЭКРАН «СОБАКИ» ==================
-let dogSegment = 'mine';
+let dogSegment = null; // определяется при первом открытии: есть свои собаки → «Мои», иначе «Все»
 const DOG_SEGMENTS = [['mine','💛 Мои'], ['lost','🚨 Потеряшки'], ['seeking','🏡 Ищут дом'], ['donors','🩸 Доноры'], ['all','Все']];
 async function initDogsScreen() {
   await loadData('dogs');
+  if (dogSegment === null) dogSegment = (dataCache.dogs || []).some(d => d.mine) ? 'mine' : 'all';
   renderDogSegments();
   renderDogsScreen();
 }
