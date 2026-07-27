@@ -95,9 +95,17 @@
   #fab.show { display: flex; }
 
   /* Маркеры-«жетоны»: эмалевый кружок с латунным ободком */
-  .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: var(--shadow-m); }
+  /* Подложку попапа красим переменными темы: у Leaflet по умолчанию белый фон,
+     и в тёмной теме Telegram светлый --text становился невидимым */
+  .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: var(--shadow-m);
+    background: var(--card); color: var(--text); border: 1px solid var(--line); }
+  .leaflet-popup-tip { background: var(--card); }
+  .leaflet-container a.leaflet-popup-close-button { color: var(--hint); }
   .leaflet-popup-content { margin: 13px 15px; font-size: 13.5px; line-height: 1.45; width: 240px !important;
     font-family: var(--font-body); color: var(--text); }
+  .leaflet-popup-content .pop-title { color: var(--text); }
+  .leaflet-bar a { background: var(--card) !important; color: var(--text) !important;
+    border-color: var(--line) !important; }
   .marker-pin { width: 30px; height: 30px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     border: 2.5px solid #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 10px rgba(0,0,0,.22); }
@@ -264,7 +272,7 @@
   .dog-card-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 0;
     border-bottom: 2px dashed color-mix(in srgb, var(--paw-deep) 55%, transparent); }
   .dog-card-head h3 { margin: 0; color: #2b2008; font-family: var(--font-disp); font-size: 17px; }
-  .dog-photo { width: 64px; height: 64px; border-radius: 50%; background: #fff7e6 center/cover no-repeat;
+  .dog-photo { width: 64px; height: 64px; border-radius: 50%; background: var(--paw-soft) center/cover no-repeat;
     border: 2.5px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.18);
     display: flex; align-items: center; justify-content: center; font-size: 28px; flex: 0 0 auto; }
   .dog-photo.loaded { font-size: 0; }
