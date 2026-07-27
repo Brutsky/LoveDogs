@@ -673,6 +673,10 @@ async function openDogCard(d) {
     actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}')">🗑 Удалить анкету</button>`;
   } else {
     if (d.hasOwner) actions += `<button class="pop-btn" onclick="contactOwner('${d.id}')">✉️ Связаться с хозяином</button>`;
+    // Уличную без владельца может дозаполнить любой (первичные данные)
+    if (isStreet && !d.hasOwner) {
+      actions += `<button class="pop-btn secondary" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Дополнить анкету</button>`;
+    }
     // Взять опекунство: как в боте — если хозяина нет вовсе или собака не домашняя
     if (!d.hasOwner || d.status !== 'У владельца') {
       actions += `<button class="pop-btn secondary" onclick="takeCare('${d.id}','${escapeAttr(d.name || '')}')">🤲 Взять опекунство</button>`;
