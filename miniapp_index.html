@@ -647,7 +647,7 @@ async function openDogCard(d) {
   if (d.mine) {
     actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Редактировать анкету</button>`;
     if (isHomeMine) {
-      actions += `<button class="pop-btn secondary" onclick="walkHereMine('${d.id}')">📍 Гуляем тут</button>`;
+      actions += `<button class="pop-btn secondary" onclick="walkHereMine('${d.id}')">📍 Гуляет тут</button>`;
       actions += d.isDonor
         ? `<button class="pop-btn secondary" onclick="removeDonor('${d.id}')">🚫 Убрать из доноров</button>`
         : `<button class="pop-btn secondary" onclick="openDonorSheet('${d.id}','${escapeAttr(d.name || '')}')">🩸 Стать донором крови</button>`;
@@ -750,14 +750,14 @@ async function submitDogEdit(id) {
 }
 
 function walkHereMine(dogId) {
-  // Точка «Гуляем тут» ставится/снимается у ВСЕХ домашних собак владельца в его городе
+  // «Гуляет тут» — координаты именно ЭТОЙ собаки
   openSheet(`
-    <h3>📍 Гуляем тут</h3>
-    <div class="geo-note" style="margin-bottom:12px">Точка станет видна другим на карте — так соседи смогут познакомиться. Действие применяется ко всем твоим домашним собакам в городе.</div>
+    <h3>📍 Гуляет тут</h3>
+    <div class="geo-note" style="margin-bottom:12px">Точка этой собаки станет видна другим на карте — так соседи смогут познакомиться.</div>
     <div class="pop-actions vertical">
       <button class="pop-btn" onclick="walkSetGeo('${dogId}')">📍 Моя текущая позиция</button>
-      <button class="pop-btn secondary" onclick="walkPickOnMap()">🗺 Выбрать точку на карте</button>
-      <button class="pop-btn secondary" onclick="walkClear()">🙅 Не указывать место (скрыть точку)</button>
+      <button class="pop-btn secondary" onclick="walkPickOnMap('${dogId}')">🗺 Выбрать точку на карте</button>
+      <button class="pop-btn secondary" onclick="walkClear('${dogId}')">🙅 Не делиться местом прогулки</button>
     </div>
   `);
 }
@@ -775,16 +775,16 @@ async function walkSetGeo(dogId) {
   const geo = await getGeo();
   if (!geo) { setStatus(null); openBotDeepLink('walk_' + dogId); return; }
   setStatus('Обновляю точку…');
-  await walkApply(geo, '✅ Точка на карте обновлена');
+  await walkApply({ dogId, ...geo }, '✅ Точка на карте обновлена');
 }
-async function walkPickOnMap() {
+async function walkPickOnMap(dogId) {
   const choice = await pickOnMap(null);
   if (!choice) return;
-  await walkApply(choice, '✅ Точка на карте обновлена');
+  await walkApply({ dogId, ...choice }, '✅ Точка на карте обновлена');
 }
-async function walkClear() {
-  if (!confirm('Скрыть точное место? Собаки останутся на карте, но только по своему району.')) return;
-  await walkApply({ clear: true }, '🙅 Точка скрыта — собаки видны по району');
+async function walkClear(dogId) {
+  if (!confirm('Скрыть точное место этой собаки? Она останется на карте, но только по своему району.')) return;
+  await walkApply({ dogId, clear: true }, '🙅 Точка скрыта — собака видна по району');
 }
 async function setDogGeoFromCard(dogId) {
   closeSheet();
@@ -796,7 +796,7 @@ async function setDogGeoFromCard(dogId) {
 }
 
 async function markLost(dogId) {
-  if (!confirm('Отметить собаку как потерявшуюся? Она появится на карте с тревожной меткой 🚨')) return;
+  if (!confirm('Отметить, что собака потерялась?\n\nПосле подтверждения:\n• 📣 всем пользователям города уйдёт оповещение с карточкой, местом и твоими открытыми контактами (телефон и TG);\n• 🗺 собака появится на карте с тревожной меткой и в «Потеряшках» — до 2 месяцев или пока не нажмёшь «Нашлась!»')) return;
   setStatus('📍 Пробую взять место, где видели в последний раз…');
   const geo = await getGeo();
   const res = await callApi('setLost', Object.assign({ dogId }, geo || {}));
@@ -1136,19 +1136,24 @@ function openBecomeSitterSheet(isEdit) {
       </div>
       <label class="switch" style="flex:0 0 auto;margin-top:4px"><input type="checkbox" id="svc_${k}" ${cur[k] ? 'checked' : ''}><span class="slider-t"></span></label>
     </div>`).join('');
+  const profileName = (me && me.profile && me.profile.name && me.profile.name !== 'Не указано') ? me.profile.name : '';
   openSheet(`
     <h3>${isEdit ? '✏️ Моя анкета ситтера' : '🙋 Стать догситтером'}</h3>
+    ${!profileName ? `<div class="field"><label>Твоё имя * (увидят владельцы собак)</label><input type="text" id="sitName" placeholder="Как тебя зовут?"></div>` : ''}
     <div class="field"><label>Форматы работы * (хотя бы один)</label>
       <div style="background:var(--card);border-radius:12px;padding:4px 12px">${svcToggles}</div>
     </div>
     <div class="field"><label>Пара слов о себе и опыте *</label>
       <textarea id="sitBio" placeholder="Например: гуляю с собаками 3 года, живу в Ваке, умею с тревожными…">${escapeHtml(cur.desc || '')}</textarea></div>
-    <div class="field"><label>Телефон для связи</label><input type="tel" id="sitPhone" value="${escapeAttr(cur.phone || (me && me.profile && me.profile.tel !== 'Не указан' ? me.profile.tel : '') || '')}" placeholder="+995…"></div>
+    <div class="field"><label>Телефон для связи (сохранится в твоём профиле)</label><input type="tel" id="sitPhone" value="${escapeAttr(cur.phone || (me && me.profile && me.profile.tel !== 'Не указан' ? me.profile.tel : '') || '')}" placeholder="+995…"></div>
     <div class="field"><label>Цена / условия</label><input type="text" id="sitPrice" value="${escapeAttr(cur.price || '')}" placeholder="Например: 20 лари за прогулку"></div>
     <button class="pop-btn" onclick="submitBecomeSitter()">${isEdit ? 'Сохранить' : 'Опубликовать анкету'}</button>
   `);
 }
 async function submitBecomeSitter() {
+  const nameEl = document.getElementById('sitName');
+  const sitName = nameEl ? nameEl.value.trim() : '';
+  if (nameEl && !sitName) { alert('Имя обязательно — его увидят владельцы собак 🙂'); return; }
   const bio = document.getElementById('sitBio').value.trim();
   if (!bio) { alert('Расскажи немного о себе — это твоя визитка.'); return; }
   const services = {};
@@ -1157,9 +1162,11 @@ async function submitBecomeSitter() {
     alert('Выбери хотя бы один формат работы — так хозяевам понятнее.'); return;
   }
   const res = await callApi('becomeSitter', Object.assign({
-    bio, phone: document.getElementById('sitPhone').value.trim(),
+    bio, name: sitName, phone: document.getElementById('sitPhone').value.trim(),
     price: document.getElementById('sitPrice').value.trim()
   }, services));
+  if (!res.ok && res.error === 'name required') { alert('Укажи имя — его увидят владельцы собак.'); return; }
+  if (res.ok) me = null; // имя могло обновиться — профиль перечитаем
   closeSheet();
   if (res.ok) { haptic(); sittersCache = null; loadSitters(true); setStatus('✅ Анкета опубликована!', 2200); }
   else alert('Не получилось: ' + (res.error === 'service required' ? 'выбери хотя бы один формат' : (res.error || '')));
@@ -1348,7 +1355,8 @@ function renderProfile() {
       </div>
       <div class="info-row"><span>🏙 Город</span><b>${escapeHtml(p.city || '—')}</b></div>
       <div class="info-row"><span>📞 Телефон</span><b>${escapeHtml(p.tel || '—')}</b></div>
-      <div class="info-row"><span>🌐 Язык бота</span><b>${langNames[p.lang] || p.lang}</b></div>
+      <div class="info-row"><span>Язык бота</span><b>${langNames[p.lang] || p.lang}</b></div>
+      <div class="info-row"><span>🔔 Оповещения о потеряшках</span><b>${p.lostAlerts === false ? 'выкл' : 'вкл'}</b></div>
       <div class="info-row"><span>👁 Юзернейм в «Кто рядом?»</span><b>${p.showTg === 'Показан' ? 'показан' : 'скрыт'}</b></div>
       <div class="info-row"><span>🐕 Моих собак</span><b>${me.myDogsCount || 0}</b></div>
       <button class="pop-btn" style="margin-top:12px" onclick="openProfileEdit()">✏️ Редактировать</button>
@@ -1384,6 +1392,10 @@ function openProfileEdit() {
       <input type="checkbox" id="prShowTg" ${p.showTg === 'Показан' ? 'checked' : ''}>
       <label style="margin:0">Показывать мой юзернейм в «Кто рядом?»</label>
     </div>
+    <div class="field field-row">
+      <input type="checkbox" id="prLostAlerts" ${p.lostAlerts === false ? '' : 'checked'}>
+      <label style="margin:0">🔔 Сообщать о потеряшках моего города</label>
+    </div>
     <button class="pop-btn" onclick="submitProfileEdit()">Сохранить</button>
   `);
 }
@@ -1394,7 +1406,8 @@ async function submitProfileEdit() {
     tel: document.getElementById('prTel').value,
     city: cityEl ? cityEl.value : undefined,
     lang: document.getElementById('prLang').value,
-    showTg: document.getElementById('prShowTg').checked ? 'Показан' : 'Скрыт'
+    showTg: document.getElementById('prShowTg').checked ? 'Показан' : 'Скрыт',
+    lostAlerts: document.getElementById('prLostAlerts').checked
   }});
   closeSheet();
   if (res.ok) { haptic(); me = null; loadProfile(true); setStatus('✅ Профиль обновлён', 2000); }
