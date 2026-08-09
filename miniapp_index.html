@@ -363,7 +363,7 @@
 <script>
 // URL рабочего деплоя Apps Script (Manage deployments → тот же URL, что и вебхук бота)
 const API_URL = "https://script.google.com/macros/s/AKfycbwuaKkog3Ebjowds_pE4SmxjS63UIlZseNE-NE48KQSYLmNas3gkAqCS1p7TM-0tv1r/exec";
-const BOT_USERNAME = "ВАШ_БОТ_USERNAME";
+let BOT_USERNAME = "ВАШ_БОТ_USERNAME"; // подхватится из getMe (botUsername)
 
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
@@ -563,7 +563,7 @@ function showScreen(name) {
   document.querySelectorAll('#tabbar .nav-item').forEach(n => n.classList.toggle('active', n.dataset.screen === name));
   if (name !== 'map') document.getElementById('screen-' + name).classList.add('show');
   document.getElementById('fab').classList.toggle('show', name === 'map');
-  if (name === 'dogs') { dogSegment = dogSegment || 'mine'; initDogsScreen(); }
+  if (name === 'dogs') { dogSegment = dogSegment || 'all'; initDogsScreen(); }
   if (name === 'sitters') loadSitters();
   if (name === 'profile') loadProfile();
   if (name === 'map') setTimeout(() => map.invalidateSize(), 60);
@@ -583,6 +583,37 @@ function openBotDeepLink(payloadStr) {
   if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
 }
 function contactOwner(dogId) { openBotDeepLink('contact_' + dogId); }
+function copyToClipboard(text, label) {
+  const done = () => setStatus('📋 Скопировано: ' + (label || text), 1800);
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); done(); }
+  } catch (e) { done(); }
+  haptic('success');
+}
+function openSupportSheet() {
+  // Реквизиты копируются по тапу; ссылка на чат спрятана под текстом
+  const row = (label, value) => `
+    <div class="card tappable" style="margin-bottom:8px" onclick="copyToClipboard('${escapeAttr(value)}','${escapeAttr(label)}')">
+      <div class="row-between">
+        <div><div class="list-sub">${label}</div><div class="list-title" style="font-size:14px">${escapeHtml(value)}</div></div>
+        <div style="font-size:18px">📋</div>
+      </div>
+    </div>`;
+  openSheet(`
+    <h3>💚 Поддержать проект</h3>
+    <div class="geo-note" style="margin-bottom:12px">Этот бот — некоммерческий проект. Средства идут на оплату инфраструктуры и развитие нового функционала. Нажми на реквизит, чтобы скопировать. 🐾</div>
+    ${row('BOG', 'GE21BG0000000538937088')}
+    ${row('TBC', 'GE87TB7838545064400012')}
+    ${row('Получатель', 'Kirill Riabkov')}
+    ${row('Тбанк (по номеру)', '+79055817402')}
+    <div class="pop-actions vertical" style="margin-top:12px">
+      <button class="pop-btn" onclick="openTgUser('brutsky')">✉️ Написать @brutsky</button>
+      <button class="pop-btn secondary" onclick="openTgLink('https://t.me/+9W7Y065T78BhNTM6')">💬 Чат для обсуждения бота</button>
+    </div>
+  `);
+}
+function openTgLink(url) { if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank'); }
 function shareDog(dogId, name) {
   // Диалог шаринга Telegram с диплинком на карточку — «увидел собаку → скинул соседям»
   const deep = `https://t.me/${BOT_USERNAME}?start=dog_${dogId}`;
@@ -1029,11 +1060,11 @@ async function submitAddDog() {
 }
 
 // ================== ЭКРАН «СОБАКИ» ==================
-let dogSegment = null; // определяется при первом открытии: есть свои собаки → «Мои», иначе «Все»
-const DOG_SEGMENTS = [['mine','💛 Мои'], ['lost','🚨 Потеряшки'], ['seeking','🏡 Ищут дом'], ['donors','🩸 Доноры'], ['all','Все']];
+let dogSegment = 'all'; // по умолчанию — все собаки города (без фильтров)
+const DOG_SEGMENTS = [['all','Все'], ['street','🌳 Уличные'], ['home','🏠 Домашние'], ['mine','💛 Мои'], ['lost','🚨 Потеряшки'], ['seeking','🏡 Ищут дом'], ['donors','🩸 Доноры']];
 async function initDogsScreen() {
   await loadData('dogs');
-  if (dogSegment === null) dogSegment = (dataCache.dogs || []).some(d => d.mine) ? 'mine' : 'all';
+  if (dogSegment === null) dogSegment = 'all';
   renderDogSegments();
   renderDogsScreen();
 }
@@ -1066,6 +1097,8 @@ function renderDogsScreen() {
   // Пока идёт поиск — ищем по ВСЕЙ базе города, сегмент игнорируем (иначе «Мои» прячет чужих)
   if (!q) {
     if (dogSegment === 'mine') filtered = scoped.filter(d => d.mine);
+    if (dogSegment === 'street') filtered = scoped.filter(d => d.status === 'Уличная');
+    if (dogSegment === 'home') filtered = scoped.filter(d => d.status === 'У владельца' || d.status === 'У опекуна');
     if (dogSegment === 'lost') filtered = scoped.filter(d => d.lost);
     if (dogSegment === 'seeking') filtered = scoped.filter(d => d.seekingHome);
     if (dogSegment === 'donors') {
@@ -1407,12 +1440,12 @@ async function loadProfile(force) {
   const res = await callApi('getMe', {});
   if (!res.ok) { document.getElementById('profileBody').innerHTML = `<div class="empty">Не получилось загрузить профиль (${escapeHtml(res.error || '')})</div>`; return; }
   me = res;
+  if (me.botUsername) BOT_USERNAME = me.botUsername;
   if (me.profile) centerMapByCity(me.profile.city);
   renderProfile();
 }
 function renderProfile() {
   const p = me.profile;
-  renderProfileMyDogs();
   const langNames = { RU: '🇷🇺 Русский', GE: '🇬🇪 ქართული', EN: '🇬🇧 English' };
   const resources = (me.resources || []).map(r => `
     <div class="card tappable" onclick="${r.url ? `window.open('${escapeAttr(r.url)}','_blank')` : ''}">
@@ -1441,12 +1474,13 @@ function renderProfile() {
     <div id="profileMyDogs"><div class="empty" style="padding:16px">Загружаю…</div></div>
 
     <div class="sec-label">💚 Проект</div>
-    <div class="card tappable" onclick="openBotDeepLink('support')">
-      <div class="list-title" style="font-size:14px">Поддержать проект</div>
-      <div class="list-sub">помочь бесплатному сервису для хвостиков</div>
+    <div class="card tappable" onclick="openSupportSheet()">
+      <div class="list-title" style="font-size:14px">💚 Поддержать проект</div>
+      <div class="list-sub">реквизиты, чат, обратная связь</div>
     </div>
     ${resources ? `<div class="sec-label">📚 Полезные материалы</div>${resources}` : ''}
   `;
+  renderProfileMyDogs(); // после вставки HTML — теперь #profileMyDogs существует
 }
 function openProfileEdit() {
   const p = me.profile;
@@ -1509,7 +1543,7 @@ async function submitProfileEdit() {
 
 renderSubfilters();
 renderLayer();
-callApi('getMe', {}).then(res => { if (res.ok) { me = res; if (me.profile) centerMapByCity(me.profile.city); } });
+callApi('getMe', {}).then(res => { if (res.ok) { me = res; if (me.botUsername) BOT_USERNAME = me.botUsername; if (me.profile) centerMapByCity(me.profile.city); } });
 </script>
 </body>
 </html>
