@@ -186,7 +186,9 @@
   .btn-row { display: flex; gap: 8px; }
   .btn-row .pop-btn { flex: 1; }
 
-  .stars { cursor: pointer; font-size: 24px; letter-spacing: 4px; user-select: none; }
+  .stars { cursor: pointer; font-size: 30px; user-select: none; display: flex; gap: 8px; }
+  .stars .star { padding: 2px 4px; transition: transform .1s ease; }
+  .stars .star:active { transform: scale(1.25); }
   .stars-small { font-size: 12.5px; }
 
   /* донорские фильтры */
@@ -348,9 +350,8 @@
   <!-- ===== Нижняя навигация ===== -->
   <div id="tabbar">
     <div class="nav-item active" data-screen="map"><span class="ico">🗺</span>Карта</div>
-    <div class="nav-item" data-screen="dogs"><span class="ico">🐾</span>Собаки<span class="nav-dot" id="lostDot"></span></div>
     <div class="nav-item" data-screen="sitters"><span class="ico">🧑</span>Ситтеры</div>
-    <div class="nav-item" data-screen="profile"><span class="ico">👤</span>Профиль</div>
+    <div class="nav-item" data-screen="profile"><span class="ico">👤</span>Профиль<span class="nav-dot" id="lostDot"></span></div>
   </div>
 </div>
 
@@ -367,8 +368,19 @@ if (tg) { tg.ready(); tg.expand(); }
 const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user.id : '';
 
 // ================== КАРТА ==================
-const TBILISI_CENTER = [41.7151, 44.8271];
+const CITY_CENTERS = {
+  'Тбилиси': [41.7151, 44.8271], 'Батуми': [41.6168, 41.6367],
+  'Кутаиси': [42.2679, 42.7180], 'Рустави': [41.5495, 45.0028]
+};
+const TBILISI_CENTER = CITY_CENTERS['Тбилиси'];
 const map = L.map('map', { zoomControl: false, attributionControl: false }).setView(TBILISI_CENTER, 12);
+let mapCentered = false;
+// Центрируем карту по городу пользователя, как только узнаём профиль
+function centerMapByCity(city) {
+  if (mapCentered) return;
+  const c = CITY_CENTERS[city];
+  if (c) { map.setView(c, 12); mapCentered = true; }
+}
 // Стандартная подложка Google Maps (lyrs=m — «карта»; h=гибрид, s=спутник при желании)
 L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=ru&x={x}&y={y}&z={z}', {
   maxZoom: 20, subdomains: ['0', '1', '2', '3']
@@ -458,7 +470,7 @@ function renderSubfilters() {
     chip.onclick = () => { subFilter = k; renderSubfilters(); renderLayer(); };
     box.appendChild(chip);
   });
-  document.getElementById('fab').classList.toggle('show', activeScreen === 'map' && activeTab === 'places');
+  document.getElementById('fab').classList.toggle('show', activeScreen === 'map');
 }
 
 async function loadData(kind, force) {
@@ -542,8 +554,8 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('show'));
   document.querySelectorAll('#tabbar .nav-item').forEach(n => n.classList.toggle('active', n.dataset.screen === name));
   if (name !== 'map') document.getElementById('screen-' + name).classList.add('show');
-  document.getElementById('fab').classList.toggle('show', name === 'map' && activeTab === 'places');
-  if (name === 'dogs') initDogsScreen();
+  document.getElementById('fab').classList.toggle('show', name === 'map');
+  if (name === 'dogs') { dogSegment = dogSegment || 'mine'; initDogsScreen(); }
   if (name === 'sitters') loadSitters();
   if (name === 'profile') loadProfile();
   if (name === 'map') setTimeout(() => map.invalidateSize(), 60);
@@ -734,8 +746,13 @@ function openDogEditSheet(d) {
     <div class="field"><label>Вес (кг)</label><input type="number" step="0.1" id="edWeight" value="${escapeAttr(d.weightKg || '')}"></div>
     <div class="field"><label>Прививки</label><select id="edVacc">${selOpts(TRISTATE, d.vaccinated, '—')}</select></div>
     <div class="field"><label>Заметки</label><textarea id="edMemo">${escapeHtml(d.memo || '')}</textarea></div>
+    <button class="pop-btn secondary" style="margin-bottom:8px" onclick="updateDogPhoto('${d.id}')">📷 ${d.photoId ? 'Обновить' : 'Добавить'} фото</button>
     <button class="pop-btn" onclick="submitDogEdit('${d.id}')">Сохранить</button>
   `);
+}
+function updateDogPhoto(dogId) {
+  // Фото можно прислать только через чат бота — открываем его на нужном шаге
+  openBotDeepLink('photo_' + dogId);
 }
 async function submitDogEdit(id) {
   const breedSel = document.getElementById('edBreedSel').value;
@@ -897,6 +914,10 @@ async function takeCare(dogId, name) {
 
 // ================== ДОБАВЛЕНИЕ СОБАКИ ==================
 let addDogDraft = null;
+// Быстрое добавление УЛИЧНОЙ собаки прямо с карты (частый полевой сценарий)
+function openAddStreetDog() {
+  openAddDogSheet({ status: 'Уличная' });
+}
 function openAddDogSheet(draft) {
   addDogDraft = draft || addDogDraft || { status: 'У владельца' };
   const d = addDogDraft;
@@ -1194,17 +1215,18 @@ async function stopSitter() {
 function openReviewSheet(id, name, itemType) {
   openSheet(`
     <h3>Отзыв — «${escapeHtml(name)}»</h3>
-    <div class="field"><label>Оценка</label><div class="stars" id="starsPick">☆☆☆☆☆</div></div>
+    <div class="field"><label>Оценка</label>
+      <div class="stars" id="starsPick" data-rating="0">${[1,2,3,4,5].map(n => `<span class="star" data-v="${n}" onclick="pickStar(${n})">☆</span>`).join('')}</div>
+    </div>
     <div class="field"><textarea id="reviewText" placeholder="Коротко о впечатлениях (необязательно)"></textarea></div>
     <button class="pop-btn" onclick="submitReview('${id}','${itemType}')">Отправить</button>
   `);
-  const starsEl = document.getElementById('starsPick');
-  starsEl.onclick = (e) => {
-    const rect = starsEl.getBoundingClientRect();
-    const rating = Math.max(1, Math.min(5, Math.ceil(((e.clientX - rect.left) / rect.width) * 5)));
-    starsEl.textContent = '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
-    starsEl.dataset.rating = rating;
-  };
+}
+function pickStar(n) {
+  const box = document.getElementById('starsPick');
+  box.dataset.rating = n;
+  box.querySelectorAll('.star').forEach(s => { s.textContent = (+s.dataset.v <= n) ? '⭐' : '☆'; });
+  haptic('success');
 }
 async function submitReview(id, itemType) {
   const rating = parseInt(document.getElementById('starsPick').dataset.rating || '0', 10);
@@ -1290,6 +1312,7 @@ async function submitDelete(id, name) {
 }
 
 document.getElementById('fab').onclick = () => {
+  if (activeTab === 'dogs') { openAddStreetDog(); return; } // на слое собак — добавить уличную
   const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
     `<option value="${tk}" ${(subFilter !== 'all' && subFilter === tk) ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`).join('');
   openSheet(`
@@ -1346,6 +1369,7 @@ async function loadProfile(force) {
   const res = await callApi('getMe', {});
   if (!res.ok) { document.getElementById('profileBody').innerHTML = `<div class="empty">Не получилось загрузить профиль (${escapeHtml(res.error || '')})</div>`; return; }
   me = res;
+  if (me.profile) centerMapByCity(me.profile.city);
   renderProfile();
 }
 function renderProfile() {
@@ -1374,16 +1398,17 @@ function renderProfile() {
       <button class="pop-btn" style="margin-top:12px" onclick="openProfileEdit()">✏️ Редактировать</button>
     </div>
 
-    <div class="sec-label">Действия</div>
-    <div class="card tappable" onclick="showScreen('dogs'); dogSegment='mine'; renderDogSegments(); renderDogsScreen();">
-      <div class="list-title" style="font-size:14px">🐕 Мои собаки</div>
-      <div class="list-sub">анкеты, геопозиция, редактирование</div>
-    </div>
-    <div class="card tappable" onclick="openBotDeepLink('')">
-      <div class="list-title" style="font-size:14px">🤖 Открыть бота</div>
-      <div class="list-sub">фото собак, «Кто рядом?», поддержка проекта</div>
+    <div class="sec-label">🐕 Собаки</div>
+    <div class="card tappable" onclick="showScreen('dogs')">
+      <div class="list-title" style="font-size:14px">Мои собаки${me.myDogsCount ? ' · ' + me.myDogsCount : ''}</div>
+      <div class="list-sub">анкеты, геопозиция, доноры, потеряшки</div>
     </div>
 
+    <div class="sec-label">💚 Проект</div>
+    <div class="card tappable" onclick="openBotDeepLink('support')">
+      <div class="list-title" style="font-size:14px">Поддержать проект</div>
+      <div class="list-sub">помочь бесплатному сервису для хвостиков</div>
+    </div>
     ${resources ? `<div class="sec-label">📚 Полезные материалы</div>${resources}` : ''}
   `;
 }
@@ -1448,7 +1473,7 @@ async function submitProfileEdit() {
 
 renderSubfilters();
 renderLayer();
-callApi('getMe', {}).then(res => { if (res.ok) me = res; });
+callApi('getMe', {}).then(res => { if (res.ok) { me = res; if (me.profile) centerMapByCity(me.profile.city); } });
 </script>
 </body>
 </html>
