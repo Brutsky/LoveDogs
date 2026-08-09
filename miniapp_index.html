@@ -87,7 +87,7 @@
     -webkit-backdrop-filter: blur(10px); color: var(--text); font-size: 12px; font-weight: 700;
     letter-spacing: .01em; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--line);
     box-shadow: var(--shadow-s); }
-  #fab { position: absolute; bottom: calc(var(--tabbar-h) + 14px); right: 14px; z-index: 600;
+  #fab { position: absolute; top: 108px; right: 14px; z-index: 750;
     width: 52px; height: 52px; border-radius: 18px; background: var(--vet); color: #fff; border: none;
     font-size: 26px; font-weight: 400; box-shadow: var(--shadow-m); cursor: pointer; display: none;
     align-items: center; justify-content: center; transition: transform .12s ease; }
@@ -186,9 +186,10 @@
   .btn-row { display: flex; gap: 8px; }
   .btn-row .pop-btn { flex: 1; }
 
-  .stars { cursor: pointer; font-size: 30px; user-select: none; display: flex; gap: 8px; }
-  .stars .star { padding: 2px 4px; transition: transform .1s ease; }
-  .stars .star:active { transform: scale(1.25); }
+  .stars { cursor: pointer; font-size: 34px; line-height: 1; user-select: none;
+    display: flex; gap: 10px; justify-content: center; padding: 6px 0; }
+  .stars .star { transition: transform .1s ease; }
+  .stars .star:active { transform: scale(1.3); }
   .stars-small { font-size: 12.5px; }
 
   /* донорские фильтры */
@@ -350,8 +351,9 @@
   <!-- ===== Нижняя навигация ===== -->
   <div id="tabbar">
     <div class="nav-item active" data-screen="map"><span class="ico">🗺</span>Карта</div>
+    <div class="nav-item" data-screen="dogs"><span class="ico">🐾</span>Собаки<span class="nav-dot" id="lostDot"></span></div>
     <div class="nav-item" data-screen="sitters"><span class="ico">🧑</span>Ситтеры</div>
-    <div class="nav-item" data-screen="profile"><span class="ico">👤</span>Профиль<span class="nav-dot" id="lostDot"></span></div>
+    <div class="nav-item" data-screen="profile"><span class="ico">👤</span>Профиль</div>
   </div>
 </div>
 
@@ -378,7 +380,9 @@ let mapCentered = false;
 // Центрируем карту по городу пользователя, как только узнаём профиль
 function centerMapByCity(city) {
   if (mapCentered) return;
-  const c = CITY_CENTERS[city];
+  // Приоритет — координаты из профиля (бот знает центр любого города, вкл. РФ),
+  // затем локальный словарь как фолбэк
+  const c = (me && me.cityCenter) || CITY_CENTERS[city];
   if (c) { map.setView(c, 12); mapCentered = true; }
 }
 // Стандартная подложка Google Maps (lyrs=m — «карта»; h=гибрид, s=спутник при желании)
@@ -490,6 +494,8 @@ async function loadData(kind, force) {
 }
 
 function filterDogsMap(list) {
+  const myCity = me && me.profile ? me.profile.city : null;
+  if (myCity) list = list.filter(d => !d.city || d.city === myCity); // только мой город
   if (subFilter === 'mine') return list.filter(d => d.mine);
   if (subFilter === 'home') return list.filter(d => d.status === 'У владельца' || d.status === 'У опекуна');
   if (subFilter === 'street') return list.filter(d => d.status === 'Уличная');
@@ -497,8 +503,10 @@ function filterDogsMap(list) {
   return list;
 }
 function filterPlacesMap(list) {
-  if (subFilter === 'all') return list;
-  return list.filter(p => (p.type || 'Other') === subFilter);
+  const myCity = me && me.profile ? me.profile.city : null;
+  let out = myCity ? list.filter(p => !p.city || p.city === myCity) : list; // только мой город
+  if (subFilter !== 'all') out = out.filter(p => (p.type || 'Other') === subFilter);
+  return out;
 }
 
 function placePopupHtml(p) {
@@ -860,6 +868,30 @@ async function submitDeleteDog(dogId) {
   else alert('Не получилось: ' + (res.error || ''));
 }
 
+// Список собак пользователя прямо в профиле (все — списком, тап открывает карточку)
+async function renderProfileMyDogs() {
+  const box = document.getElementById('profileMyDogs');
+  if (!box) return;
+  let dogs = dataCache.dogs;
+  if (!dogs) { try { dogs = await loadData('dogs'); } catch (e) { dogs = []; } }
+  const mine = (dogs || []).filter(d => d.mine);
+  if (!mine.length) {
+    box.innerHTML = `<div class="card"><div class="list-sub">У тебя пока нет добавленных собак. Открой «Собаки» → «＋», чтобы добавить.</div></div>`;
+    return;
+  }
+  const statusIco = s => s === 'У владельца' ? '🏠' : (s === 'У опекуна' ? '🤝' : '🌳');
+  box.innerHTML = mine.map(d => `
+    <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
+      <div class="row-between">
+        <div>
+          <div class="list-title">${d.lost ? '🚨 ' : ''}${escapeHtml(d.name || 'Без клички')}</div>
+          <div class="list-sub">${statusIco(d.status)} ${escapeHtml(d.status)}${d.breed ? ' · ' + escapeHtml(d.breed) : ''}</div>
+        </div>
+        <div style="font-size:22px">💛</div>
+      </div>
+    </div>`).join('');
+}
+
 // ---- Донорство / опека / «ищет дом» (зеркало кнопок бота) ----
 function openDonorSheet(dogId, name) {
   const d = findDog(dogId) || {};
@@ -1027,18 +1059,24 @@ function renderDogsScreen() {
   const q = (document.getElementById('dogSearch').value || '').trim().toLowerCase();
   const reg = document.getElementById('dogRegion').value;
   document.getElementById('donor-panel').classList.toggle('show', dogSegment === 'donors');
-  let filtered = list;
-  if (dogSegment === 'mine') filtered = list.filter(d => d.mine);
-  if (dogSegment === 'lost') filtered = list.filter(d => d.lost);
-  if (dogSegment === 'seeking') filtered = list.filter(d => d.seekingHome);
-  if (dogSegment === 'donors') {
-    const minW = +document.getElementById('donorWeight').value;
-    const vacc = document.getElementById('donorVacc').checked;
-    const ster = document.getElementById('donorSter').checked;
-    filtered = list.filter(d => d.isDonor
-      && (Number(d.weightKg) || 0) >= minW
-      && (!vacc || d.vaccinated === 'Да')
-      && (!ster || d.sterilized === 'Да'));
+  // Город профиля: экран собак показывает только собак своего города (как и карта)
+  const myCity = me && me.profile ? me.profile.city : null;
+  let scoped = myCity ? list.filter(d => !d.city || d.city === myCity) : list;
+  let filtered = scoped;
+  // Пока идёт поиск — ищем по ВСЕЙ базе города, сегмент игнорируем (иначе «Мои» прячет чужих)
+  if (!q) {
+    if (dogSegment === 'mine') filtered = scoped.filter(d => d.mine);
+    if (dogSegment === 'lost') filtered = scoped.filter(d => d.lost);
+    if (dogSegment === 'seeking') filtered = scoped.filter(d => d.seekingHome);
+    if (dogSegment === 'donors') {
+      const minW = +document.getElementById('donorWeight').value;
+      const vacc = document.getElementById('donorVacc').checked;
+      const ster = document.getElementById('donorSter').checked;
+      filtered = scoped.filter(d => d.isDonor
+        && (Number(d.weightKg) || 0) >= minW
+        && (!vacc || d.vaccinated === 'Да')
+        && (!ster || d.sterilized === 'Да'));
+    }
   }
   if (reg) filtered = filtered.filter(d => d.region === reg);
   if (q) {
@@ -1374,6 +1412,7 @@ async function loadProfile(force) {
 }
 function renderProfile() {
   const p = me.profile;
+  renderProfileMyDogs();
   const langNames = { RU: '🇷🇺 Русский', GE: '🇬🇪 ქართული', EN: '🇬🇧 English' };
   const resources = (me.resources || []).map(r => `
     <div class="card tappable" onclick="${r.url ? `window.open('${escapeAttr(r.url)}','_blank')` : ''}">
@@ -1398,11 +1437,8 @@ function renderProfile() {
       <button class="pop-btn" style="margin-top:12px" onclick="openProfileEdit()">✏️ Редактировать</button>
     </div>
 
-    <div class="sec-label">🐕 Собаки</div>
-    <div class="card tappable" onclick="showScreen('dogs')">
-      <div class="list-title" style="font-size:14px">Мои собаки${me.myDogsCount ? ' · ' + me.myDogsCount : ''}</div>
-      <div class="list-sub">анкеты, геопозиция, доноры, потеряшки</div>
-    </div>
+    <div class="sec-label">🐕 Мои собаки</div>
+    <div id="profileMyDogs"><div class="empty" style="padding:16px">Загружаю…</div></div>
 
     <div class="sec-label">💚 Проект</div>
     <div class="card tappable" onclick="openBotDeepLink('support')">
