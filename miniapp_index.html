@@ -409,6 +409,12 @@ const PLACE_TYPES = {
   Other:   { label: 'Другое',     icon: '📍' }
 };
 const AGE_OPTIONS = ['Щенок', 'Молодая', 'Взрослая', 'Пожилая'];
+// Подписи с диапазонами лет (значение остаётся прежним — совместимо с ботом)
+const AGE_LABELS = { 'Щенок': 'Щенок (до 1 года)', 'Молодая': 'Молодая (1–3 года)', 'Взрослая': 'Взрослая (4–10 лет)', 'Пожилая': 'Пожилая (10+ лет)' };
+function ageOptsHtml(sel, placeholder) {
+  return (placeholder ? `<option value="">${placeholder}</option>` : '') +
+    AGE_OPTIONS.map(a => `<option value="${a}" ${a === sel ? 'selected' : ''}>${AGE_LABELS[a]}</option>`).join('');
+}
 const SEX_OPTIONS = ['Кобель', 'Сука'];
 const TRISTATE = ['Да', 'Нет', 'Неизвестно'];
 let COMMON_BREEDS = ['Метис', 'Не знаю', 'Дворняжка', 'Лабрадор', 'Немецкая овчарка', 'Хаски', 'Корги', 'Бигль', 'Такса', 'Чихуахуа', 'Золотистый ретривер', 'Шпиц'];
@@ -617,7 +623,8 @@ function openTgLink(url) { if (tg && tg.openTelegramLink) tg.openTelegramLink(ur
 function shareDog(dogId, name) {
   // Диалог шаринга Telegram с диплинком на карточку — «увидел собаку → скинул соседям»
   const deep = `https://t.me/${BOT_USERNAME}?start=dog_${dogId}`;
-  const share = `https://t.me/share/url?url=${encodeURIComponent(deep)}&text=${encodeURIComponent('🐕 ' + name + ' — карточка в Love Dogs')}`;
+  const shareText = `🐕 Познакомься с ${name}!\n\nЭто карточка из Love Dogs — живой карты собак нашего района. Тут домашние, дворовые и потеряшки. Загляни, добавь своего пса или помоги найти чужого 🐾\n\nОткрыть 👇`;
+  const share = `https://t.me/share/url?url=${encodeURIComponent(deep)}&text=${encodeURIComponent(shareText)}`;
   if (tg && tg.openTelegramLink) tg.openTelegramLink(share); else window.open(share, '_blank');
 }
 
@@ -778,7 +785,7 @@ function openDogEditSheet(d) {
       <input type="text" id="edBreedManual" placeholder="Порода (только буквы и дефис)" style="display:none;margin-top:6px">
     </div>
     <div class="field"><label>Окрас</label><input type="text" id="edColor" value="${escapeAttr(d.color || '')}" placeholder="Например: рыжий, чёрно-белый"></div>
-    <div class="field"><label>Возраст</label><select id="edAge">${selOpts(AGE_OPTIONS, d.age)}</select></div>
+    <div class="field"><label>Возраст</label><select id="edAge">${ageOptsHtml(d.age, '—')}</select></div>
     ${REGIONS_LIST.length ? `<div class="field"><label>Район</label><select id="edRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
     <div class="field"><label>Пол</label><select id="edSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
     <div class="field"><label>Стерилизация</label><select id="edSter">${selOpts(TRISTATE, d.sterilized || 'Неизвестно')}</select></div>
@@ -1001,7 +1008,7 @@ function openAddDogSheet(draft) {
     </div>
     <div class="field"><label>Окрас</label><input type="text" id="adColor" value="${escapeAttr(d.color || '')}" placeholder="Например: рыжий, чёрно-белый"></div>
     <div class="field"><label>Пол</label><select id="adSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
-    <div class="field"><label>Возраст</label><select id="adAge">${selOpts(AGE_OPTIONS, d.age, '—')}</select></div>
+    <div class="field"><label>Возраст</label><select id="adAge">${ageOptsHtml(d.age, '—')}</select></div>
     ${REGIONS_LIST.length ? `<div class="field"><label>Район (Тбилиси)</label><select id="adRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
     <div class="field"><label>Стерилизация</label><select id="adSter">${selOpts(TRISTATE, d.sterilized || 'Неизвестно')}</select></div>
     <div class="field"><label>Бирка (если есть)</label>
@@ -1542,8 +1549,15 @@ async function submitProfileEdit() {
 })();
 
 renderSubfilters();
-renderLayer();
-callApi('getMe', {}).then(res => { if (res.ok) { me = res; if (me.botUsername) BOT_USERNAME = me.botUsername; if (me.profile) centerMapByCity(me.profile.city); } });
+// Сначала узнаём город пользователя, ТОЛЬКО потом рисуем карту — иначе первый рендер
+// проходит с me=null и показывает собак всех городов.
+callApi('getMe', {}).then(res => {
+  if (res.ok) {
+    me = res;
+    if (me.botUsername) BOT_USERNAME = me.botUsername;
+    if (me.profile) centerMapByCity(me.profile.city);
+  }
+}).finally(() => { renderLayer(); });
 </script>
 </body>
 </html>
