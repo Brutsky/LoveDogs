@@ -1460,34 +1460,62 @@ document.getElementById('fab').onclick = () => {
     `<option value="${tk}" ${(subFilter !== 'all' && subFilter === tk) ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`).join('');
   openSheet(`
     <h3>Добавить место</h3>
+    <div class="geo-note" style="margin-bottom:10px">Добавляем только проверенные, полезные для собак места — и без дублей 🙏</div>
     <div class="field"><label>Тип места</label><select id="addType">${typeOpts}</select></div>
+    <div class="field"><label>🔗 Ссылка Google Maps (быстрый способ)</label>
+      <input type="text" id="addLink" placeholder="Вставь ссылку и нажми «Подтянуть»">
+      <button class="pop-btn secondary" style="margin-top:6px" onclick="prefillFromLink()">🔗 Подтянуть из ссылки</button>
+      <div id="link-status" style="font-size:12px;color:var(--hint);margin-top:4px"></div>
+    </div>
     <div class="field"><label>Название *</label><input type="text" id="addName" placeholder="Название"></div>
+    <button class="pop-btn secondary" onclick="addPlacePickGeo()">📍 Отметить точку на карте</button>
+    <div id="geo-status" style="font-size:12px;color:var(--hint);margin:4px 0">${pendingGeo ? '✅ Точка выбрана' : ''}</div>
+    <div class="geo-note" style="margin:6px 0">🗺 Район определится автоматически по точке на карте.</div>
     <div class="field"><label>Адрес</label><input type="text" id="addAddress" placeholder="Улица, дом"></div>
     <div class="field"><label>Телефон</label><input type="tel" id="addPhone" placeholder="+995…"></div>
-    <div class="field field-row"><input type="checkbox" id="addNight"><label style="margin:0">Круглосуточно</label></div>
-    <button class="pop-btn secondary" onclick="addPlacePickGeo()">📍 Отметить точку на карте</button>
-    <div id="geo-status">${pendingGeo ? '✅ Точка выбрана' : ''}</div>
+    <div class="field field-row"><input type="checkbox" id="addNight"><label style="margin:0">Круглосуточно (24 часа)</label></div>
     <button class="pop-btn" onclick="submitAddPlace()">Отправить на модерацию</button>
   `);
+  if (addPlaceDraft) {
+    document.getElementById('addType').value = addPlaceDraft.type || document.getElementById('addType').value;
+    document.getElementById('addLink').value = addPlaceDraft.link || '';
+    document.getElementById('addName').value = addPlaceDraft.name || '';
+    document.getElementById('addAddress').value = addPlaceDraft.address || '';
+    document.getElementById('addPhone').value = addPlaceDraft.phone || '';
+    document.getElementById('addNight').checked = !!addPlaceDraft.night;
+    addPlaceDraft = null;
+  }
 };
 let addPlaceDraft = null;
-async function addPlacePickGeo() {
+let pendingLink = '';
+function snapshotAddForm() {
   addPlaceDraft = {
-    type: document.getElementById('addType').value, name: document.getElementById('addName').value,
-    address: document.getElementById('addAddress').value, phone: document.getElementById('addPhone').value,
-    night: document.getElementById('addNight').checked
+    type: document.getElementById('addType').value, link: document.getElementById('addLink').value,
+    name: document.getElementById('addName').value, address: document.getElementById('addAddress').value,
+    phone: document.getElementById('addPhone').value, night: document.getElementById('addNight').checked
   };
+}
+async function prefillFromLink() {
+  const link = document.getElementById('addLink').value.trim();
+  if (!link) { alert('Вставь ссылку Google Maps'); return; }
+  const st = document.getElementById('link-status');
+  if (st) st.textContent = 'Разбираю ссылку…';
+  const res = await callApi('parseLink', { link });
+  if (res && res.ok) {
+    pendingLink = link;
+    if (res.name && !document.getElementById('addName').value) document.getElementById('addName').value = res.name;
+    if (res.address && !document.getElementById('addAddress').value) document.getElementById('addAddress').value = res.address;
+    if (res.lat && res.lng) { pendingGeo = { lat: res.lat, lng: res.lng }; const gs = document.getElementById('geo-status'); if (gs) gs.textContent = '✅ Точка подтянута из ссылки'; }
+    if (st) st.textContent = (res.lat && res.lng ? '✅ Название, адрес и точка подтянуты' : '✅ Подтянул, что нашёл. Точку укажи на карте.') + (res.region ? ' · Район: ' + res.region : '');
+  } else {
+    if (st) st.textContent = '⚠️ Не удалось разобрать. Заполни поля вручную.';
+  }
+}
+async function addPlacePickGeo() {
+  snapshotAddForm();
   const choice = await pickOnMap(null);
   if (choice) pendingGeo = choice;
   document.getElementById('fab').onclick();
-  if (addPlaceDraft) {
-    document.getElementById('addType').value = addPlaceDraft.type;
-    document.getElementById('addName').value = addPlaceDraft.name;
-    document.getElementById('addAddress').value = addPlaceDraft.address;
-    document.getElementById('addPhone').value = addPlaceDraft.phone;
-    document.getElementById('addNight').checked = addPlaceDraft.night;
-    addPlaceDraft = null;
-  }
 };
 async function submitAddPlace() {
   const name = document.getElementById('addName').value.trim();
@@ -1496,11 +1524,12 @@ async function submitAddPlace() {
     type: document.getElementById('addType').value, name,
     address: document.getElementById('addAddress').value,
     phone: document.getElementById('addPhone').value,
-    night: document.getElementById('addNight').checked
+    night: document.getElementById('addNight').checked,
+    mapsLink: document.getElementById('addLink').value.trim() || pendingLink || ''
   };
   if (pendingGeo) { payload.lat = pendingGeo.lat; payload.lng = pendingGeo.lng; }
   const res = await callApi('addPlace', payload);
-  pendingGeo = null;
+  pendingGeo = null; pendingLink = '';
   closeSheet();
   if (res.ok) { haptic(); setStatus('✅ Появится на карте после проверки', 2600); }
   else alert('Не получилось: ' + (res.error || ''));
