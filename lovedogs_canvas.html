@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Love Dogs · Lean Canvas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap');
+  :root{
+    --ink:#14140F;--paper:#FBF7EF;--paper2:#F3ECDD;--line:#DFD4BE;
+    --moss:#3B5B3A;--moss-soft:#6E8A5E;--clay:#C24E2E;--sky:#2E6E86;--gold:#C8912B;--muted:#7C755F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:'Inter',system-ui,sans-serif;line-height:1.48;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1200px;margin:0 auto;padding:32px 24px 70px}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:6px}
+  .brand .paw{font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--moss);font-weight:600}
+  .brand h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(32px,5vw,50px);line-height:1;letter-spacing:-.02em}
+  .brand h1 em{font-style:italic;color:var(--clay)}
+  .meta{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);line-height:1.7}
+  .meta b{color:var(--ink)}
+  .lede{font-family:'Fraunces',serif;font-size:18px;font-style:italic;color:#403a2c;max-width:74ch;margin:20px 0 30px}
+
+  /* Canvas grid — 5 верхних колонок, снизу два «фундамента» */
+  .canvas{display:grid;grid-template-columns:repeat(10,1fr);grid-auto-rows:minmax(10px,auto);gap:12px}
+  .cell{background:var(--paper2);border:1px solid var(--line);border-radius:13px;padding:16px 17px;display:flex;flex-direction:column;gap:9px;min-height:150px}
+  .cell h3{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:7px}
+  .cell h3 .ic{font-size:15px}
+  .cell ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .cell li{font-size:13px;padding-left:15px;position:relative;color:#2a271e}
+  .cell li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:50%;background:var(--moss-soft)}
+  .cell li b{font-weight:600}
+  .cell .em{font-family:'Fraunces',serif;font-style:italic;font-size:14.5px;color:var(--clay)}
+
+  /* accents per column */
+  .c-problem{grid-column:span 2}
+  .c-solution{grid-column:span 2}
+  .c-uvp{grid-column:span 2;background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .c-uvp h3{color:var(--gold)}
+  .c-uvp li{color:#e7e0cf}
+  .c-uvp li::before{background:var(--gold)}
+  .c-uvp .head{font-family:'Fraunces',serif;font-weight:900;font-size:21px;line-height:1.12;letter-spacing:-.01em}
+  .c-uvp .head em{color:var(--moss-soft);font-style:italic}
+  .c-advantage{grid-column:span 2}
+  .c-segments{grid-column:span 2}
+
+  .c-metrics{grid-column:span 3}
+  .c-channels{grid-column:span 4}
+  .c-early{grid-column:span 3}
+
+  .c-cost{grid-column:span 5}
+  .c-revenue{grid-column:span 5}
+
+  .cell li .k{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--sky);margin-right:5px}
+  .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(59,91,58,.14);color:var(--moss)}
+  .badge.clay{background:rgba(194,78,46,.14);color:var(--clay)}
+  .badge.gold{background:rgba(200,145,43,.18);color:#8a6212}
+
+  .note{margin-top:26px;background:var(--paper2);border:1px solid var(--line);border-left:4px solid var(--clay);border-radius:10px;padding:16px 20px;font-size:13.5px;color:#3a3428;max-width:80ch}
+  .note b{color:var(--clay)}
+
+  footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  @media(max-width:960px){
+    .canvas{grid-template-columns:repeat(2,1fr)}
+    .cell{grid-column:span 1 !important}
+    .c-uvp,.c-cost,.c-revenue{grid-column:span 2 !important}
+  }
+  @media(max-width:560px){
+    .canvas{grid-template-columns:1fr}
+    .cell,.c-uvp,.c-cost,.c-revenue{grid-column:span 1 !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="paw">🐾 Lean Canvas · бизнес-модель</div>
+      <h1>Love&nbsp;<em>Dogs</em></h1>
+    </div>
+    <div class="meta">
+      <div><b>Тип:</b> некоммерческий / комьюнити</div>
+      <div><b>Формат:</b> Telegram-бот + Mini App</div>
+      <div><b>Стадия:</b> запуск, Тбилиси</div>
+    </div>
+  </header>
+
+  <p class="lede">Живая карта собак района: соседи-собачники узнают друг друга, находят пропавших за часы и спасают жизни переливанием. Модель построена не на прибыли, а на <b>плотности и доверии сообщества.</b></p>
+
+  <div class="canvas">
+
+    <!-- ПРОБЛЕМА -->
+    <div class="cell c-problem">
+      <h3><span class="ic">🔥</span>Проблема</h3>
+      <ul>
+        <li>Собака <b>убегает и теряется</b> — паника, листовки на столбах, часы уходят впустую</li>
+        <li>Соседи-собачники <b>не знают друг друга</b>, хотя гуляют по одним дворам</li>
+        <li>Дворовые псы <b>без учёта</b>: кто привит, стерилизован, кто подкармливает</li>
+        <li>Донора крови для срочной операции <b>негде быстро найти</b></li>
+      </ul>
+      <div class="em">Альтернативы сейчас: чаты-простыни, Instagram, сарафан.</div>
+    </div>
+
+    <!-- РЕШЕНИЕ -->
+    <div class="cell c-solution">
+      <h3><span class="ic">💡</span>Решение</h3>
+      <ul>
+        <li><b>Карта района</b> — все собаки рядом на одном экране</li>
+        <li><b>Сигнал о пропаже</b> уходит по всему городу с фото за секунды</li>
+        <li><b>Отметить дворнягу</b> за минуту, авто-район по гео</li>
+        <li><b>Реестр доноров</b> с фильтром по весу/прививкам</li>
+        <li><b>Ситтеры и места</b> с отзывами собачников</li>
+      </ul>
+    </div>
+
+    <!-- УНИКАЛЬНОЕ ПРЕДЛОЖЕНИЕ -->
+    <div class="cell c-uvp">
+      <h3><span class="ic">✦</span>Ценностное предложение</h3>
+      <div class="head">Твой район <em>знает</em> твою собаку.</div>
+      <ul>
+        <li>Не соцсеть про собак — <b>живая карта твоих дворов</b></li>
+        <li>Работает <b>от одного человека</b>: сигнал о пропаже ценен даже с пустой картой</li>
+        <li>Сеть шире чата: пёс убегает за свой район — <b>ищет весь город</b></li>
+      </ul>
+    </div>
+
+    <!-- НЕЧЕСТНОЕ ПРЕИМУЩЕСТВО -->
+    <div class="cell c-advantage">
+      <h3><span class="ic">🛡</span>Преимущество</h3>
+      <ul>
+        <li><b>Комьюнити-отзывы</b>, которых нет у Google (пускают с собакой, врач адекватный)</li>
+        <li>Основатель <b>внутри сообщества</b> — свой, а не рекламодатель</li>
+        <li>Локальная <b>плотность</b> = сетевой эффект: чем больше соседей, тем ценнее, и тем труднее скопировать</li>
+      </ul>
+    </div>
+
+    <!-- СЕГМЕНТЫ -->
+    <div class="cell c-segments">
+      <h3><span class="ic">👥</span>Сегменты</h3>
+      <ul>
+        <li><b>Ядро:</b> владельцы собак Тбилиси, боятся потерять питомца</li>
+        <li><b>Активисты:</b> те, кто опекает дворовых</li>
+        <li><b>Сервисы:</b> ситтеры, догфрендли-места</li>
+        <li><span class="badge clay">Early adopters</span> русскоязычные собачники, active в комьюнити-чатах</li>
+      </ul>
+    </div>
+
+    <!-- КЛЮЧЕВЫЕ МЕТРИКИ -->
+    <div class="cell c-metrics">
+      <h3><span class="ic">📊</span>Ключевые метрики</h3>
+      <ul>
+        <li><b>Северная звезда:</b> еженедельно активные «ухаживающие» (вносят/обновляют данные)</li>
+        <li><span class="k">ACT</span>активация: % добавивших собаку в 1-ю сессию</li>
+        <li><span class="k">RET</span>возврат на неделю 2</li>
+        <li><span class="k">DENS</span>плотность собак в районе</li>
+        <li><span class="k">WOW</span>время закрытия потеряшки</li>
+      </ul>
+    </div>
+
+    <!-- КАНАЛЫ -->
+    <div class="cell c-channels">
+      <h3><span class="ic">📣</span>Каналы</h3>
+      <ul>
+        <li><b>Личные приглашения</b> — основа на старте, от своего лица</li>
+        <li><b>Комьюнити-чаты собачников</b> — только после того, как стал в них своим; через реальный повод (потеряшка), не рекламой</li>
+        <li><b>Виральность потеряшек</b> — сигналы репостят сами</li>
+        <li><b>Сарафан от союзников</b> — рекомендация от своего &gt; любого поста</li>
+        <li><b>Deeplink-шеринг собак</b> из бота</li>
+      </ul>
+    </div>
+
+    <!-- РАННИЕ ПОСЛЕДОВАТЕЛИ -->
+    <div class="cell c-early">
+      <h3><span class="ic">🌱</span>Ранние последователи</h3>
+      <ul>
+        <li>3–5 знакомых собачников, которым можно написать лично</li>
+        <li>Владельцы, у кого собака <b>уже терялась</b> — самая острая боль</li>
+        <li>Опекуны дворовых — эмоционально привязаны, готовы вносить</li>
+      </ul>
+      <div class="em">Первые вносят данные → карта не пустая для следующих.</div>
+    </div>
+
+    <!-- СТРУКТУРА ИЗДЕРЖЕК -->
+    <div class="cell c-cost">
+      <h3><span class="ic">💸</span>Структура издержек</h3>
+      <ul>
+        <li><b>Сейчас почти ноль:</b> Google Apps Script (бесплатно) + Supabase (free tier) + хостинг Mini App</li>
+        <li><b>Главный ресурс — время основателя:</b> разработка, модерация, вход в сообщество</li>
+        <li><span class="badge gold">При росте</span> VPS ~$5–7/мес (уход с Apps Script ради скорости), опц. Google Places API ~$17/1000 запр.</li>
+      </ul>
+    </div>
+
+    <!-- ПОТОКИ ДОХОДА -->
+    <div class="cell c-revenue">
+      <h3><span class="ic">🤝</span>Потоки поддержки <span class="badge">не прибыль</span></h3>
+      <ul>
+        <li><b>Донаты сообщества</b> — кнопка «Поддержать» (BOG/TBC/перевод), покрывают инфраструктуру</li>
+        <li><b>Некоммерческая модель:</b> цель — польза и доверие, не заработок; отсутствие монетизации = актив доверия в комьюнити</li>
+        <li><span class="badge gold">Потенциал</span> партнёрства с ветклиниками/зоомагазинами на бартер (не реклама, а полезные связи), если сообщество это примет</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <b>Ключевой риск и он же стратегия:</b> ценность продукта равна плотности карты, а плотность на старте нулевая. Значит первые недели решает не разработка, а <b>наполнение и вход в сообщество</b>. Техника уже готова — победит тот, кто соберёт критическую массу собак в первых районах прежде, чем интерес первых пользователей остынет.
+  </div>
+
+  <footer>
+    <div>🐾 <b>Love Dogs</b> · Lean Canvas · Тбилиси</div>
+    <div>формат Эша Мории · адаптирован под комьюнити-продукт</div>
+  </footer>
+
+</div>
+</body>
+</html>
