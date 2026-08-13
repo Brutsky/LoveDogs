@@ -113,6 +113,7 @@
   .marker-pin.lost { animation: pulse 1.5s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(210,75,60,.5);} 70% { box-shadow: 0 0 0 13px rgba(210,75,60,0);} 100% { box-shadow: 0 0 0 0 rgba(210,75,60,0);} }
   .marker-pin.closed { opacity: .45; }
+  .marker-pin.moderation { border-style: dashed; border-color: #E0A93B; }
 
   /* Режим выбора точки */
   #pick-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 800;
@@ -464,6 +465,7 @@ function pinIcon(kind, item) {
   } else {
     color = ratingColor(item.rating);
     if (item.closed) cls += ' closed';
+    if (item.onModeration) cls += ' moderation';
     emoji = (PLACE_TYPES[item.type] || PLACE_TYPES.Other).icon;
   }
   return L.divIcon({ className: '', html: `<div class="${cls}" style="background:${color}"><span>${emoji}</span></div>`,
@@ -528,6 +530,7 @@ function placePopupHtml(p) {
     ${p.phone ? `<div class="pop-row">📞 <a href="tel:${escapeAttr(p.phone)}">${escapeHtml(p.phone)}</a></div>` : ''}
     <div class="pop-row">${stars}</div>
     <div class="pop-badges">
+      ${p.onModeration ? '<span class="badge warn">⏳ на проверке</span>' : ''}
       ${p.night ? '<span class="badge">🌙 круглосуточно</span>' : ''}
       ${p.closed ? '<span class="badge warn">⛔ не работает</span>' : ''}
     </div>
