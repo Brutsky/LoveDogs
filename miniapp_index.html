@@ -186,11 +186,15 @@
   .btn-row { display: flex; gap: 8px; }
   .btn-row .pop-btn { flex: 1; }
 
-  .stars { cursor: pointer; font-size: 34px; line-height: 1; user-select: none;
-    display: flex; gap: 10px; justify-content: center; padding: 6px 0; }
-  .stars .star { transition: transform .1s ease; }
+  .stars { cursor: pointer; font-size: 30px; line-height: 1; user-select: none;
+    display: flex; gap: 6px; justify-content: center; padding: 6px 0; flex-wrap: nowrap; max-width: 100%; }
+  .stars .star { transition: transform .1s ease; flex: 0 0 auto; }
   .stars .star:active { transform: scale(1.3); }
   .stars-small { font-size: 12.5px; }
+  .pack-marker { background: none; border: none; }
+  .pack-badge { background: var(--street, #6b7280); color: #fff; font-weight: 700; font-size: 12px;
+    padding: 5px 10px; border-radius: 14px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    border: 2px solid #fff; text-align: center; }
 
   /* донорские фильтры */
   #donor-panel { background: var(--card); border-radius: var(--r-card); padding: 13px 14px; margin-bottom: 10px;
@@ -534,20 +538,77 @@ function placePopupHtml(p) {
     </div>`;
 }
 
+// Расстояние между точками в метрах (гаверсинус)
+function distMeters(a, b) {
+  const R = 6371000, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(b[0] - a[0]), dLng = toRad(b[1] - a[1]);
+  const lat1 = toRad(a[0]), lat2 = toRad(b[0]);
+  const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+// Группируем уличных собак в стаи: 3+ в радиусе 50 м → один маркер «Стая (n)»
+function clusterStreetDogs(list) {
+  const PACK_RADIUS = 50, PACK_MIN = 3;
+  const street = list.filter(d => d.status === 'Уличная' && !d.lost && d.lat && d.lng);
+  const rest = list.filter(d => !(d.status === 'Уличная' && !d.lost && d.lat && d.lng));
+  const used = new Array(street.length).fill(false);
+  const packs = [], singles = [];
+  for (let i = 0; i < street.length; i++) {
+    if (used[i]) continue;
+    const group = [street[i]]; used[i] = true;
+    for (let j = i + 1; j < street.length; j++) {
+      if (used[j]) continue;
+      if (distMeters([street[i].lat, street[i].lng], [street[j].lat, street[j].lng]) <= PACK_RADIUS) { group.push(street[j]); used[j] = true; }
+    }
+    if (group.length >= PACK_MIN) packs.push(group); else group.forEach(d => singles.push(d));
+  }
+  return { packs, singles: singles.concat(rest) };
+}
 async function renderLayer() {
   const kind = activeTab;
   const raw = await loadData(kind);
   let list = kind === 'dogs' ? filterDogsMap(raw) : filterPlacesMap(raw);
   currentLayer.clearLayers();
-  list.forEach(item => {
-    if (!item.lat || !item.lng) return;
-    const marker = L.marker([item.lat, item.lng], { icon: pinIcon(kind, item) });
-    if (kind === 'dogs') marker.on('click', () => openDogCard(item));
-    else marker.bindPopup(placePopupHtml(item));
-    currentLayer.addLayer(marker);
-  });
-  document.getElementById('count-badge').textContent = kind === 'dogs' ? `🐕 ${list.length} собак` : `📍 ${list.length} мест`;
+  if (kind === 'dogs') {
+    const { packs, singles } = clusterStreetDogs(list);
+    // Маркеры-стаи
+    packs.forEach(group => {
+      const lat = group.reduce((s, d) => s + d.lat, 0) / group.length;
+      const lng = group.reduce((s, d) => s + d.lng, 0) / group.length;
+      const icon = L.divIcon({ className: 'pack-marker', html: `<div class="pack-badge">🐾 Стая (${group.length})</div>`, iconSize: [90, 30], iconAnchor: [45, 30] });
+      const marker = L.marker([lat, lng], { icon });
+      marker.on('click', () => openPackSheet(group));
+      currentLayer.addLayer(marker);
+    });
+    // Одиночные собаки
+    singles.forEach(item => {
+      if (!item.lat || !item.lng) return;
+      const marker = L.marker([item.lat, item.lng], { icon: pinIcon('dogs', item) });
+      marker.on('click', () => openDogCard(item));
+      currentLayer.addLayer(marker);
+    });
+    document.getElementById('count-badge').textContent = `🐕 ${list.length} собак`;
+  } else {
+    list.forEach(item => {
+      if (!item.lat || !item.lng) return;
+      const marker = L.marker([item.lat, item.lng], { icon: pinIcon(kind, item) });
+      marker.bindPopup(placePopupHtml(item));
+      currentLayer.addLayer(marker);
+    });
+    document.getElementById('count-badge').textContent = `📍 ${list.length} мест`;
+  }
   document.getElementById('lostDot').classList.toggle('show', !!(dataCache.dogs || []).some(d => d.lost));
+}
+// Список собак стаи
+function openPackSheet(group) {
+  const items = group.map(d => `
+    <div class="card tappable" onclick="closeSheet(); openDogCard(findDog('${d.id}'))">
+      <div class="list-title">${d.lost ? '🚨 ' : '🌳 '}${escapeHtml(d.name || 'Уличный пёс')}</div>
+      ${d.breed ? `<div class="list-sub">${escapeHtml(d.breed)}</div>` : ''}
+    </div>`).join('');
+  openSheet(`<h3>🐾 Стая — ${group.length} собак рядом</h3>
+    <div class="geo-note" style="margin-bottom:10px">Эти уличные собаки держатся в одном месте. Нажми на любую, чтобы открыть анкету.</div>
+    ${items}`);
 }
 
 document.querySelectorAll('#tabs .tab').forEach(tab => {
