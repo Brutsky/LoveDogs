@@ -1228,9 +1228,10 @@ function renderSitters(err) {
       <div class="badges">${sitterServiceBadges(s)}</div>
       ${s.desc ? `<div class="list-sub" style="margin-top:6px">${escapeHtml(s.desc)}</div>` : ''}
       ${s.price ? `<div class="list-sub">💰 ${escapeHtml(s.price)}</div>` : ''}
+      ${s.phone ? `<div class="list-sub tappable" style="margin-top:4px" onclick="copyToClipboard('${escapeAttr(s.phone)}','телефон')">📞 ${escapeHtml(s.phone)} <span style="opacity:.5">(нажми, чтобы скопировать)</span></div>` : ''}
       <div class="btn-row" style="margin-top:10px">
         ${s.tg && !s.self ? `<button class="pop-btn" onclick="openTgUser('${escapeAttr(s.tg)}')">✍️ Написать</button>` : ''}
-        ${s.phone ? `<a class="pop-btn secondary" style="text-align:center;text-decoration:none;line-height:1.3" href="tel:${escapeAttr(s.phone)}">📞</a>` : ''}
+        ${s.phone ? `<a class="pop-btn secondary" style="text-align:center;text-decoration:none;line-height:1.3" href="tel:${escapeAttr(s.phone)}">📞 Позвонить</a>` : ''}
         ${!s.self ? `<button class="pop-btn secondary" onclick="openReviewSheet('${s.id}','${escapeAttr(s.name || 'Ситтер')}','DogSitter')">⭐ Оценить</button>` : ''}
         ${s.ratingCount ? `<button class="pop-btn secondary small" onclick="showReviews('DogSitter','${s.id}','${escapeAttr(s.name || '')}')">💬 Отзывы</button>` : ''}
       </div>
