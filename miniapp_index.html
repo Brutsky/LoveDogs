@@ -1468,6 +1468,10 @@ document.getElementById('fab').onclick = () => {
     <div class="geo-note" style="margin:6px 0">🗺 Район определится автоматически по точке на карте.</div>
     <div class="field"><label>Адрес</label><input type="text" id="addAddress" placeholder="Улица, дом"></div>
     <div class="field"><label>Телефон</label><input type="tel" id="addPhone" placeholder="+995…"></div>
+    <div class="field"><label>Ссылка Google Maps <span style="color:var(--hint);font-weight:400">(необязательно)</span></label>
+      <input type="text" id="addLink" placeholder="https://maps.app.goo.gl/…">
+      <div style="font-size:12px;color:var(--hint);margin-top:4px">Добавит в карточку кнопку «Открыть в Google Maps» с деталями и маршрутом.</div>
+    </div>
     <div class="field field-row"><input type="checkbox" id="addNight"><label style="margin:0">Круглосуточно (24 часа)</label></div>
     <button class="pop-btn" onclick="submitAddPlace()">Отправить на модерацию</button>
   `);
@@ -1476,6 +1480,7 @@ document.getElementById('fab').onclick = () => {
     document.getElementById('addName').value = addPlaceDraft.name || '';
     document.getElementById('addAddress').value = addPlaceDraft.address || '';
     document.getElementById('addPhone').value = addPlaceDraft.phone || '';
+    document.getElementById('addLink').value = addPlaceDraft.link || '';
     document.getElementById('addNight').checked = !!addPlaceDraft.night;
     addPlaceDraft = null;
   }
@@ -1485,7 +1490,8 @@ function snapshotAddForm() {
   addPlaceDraft = {
     type: document.getElementById('addType').value,
     name: document.getElementById('addName').value, address: document.getElementById('addAddress').value,
-    phone: document.getElementById('addPhone').value, night: document.getElementById('addNight').checked
+    phone: document.getElementById('addPhone').value, link: document.getElementById('addLink').value,
+    night: document.getElementById('addNight').checked
   };
 }
 async function addPlacePickGeo() {
@@ -1501,6 +1507,7 @@ async function submitAddPlace() {
     type: document.getElementById('addType').value, name,
     address: document.getElementById('addAddress').value,
     phone: document.getElementById('addPhone').value,
+    mapsLink: document.getElementById('addLink').value.trim(),
     night: document.getElementById('addNight').checked
   };
   if (pendingGeo) { payload.lat = pendingGeo.lat; payload.lng = pendingGeo.lng; }
