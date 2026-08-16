@@ -774,6 +774,7 @@ async function openDogCard(d) {
   let actions = '';
   if (d.lat) actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">🗺 Показать на карте</button>`;
   actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">↗️ Поделиться собакой</button>`;
+  actions += `<button class="pop-btn secondary" onclick="showDogComments('${d.id}','${escapeAttr(d.name || '')}')">💬 Комментарии</button>`;
   if (d.mine) {
     actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Редактировать анкету</button>`;
     if (isHomeMine) {
@@ -1384,6 +1385,41 @@ async function submitReview(id, itemType) {
     setStatus('✅ Спасибо за отзыв!', 2000);
   } else alert('Не получилось: ' + (res.error === 'self review' ? 'себя оценивать нельзя 🙂' : (res.error || '')));
 }
+
+// ================== КОММЕНТАРИИ К СОБАКЕ (открытая лента) ==================
+async function showDogComments(dogId, dogName) {
+  openSheet(`<h3>💬 Комментарии — «${escapeHtml(dogName)}»</h3><div class="empty">Загружаю…</div>`);
+  const res = await callApi('getComments', { dogId });
+  const items = res.ok ? (res.comments || []) : [];
+  const canModerate = res.ok && res.canModerate;
+  openSheet(`
+    <h3>💬 Комментарии — «${escapeHtml(dogName)}»</h3>
+    <div id="commentsList">
+      ${items.length ? items.map(c => `
+        <div class="review-item">
+          <div class="row-between"><span class="who">${escapeHtml(c.author || 'Гость')}</span>
+            ${canModerate ? `<button class="pop-btn danger small" style="padding:3px 9px" onclick="deleteComment('${c.id}','${dogId}','${escapeAttr(dogName)}')">🗑</button>` : ''}</div>
+          <div class="txt">${escapeHtml(c.text)}</div>
+          <div class="when">${escapeHtml(c.date || '')}</div>
+        </div>`).join('') : '<div class="empty">Пока пусто — напиши первым(ой) 🙂</div>'}
+    </div>
+    <div class="field" style="margin-top:12px"><textarea id="commentText" placeholder="Написать комментарий…" maxlength="500"></textarea></div>
+    <button class="pop-btn" onclick="submitComment('${dogId}','${escapeAttr(dogName)}')">Отправить</button>
+  `);
+}
+async function submitComment(dogId, dogName) {
+  const text = document.getElementById('commentText').value.trim();
+  if (!text) { alert('Напиши текст комментария 🙂'); return; }
+  const res = await callApi('addComment', { dogId, text });
+  if (res.ok) { haptic(); showDogComments(dogId, dogName); }
+  else alert('Не получилось: ' + (res.error || ''));
+}
+async function deleteComment(commentId, dogId, dogName) {
+  const res = await callApi('deleteComment', { commentId, dogId });
+  if (res.ok) { haptic(); showDogComments(dogId, dogName); }
+  else alert('Не получилось удалить: ' + (res.error || ''));
+}
+
 async function showReviews(itemType, id, name) {
   openSheet(`<h3>💬 Отзывы — «${escapeHtml(name)}»</h3><div class="empty">Загружаю…</div>`);
   const res = await callApi('getReviews', { type: itemType, id });
