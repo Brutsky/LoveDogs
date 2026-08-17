@@ -299,6 +299,12 @@
   .review-item .who { font-weight: 800; }
   .review-item .txt { color: var(--text); margin-top: 2px; }
   .review-item .when { color: var(--hint); font-size: 11.5px; margin-top: 2px; }
+  .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0; }
+  .gallery-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--paw-soft); }
+  .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gallery-del { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
+    border: none; background: rgba(0,0,0,.55); color: #fff; font-size: 13px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; }
 </style>
 </head>
 <body data-screen="map">
@@ -771,9 +777,12 @@ async function openDogCard(d) {
   // домашняя моя / под опекой (в т.ч. уличная, где я записан опекуном) / чужая
   const isHomeMine = d.mine && d.status === 'У владельца';
   const isGuardianMine = d.mine && (d.status === 'У опекуна' || d.status === 'Уличная');
+  // Зеркало canEditDog_: свой владелец/опекун ИЛИ бесхозная уличная (её редактирует любой)
+  const canEditGallery = !!d.mine || (isStreet && !d.hasOwner);
   let actions = '';
   if (d.lat) actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">🗺 Показать на карте</button>`;
   actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">↗️ Поделиться собакой</button>`;
+  actions += `<button class="pop-btn secondary" onclick="showDogGallery('${d.id}','${escapeAttr(d.name || '')}',${canEditGallery})">🖼 Галерея</button>`;
   actions += `<button class="pop-btn secondary" onclick="showDogComments('${d.id}','${escapeAttr(d.name || '')}')">💬 Комментарии</button>`;
   if (d.mine) {
     actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Редактировать анкету</button>`;
@@ -1384,6 +1393,28 @@ async function submitReview(id, itemType) {
     else { dataCache.places = null; renderLayer(); }
     setStatus('✅ Спасибо за отзыв!', 2000);
   } else alert('Не получилось: ' + (res.error === 'self review' ? 'себя оценивать нельзя 🙂' : (res.error || '')));
+}
+
+// ================== ГАЛЕРЕЯ ФОТО СОБАКИ ==================
+async function showDogGallery(dogId, dogName, canEdit) {
+  openSheet(`<h3>🖼 Галерея — «${escapeHtml(dogName)}»</h3><div class="empty">Загружаю…</div>`);
+  const r = await fetch(`${API_URL}?type=dogGallery&dogId=${encodeURIComponent(dogId)}`);
+  const j = await r.json().catch(() => ({ ok: false }));
+  const photos = (j.ok ? j.photos : []) || [];
+  openSheet(`
+    <h3>🖼 Галерея — «${escapeHtml(dogName)}»</h3>
+    ${photos.length ? `<div class="gallery-grid">${photos.map(p => `
+      <div class="gallery-item">
+        <img src="${p.url}" loading="lazy">
+        ${canEdit ? `<button class="gallery-del" onclick="deleteGalleryPhoto('${p.id}','${dogId}','${escapeAttr(dogName)}',${canEdit})">✕</button>` : ''}
+      </div>`).join('')}</div>` : '<div class="empty">Пока пусто 🙂</div>'}
+    ${canEdit ? `<button class="pop-btn secondary" style="margin-top:10px" onclick="openBotDeepLink('gallery_${dogId}')">➕ Добавить фото</button>` : ''}
+  `);
+}
+async function deleteGalleryPhoto(photoId, dogId, dogName, canEdit) {
+  const res = await callApi('deleteGalleryPhoto', { photoId, dogId });
+  if (res.ok) { haptic(); showDogGallery(dogId, dogName, canEdit); }
+  else alert('Не получилось: ' + (res.error || ''));
 }
 
 // ================== КОММЕНТАРИИ К СОБАКЕ (открытая лента) ==================
