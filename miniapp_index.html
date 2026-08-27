@@ -114,6 +114,7 @@
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(210,75,60,.5);} 70% { box-shadow: 0 0 0 13px rgba(210,75,60,0);} 100% { box-shadow: 0 0 0 0 rgba(210,75,60,0);} }
   .marker-pin.closed { opacity: .45; }
   .marker-pin.moderation { border-style: dashed; border-color: #E0A93B; }
+  .marker-pin.mine { border-color: var(--paw-deep); border-width: 3px; }
 
   /* Режим выбора точки */
   #pick-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 800;
@@ -461,13 +462,18 @@ function ratingColor(r) {
   return cssVar('--green');
 }
 function pinIcon(kind, item) {
-  // Маркер-«жетон»: эмалевый кружок; потеряшки — сигнальный с пульсом, мои — тёмная латунь
+  // Маркер-«жетон»: эмалевый кружок; потеряшки — сигнальный с пульсом.
+  // Три независимых сигнала теперь не конкурируют за один и тот же слот:
+  //  • статус (домашняя/у опекуна/уличная) — иконка внутри кружка (🏠/🤝/🐕);
+  //  • «моя собака» — контрастная рамка (было слито с цветом заливки и отдельным
+  //    эмодзи 💛, но тот эмодзи-слот теперь занят статусом);
+  //  • потеряшка — красный цвет + пульсация, перекрывает всё остальное.
   let cls = 'marker-pin', color, emoji;
   if (kind === 'dogs') {
     color = cssVar('--paw');
-    if (item.lost) { cls += ' lost'; color = cssVar('--red'); }
-    else if (item.mine) color = cssVar('--paw-deep');
-    emoji = item.lost ? '🚨' : (item.mine ? '💛' : '🐕');
+    if (item.mine) cls += ' mine';
+    if (item.lost) { cls += ' lost'; color = cssVar('--red'); emoji = '🚨'; }
+    else emoji = item.status === 'У владельца' ? '🏠' : (item.status === 'У опекуна' ? '🤝' : '🐕');
   } else {
     color = ratingColor(item.rating);
     if (item.closed) cls += ' closed';
