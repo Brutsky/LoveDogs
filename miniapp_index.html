@@ -277,6 +277,8 @@
   .field input:focus, .field textarea:focus, .field select:focus {
     outline: none; border-color: var(--paw); box-shadow: 0 0 0 3px color-mix(in srgb, var(--paw) 22%, transparent); }
   .field textarea { resize: vertical; min-height: 64px; }
+  .char-count { font-size: 11.5px; color: var(--hint); text-align: right; margin-top: 3px; }
+  .char-count.over { color: var(--red); font-weight: 700; }
   .field-row { display: flex; align-items: center; gap: 8px; }
   .pop-actions.vertical { display: flex; flex-direction: column; gap: 8px; }
 
@@ -774,6 +776,16 @@ function getGeo() {
 }
 
 // ================== КАРТОЧКА СОБАКИ ==================
+// Живой счётчик символов под полем: лимиты те же, что в боте. maxlength не даёт
+// превысить предел, а счётчик заранее показывает, сколько осталось — чтобы человек
+// не обнаружил обрезанный текст уже после сохранения.
+function updCount(el, max) {
+  let c = el.parentNode.querySelector('.char-count');
+  if (!c) { c = document.createElement('div'); c.className = 'char-count'; el.parentNode.appendChild(c); }
+  const len = el.value.length;
+  c.textContent = len + ' / ' + max;
+  c.classList.toggle('over', len >= max);
+}
 function findDog(id) { return (dataCache.dogs || []).find(d => d.id.toString() === id.toString()); }
 
 async function openDogCard(d) {
@@ -897,7 +909,7 @@ function openDogEditSheet(d) {
     <div class="field"><label>Стерилизация</label><select id="edSter">${selOpts(TRISTATE, d.sterilized || 'Неизвестно')}</select></div>
     <div class="field"><label>Вес (кг)</label><input type="number" step="0.1" id="edWeight" value="${escapeAttr(d.weightKg || '')}"></div>
     <div class="field"><label>Прививки</label><select id="edVacc">${selOpts(TRISTATE, d.vaccinated, '—')}</select></div>
-    <div class="field"><label>Заметки</label><textarea id="edMemo">${escapeHtml(d.memo || '')}</textarea></div>
+    <div class="field"><label>Заметки</label><textarea id="edMemo" maxlength="200" oninput="updCount(this,200)">${escapeHtml(d.memo || '')}</textarea></div>
     <button class="pop-btn secondary" style="margin-bottom:8px" onclick="updateDogPhoto('${d.id}')">📷 ${d.photoId ? 'Обновить' : 'Добавить'} фото</button>
     <button class="pop-btn" onclick="submitDogEdit('${d.id}')">Сохранить</button>
   `);
@@ -996,7 +1008,7 @@ function askDeleteDog(dogId, name) {
   openSheet(`
     <h3>Удалить анкету «${escapeHtml(name)}»?</h3>
     <div class="field"><label>Почему? (обязательно — уйдёт админам на проверку)</label>
-      <textarea id="delReason" placeholder="Например: переехали, анкета-дубль…"></textarea></div>
+      <textarea id="delReason" maxlength="200" oninput="updCount(this,200)" placeholder="Например: переехали, анкета-дубль…"></textarea></div>
     <div class="btn-row">
       <button class="pop-btn secondary" onclick="closeSheet()">Отмена</button>
       <button class="pop-btn danger" onclick="submitDeleteDog('${dogId}')">🗑 Удалить</button>
@@ -1045,7 +1057,7 @@ function openDonorSheet(dogId, name) {
     <div class="field"><label>Вес (кг)</label><input type="number" step="0.5" id="dnWeight" value="${escapeAttr(d.weightKg || '')}"></div>
     <div class="field"><label>Прививки</label><select id="dnVacc">${selOpts(TRISTATE, d.vaccinated || 'Неизвестно')}</select></div>
     <div class="field"><label>Условия (когда можете, район, компенсация…)</label>
-      <textarea id="dnMemo" placeholder="Например: будни после 18:00, только Ваке/Сабуртало">${escapeHtml(d.donorMemo || '')}</textarea></div>
+      <textarea id="dnMemo" maxlength="300" oninput="updCount(this,300)" placeholder="Например: будни после 18:00, только Ваке/Сабуртало">${escapeHtml(d.donorMemo || '')}</textarea></div>
     <button class="pop-btn" onclick="submitDonor('${dogId}')">🩸 Записать в доноры</button>
   `);
 }
@@ -1123,7 +1135,7 @@ function openAddDogSheet(draft) {
         <input type="text" id="adTagColor" placeholder="Цвет" value="${escapeAttr(d.tagColor || '')}">
       </div>
     </div>
-    <div class="field"><label>Заметки</label><textarea id="adMemo" placeholder="Характер, приметы, что важно знать…">${escapeHtml(d.memo || '')}</textarea></div>
+    <div class="field"><label>Заметки</label><textarea id="adMemo" maxlength="200" oninput="updCount(this,200)" placeholder="Характер, приметы, что важно знать…">${escapeHtml(d.memo || '')}</textarea></div>
     <button class="pop-btn secondary" onclick="addDogPickGeo()">${d.lat ? '📍 Точка выбрана — изменить' : '📍 Отметить точку на карте'}</button>
     <div class="geo-note">${d.lat ? '✅ ' + d.lat + ', ' + d.lng : 'Необязательно: без точки собака встанет по центру района'}</div>
     <div style="height:8px"></div>
@@ -1362,7 +1374,7 @@ function openBecomeSitterSheet(isEdit) {
       <div style="background:var(--card);border-radius:12px;padding:4px 12px">${svcToggles}</div>
     </div>
     <div class="field"><label>Пара слов о себе и опыте *</label>
-      <textarea id="sitBio" placeholder="Например: гуляю с собаками 3 года, живу в Ваке, умею с тревожными…">${escapeHtml(cur.desc || '')}</textarea></div>
+      <textarea id="sitBio" maxlength="300" oninput="updCount(this,300)" placeholder="Например: гуляю с собаками 3 года, живу в Ваке, умею с тревожными…">${escapeHtml(cur.desc || '')}</textarea></div>
     <div class="field"><label>Телефон для связи (сохранится в твоём профиле)</label><input type="tel" id="sitPhone" value="${escapeAttr(cur.phone || (me && me.profile && me.profile.tel !== 'Не указан' ? me.profile.tel : '') || '')}" placeholder="+995…"></div>
     <div class="field"><label>Цена / условия</label><input type="text" id="sitPrice" value="${escapeAttr(cur.price || '')}" placeholder="Например: 20 лари за прогулку"></div>
     <button class="pop-btn" onclick="submitBecomeSitter()">${isEdit ? 'Сохранить' : 'Опубликовать анкету'}</button>
@@ -1403,7 +1415,7 @@ function openReviewSheet(id, name, itemType) {
     <div class="field"><label>Оценка</label>
       <div class="stars" id="starsPick" data-rating="0">${[1,2,3,4,5].map(n => `<span class="star" data-v="${n}" onclick="pickStar(${n})">☆</span>`).join('')}</div>
     </div>
-    <div class="field"><textarea id="reviewText" placeholder="Коротко о впечатлениях (необязательно)"></textarea></div>
+    <div class="field"><textarea id="reviewText" maxlength="500" oninput="updCount(this,500)" placeholder="Коротко о впечатлениях (необязательно)"></textarea></div>
     <button class="pop-btn" onclick="submitReview('${id}','${itemType}')">Отправить</button>
   `);
 }
@@ -1485,7 +1497,7 @@ async function showDogComments(dogId, dogName) {
           <div class="when">${escapeHtml(c.date || '')}</div>
         </div>`).join('') : '<div class="empty">Пока пусто — напиши первым(ой) 🙂</div>'}
     </div>
-    <div class="field" style="margin-top:12px"><textarea id="commentText" placeholder="Написать комментарий…" maxlength="500"></textarea></div>
+    <div class="field" style="margin-top:12px"><textarea id="commentText" placeholder="Написать комментарий…" maxlength="500" oninput="updCount(this,500)"></textarea></div>
     <button class="pop-btn" id="commentSendBtn" onclick="submitComment('${dogId}','${escapeAttr(dogName)}')">Отправить</button>
   `);
 }
