@@ -276,14 +276,22 @@
     padding: 14px 18px 16px;
     background: linear-gradient(160deg, #eeb04a, var(--paw) 55%, var(--paw-deep));
     position: relative; }
+  /* Вертикальная «геройская» раскладка — только для карточки собаки; тот же класс
+     используется в шапке профиля пользователя, где нужен обычный ряд аватар+текст. */
+  .dog-card-head.hero { flex-direction: column; align-items: center; gap: 11px; padding: 16px 18px 18px; }
   .dog-card-head::before { content: ""; position: absolute; top: 12px; right: 16px; width: 13px; height: 13px;
     border-radius: 50%; background: var(--bg); box-shadow: inset 0 1px 2px rgba(0,0,0,.28); }
   .dog-card-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 0;
     border-bottom: 2px dashed color-mix(in srgb, var(--paw-deep) 55%, transparent); }
   .dog-card-head h3 { margin: 0; color: #2b2008; font-family: var(--font-disp); font-size: 17px; }
-  .dog-photo { width: 64px; height: 64px; border-radius: 50%; background: var(--paw-soft) center/cover no-repeat;
-    border: 2.5px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.18);
-    display: flex; align-items: center; justify-content: center; font-size: 28px; flex: 0 0 auto; }
+  .dog-card-head.hero h3 { font-size: 19px; text-align: center; }
+  /* Фото — главный элемент карточки: крупное, во всю ширину. Раньше это был кружок
+     64px сбоку от клички, из-за чего самая ценная часть анкеты почти не читалась. */
+  .dog-photo { width: 100%; max-width: 300px; aspect-ratio: 1; border-radius: var(--r-ctl, 14px);
+    background: var(--paw-soft) center/cover no-repeat;
+    border: 3px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,.2);
+    display: flex; align-items: center; justify-content: center; font-size: 72px; flex: 0 0 auto;
+    cursor: pointer; }
   .dog-photo.loaded { font-size: 0; }
   .dog-memo { background: rgba(39,34,25,.05);
     background: color-mix(in srgb, var(--text) 5%, transparent); border-radius: var(--r-ctl);
@@ -306,6 +314,8 @@
   .gallery-del { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
     border: none; background: rgba(0,0,0,.55); color: #fff; font-size: 13px; line-height: 1; cursor: pointer;
     display: flex; align-items: center; justify-content: center; }
+  .gallery-cover-tag { position: absolute; bottom: 4px; left: 4px; padding: 2px 6px; border-radius: 999px;
+    background: rgba(0,0,0,.6); color: #fff; font-size: 10px; font-weight: 700; }
 </style>
 </head>
 <body data-screen="map">
@@ -823,7 +833,7 @@ async function openDogCard(d) {
   }
 
   openSheet(`
-    <div class="dog-card-head"><div id="dogPhoto" class="dog-photo">🐕</div><h3>${escapeHtml(d.name || 'Собака')}</h3></div>
+    <div class="dog-card-head hero"><div id="dogPhoto" class="dog-photo" onclick="showDogGallery('${d.id}','${escapeAttr(d.name || '')}',${canEditGallery})">🐕</div><h3>${escapeHtml(d.name || 'Собака')}</h3></div>
     <div class="badges">${badges}</div>
     <div class="dog-info">${rows.map(r => `<div class="info-row"><span>${r[0]}</span><b>${escapeHtml(r[1])}</b></div>`).join('')}</div>
     ${d.memo ? `<div class="dog-memo">📝 ${escapeHtml(d.memo)}</div>` : ''}
@@ -1412,7 +1422,8 @@ async function showDogGallery(dogId, dogName, canEdit) {
     ${photos.length ? `<div class="gallery-grid">${photos.map(p => `
       <div class="gallery-item">
         <img src="${p.url}" loading="lazy">
-        ${canEdit ? `<button class="gallery-del" onclick="deleteGalleryPhoto('${p.id}','${dogId}','${escapeAttr(dogName)}',${canEdit})">✕</button>` : ''}
+        ${p.isCover ? '<span class="gallery-cover-tag">обложка</span>' : ''}
+        ${(canEdit && !p.isCover) ? `<button class="gallery-del" onclick="deleteGalleryPhoto('${p.id}','${dogId}','${escapeAttr(dogName)}',${canEdit})">✕</button>` : ''}
       </div>`).join('')}</div>` : '<div class="empty">Пока пусто 🙂</div>'}
     ${canEdit ? `<button class="pop-btn secondary" style="margin-top:10px" onclick="openBotDeepLink('gallery_${dogId}')">➕ Добавить фото</button>` : ''}
   `);
@@ -1441,15 +1452,51 @@ async function showDogComments(dogId, dogName) {
         </div>`).join('') : '<div class="empty">Пока пусто — напиши первым(ой) 🙂</div>'}
     </div>
     <div class="field" style="margin-top:12px"><textarea id="commentText" placeholder="Написать комментарий…" maxlength="500"></textarea></div>
-    <button class="pop-btn" onclick="submitComment('${dogId}','${escapeAttr(dogName)}')">Отправить</button>
+    <button class="pop-btn" id="commentSendBtn" onclick="submitComment('${dogId}','${escapeAttr(dogName)}')">Отправить</button>
   `);
 }
+let commentSubmitting = false;
 async function submitComment(dogId, dogName) {
-  const text = document.getElementById('commentText').value.trim();
+  if (commentSubmitting) return; // повторный тап, пока запрос в полёте, — игнорируем
+  const field = document.getElementById('commentText');
+  const text = field.value.trim();
   if (!text) { alert('Напиши текст комментария 🙂'); return; }
-  const res = await callApi('addComment', { dogId, text });
-  if (res.ok) { haptic(); showDogComments(dogId, dogName); }
-  else alert('Не получилось: ' + (res.error || ''));
+  const btn = document.getElementById('commentSendBtn');
+  commentSubmitting = true;
+  // Блокируем кнопку и показываем прогресс прямо на ней: раньше окно с введённым
+  // текстом «висело» неизменным, и было неясно, ушёл ли комментарий — люди жали
+  // второй раз и получали дубль.
+  if (btn) { btn.disabled = true; btn.textContent = 'Отправляю…'; }
+  field.disabled = true;
+  try {
+    const res = await callApi('addComment', { dogId, text });
+    if (res.ok) {
+      haptic();
+      // Дорисовываем комментарий на месте, без полной перезагрузки ленты через
+      // промежуточный экран «Загружаю».
+      const list = document.getElementById('commentsList');
+      if (list) {
+        const empty = list.querySelector('.empty');
+        if (empty) empty.remove();
+        const now = new Date();
+        const stamp = String(now.getDate()).padStart(2, '0') + '.' + String(now.getMonth() + 1).padStart(2, '0') + '.' + now.getFullYear() +
+          ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        const div = document.createElement('div');
+        div.className = 'review-item';
+        div.innerHTML = `<div class="row-between"><span class="who">${escapeHtml(res.author || 'Ты')}</span></div>
+          <div class="txt">${escapeHtml(text)}</div><div class="when">${escapeHtml(stamp)}</div>`;
+        list.appendChild(div);
+        div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      field.value = '';
+    } else {
+      alert('Не получилось: ' + (res.error || ''));
+    }
+  } finally {
+    commentSubmitting = false;
+    field.disabled = false;
+    if (btn) { btn.disabled = false; btn.textContent = 'Отправить'; }
+  }
 }
 async function deleteComment(commentId, dogId, dogName) {
   const res = await callApi('deleteComment', { commentId, dogId });
