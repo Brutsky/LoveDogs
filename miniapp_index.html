@@ -115,6 +115,10 @@
   .marker-pin.closed { opacity: .45; }
   .marker-pin.moderation { border-style: dashed; border-color: #E0A93B; }
   .marker-pin.mine { border-color: var(--paw-deep); border-width: 3px; }
+  /* Уличная с устаревшей гео (>3 мес без подтверждений): приглушённая и с пунктирным
+     кольцом — читается как «не подтверждено», но не спорит с алармом потеряшки. */
+  .marker-pin.stale { border-style: dashed; opacity: .6; }
+  .marker-pin.stale span { opacity: .75; }
 
   /* Режим выбора точки */
   #pick-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 800;
@@ -482,6 +486,7 @@ function pinIcon(kind, item) {
   if (kind === 'dogs') {
     color = cssVar('--paw');
     if (item.mine) cls += ' mine';
+    if (item.geoStale) cls += ' stale'; // >3 мес без подтверждения — визуально приглушаем
     if (item.lost) { cls += ' lost'; color = cssVar('--red'); emoji = '🚨'; }
     else emoji = item.status === 'У владельца' ? '🏠' : (item.status === 'У опекуна' ? '🤝' : '🐕');
   } else {
@@ -796,6 +801,12 @@ async function openDogCard(d) {
   // Зеркало canEditDog_: свой владелец/опекун ИЛИ бесхозная уличная (её редактирует любой)
   const canEditGallery = !!d.mine || (isStreet && !d.hasOwner);
   let actions = '';
+  // Уличная: подтвердить, что пёс всё там же — один тап, без отправки новой точки.
+  // Именно эти подтверждения удерживают собаку на карте (>3 мес — метка «устарело»,
+  // >1 год — уходит с карты, >2 лет — становится неактивной).
+  if (isStreet && !d.lost) {
+    actions += `<button class="pop-btn" onclick="confirmDogGeo('${d.id}','${escapeAttr(d.name || '')}')">✅ Собака здесь</button>`;
+  }
   if (d.lat) actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">🗺 Показать на карте</button>`;
   actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">↗️ Поделиться собакой</button>`;
   actions += `<button class="pop-btn secondary" onclick="showDogGallery('${d.id}','${escapeAttr(d.name || '')}',${canEditGallery})">🖼 Галерея</button>`;
@@ -1409,6 +1420,24 @@ async function submitReview(id, itemType) {
     else { dataCache.places = null; renderLayer(); }
     setStatus('✅ Спасибо за отзыв!', 2000);
   } else alert('Не получилось: ' + (res.error === 'self review' ? 'себя оценивать нельзя 🙂' : (res.error || '')));
+}
+
+let geoConfirming = false;
+async function confirmDogGeo(dogId, dogName) {
+  if (geoConfirming) return;
+  geoConfirming = true;
+  try {
+    const res = await callApi('confirmDogGeo', { dogId });
+    if (res.ok) {
+      haptic();
+      setStatus('✅ Спасибо! Отметил, что «' + dogName + '» на месте', 2600);
+      await loadData('dogs', true);    // перечитать слой собак, минуя кэш
+      const fresh = findDog(dogId);
+      if (fresh) openDogCard(fresh);   // перерисовать карточку с новой датой
+    } else {
+      alert('Не получилось: ' + (res.error || ''));
+    }
+  } finally { geoConfirming = false; }
 }
 
 // ================== ГАЛЕРЕЯ ФОТО СОБАКИ ==================
