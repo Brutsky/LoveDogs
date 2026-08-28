@@ -426,6 +426,73 @@ const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initData
 // а когда загрузится профиль — уточняем сохранённым выбором пользователя.
 const I18N = {
   RU: {
+    si_myform_h:'✏️ Моя анкета ситтера', si_become_h:'🙋 Стать догситтером',
+    si_none:'Ситтеров пока нет — стань первым!',
+    si_none_fmt:'В этом формате пока никто не работает',
+    si_become:'Стать догситтером',
+    si_back:'Вернуться в ситтеры',
+    si_word:'Ситтер',
+    si_norates:'без оценок',
+    si_phone:'телефон',
+    si_copyhint:'(нажми, чтобы скопировать)',
+    si_write:'✍️ Написать',
+    si_myform:'✏️ Моя анкета',
+    si_call:'📞 Позвонить',
+    si_quit:'🚫 Больше не ситтер',
+    cm_head:'💬 Комментарии',
+    cm_empty:'Пока пусто — напиши первым(ой) 🙂',
+    cm_ph:'Написать комментарий…',
+    cm_send:'Отправить',
+    cm_sending:'Отправляю…',
+    cm_guest:'Гость',
+    cm_empty_text:'Напиши текст комментария 🙂',
+    gl_head:'🖼 Галерея',
+    gl_empty:'Пока пусто 🙂',
+    gl_cover:'обложка',
+    gl_add:'➕ Добавить фото',
+    rv_head:'💬 Отзывы',
+    rv_empty:'Пока пусто — будь первым 🙂',
+    rv_anon:'Аноним',
+    rv_rating:'Оценка',
+    rv_ph:'Коротко о впечатлениях (необязательно)',
+    rv_need:'Поставь оценку от 1 до 5 ⭐',
+    err_fail:'Не получилось: ',
+    p_fewrates:'мало оценок',
+    d_breed:'🏷 Порода',
+    d_age:'📅 Возраст',
+    d_sex:'⚥ Пол',
+    d_status:'📊 Статус',
+    d_region:'🗺 Район',
+    d_weight:'⚖️ Вес',
+    d_ster:'🏥 Стерилизация',
+    d_vacc:'💉 Прививки',
+    d_color:'🎨 Окрас',
+    d_tag:'🔖 Бирка',
+    d_donor:'🩸 Донор',
+    d_dog:'Собака',
+    d_yes:'да',
+    d_dash:'—',
+    d_kg:' кг',
+    d_days:' дн.',
+    b_mine:'💛 моя',
+    b_seeking:'🏡 ищет дом',
+    b_donor:'🩸 донор',
+    b_approx:'≈ примерно район',
+    a_share:'↗️ Поделиться собакой',
+    a_here:'✅ Собака здесь',
+    a_edit:'✏️ Редактировать анкету',
+    a_comments:'💬 Комментарии',
+    a_gallery:'🖼 Галерея',
+    a_walks:'📍 Гуляет тут',
+    a_updgeo:'📍 Уточнить геопозицию',
+    a_showmap:'🗺 Показать на карте',
+    p_onmod:'⏳ на проверке',
+    p_closed:'⛔ не работает',
+    p_night:'🌙 круглосуточно',
+    p_noreviews:'пока без отзывов',
+    p_fix:'✏️ Уточнить данные',
+    p_review:'⭐ Оставить отзыв',
+    p_readrev:'💬 Читать отзывы',
     sf_all:'Все', sf_mine:'💛 Мои', sf_home:'Домашние', sf_street:'Уличные', sf_lost:'🚨 Потеряшки',
     tab_map:'🗺', tab_map_l:'Карта', tab_dogs:'🐾', tab_dogs_l:'Собаки',
     tab_sitters:'🧑', tab_sitters_l:'Ситтеры', tab_profile:'👤', tab_profile_l:'Профиль',
@@ -437,6 +504,73 @@ const I18N = {
     empty:'Пусто', cancel:'Отмена', save:'Сохранить', close:'Закрыть'
   },
   GE: {
+    si_myform_h:'✏️ ჩემი მომვლელის ანკეტა', si_become_h:'🙋 გახდი ძაღლის მომვლელი',
+    si_none:'მომვლელები ჯერ არ არიან — გახდი პირველი!',
+    si_none_fmt:'ამ ფორმატში ჯერ არავინ მუშაობს',
+    si_become:'გახდი ძაღლის მომვლელი',
+    si_back:'დაბრუნება მომვლელებში',
+    si_word:'მომვლელი',
+    si_norates:'შეფასების გარეშე',
+    si_phone:'ტელეფონი',
+    si_copyhint:'(დააჭირე დასაკოპირებლად)',
+    si_write:'✍️ მიწერა',
+    si_myform:'✏️ ჩემი ანკეტა',
+    si_call:'📞 დარეკვა',
+    si_quit:'🚫 აღარ ვარ მომვლელი',
+    cm_head:'💬 კომენტარები',
+    cm_empty:'ჯერ ცარიელია — დაწერე პირველმა 🙂',
+    cm_ph:'დაწერე კომენტარი…',
+    cm_send:'გაგზავნა',
+    cm_sending:'იგზავნება…',
+    cm_guest:'სტუმარი',
+    cm_empty_text:'დაწერე კომენტარის ტექსტი 🙂',
+    gl_head:'🖼 გალერეა',
+    gl_empty:'ჯერ ცარიელია 🙂',
+    gl_cover:'ყდა',
+    gl_add:'➕ ფოტოს დამატება',
+    rv_head:'💬 შეფასებები',
+    rv_empty:'ჯერ ცარიელია — იყავი პირველი 🙂',
+    rv_anon:'ანონიმური',
+    rv_rating:'შეფასება',
+    rv_ph:'მოკლედ შთაბეჭდილებებზე (არასავალდებულო)',
+    rv_need:'დააყენე შეფასება 1-დან 5-მდე ⭐',
+    err_fail:'ვერ მოხერხდა: ',
+    p_fewrates:'შეფასება ცოტაა',
+    d_breed:'🏷 ჯიში',
+    d_age:'📅 ასაკი',
+    d_sex:'⚥ სქესი',
+    d_status:'📊 სტატუსი',
+    d_region:'🗺 რაიონი',
+    d_weight:'⚖️ წონა',
+    d_ster:'🏥 სტერილიზაცია',
+    d_vacc:'💉 აცრები',
+    d_color:'🎨 ფერი',
+    d_tag:'🔖 ჟეტონი',
+    d_donor:'🩸 დონორი',
+    d_dog:'ძაღლი',
+    d_yes:'კი',
+    d_dash:'—',
+    d_kg:' კგ',
+    d_days:' დღე',
+    b_mine:'💛 ჩემი',
+    b_seeking:'🏡 ეძებს სახლს',
+    b_donor:'🩸 დონორი',
+    b_approx:'≈ სავარაუდო რაიონი',
+    a_share:'↗️ ძაღლის გაზიარება',
+    a_here:'✅ ძაღლი აქ არის',
+    a_edit:'✏️ ანკეტის რედაქტირება',
+    a_comments:'💬 კომენტარები',
+    a_gallery:'🖼 გალერეა',
+    a_walks:'📍 აქ სეირნობს',
+    a_updgeo:'📍 გეოლოკაციის დაზუსტება',
+    a_showmap:'🗺 რუკაზე ჩვენება',
+    p_onmod:'⏳ შემოწმებაზეა',
+    p_closed:'⛔ არ მუშაობს',
+    p_night:'🌙 24 საათი',
+    p_noreviews:'ჯერ შეფასების გარეშე',
+    p_fix:'✏️ მონაცემების დაზუსტება',
+    p_review:'⭐ შეფასების დატოვება',
+    p_readrev:'💬 შეფასებების წაკითხვა',
     sf_all:'ყველა', sf_mine:'💛 ჩემი', sf_home:'შინაური', sf_street:'ქუჩის', sf_lost:'🚨 დაკარგულები',
     tab_map:'🗺', tab_map_l:'რუკა', tab_dogs:'🐾', tab_dogs_l:'ძაღლები',
     tab_sitters:'🧑', tab_sitters_l:'მომვლელები', tab_profile:'👤', tab_profile_l:'პროფილი',
@@ -448,6 +582,73 @@ const I18N = {
     empty:'ცარიელია', cancel:'გაუქმება', save:'შენახვა', close:'დახურვა'
   },
   EN: {
+    si_myform_h:'✏️ My sitter profile', si_become_h:'🙋 Become a dog sitter',
+    si_none:'No sitters yet — be the first!',
+    si_none_fmt:'Nobody works in this format yet',
+    si_become:'Become a dog sitter',
+    si_back:'Back to sitters',
+    si_word:'Sitter',
+    si_norates:'no ratings',
+    si_phone:'phone',
+    si_copyhint:'(tap to copy)',
+    si_write:'✍️ Write',
+    si_myform:'✏️ My profile',
+    si_call:'📞 Call',
+    si_quit:'🚫 Stop being a sitter',
+    cm_head:'💬 Comments',
+    cm_empty:'Nothing yet — be the first 🙂',
+    cm_ph:'Write a comment…',
+    cm_send:'Send',
+    cm_sending:'Sending…',
+    cm_guest:'Guest',
+    cm_empty_text:'Write the comment text 🙂',
+    gl_head:'🖼 Gallery',
+    gl_empty:'Nothing yet 🙂',
+    gl_cover:'cover',
+    gl_add:'➕ Add a photo',
+    rv_head:'💬 Reviews',
+    rv_empty:'Nothing yet — be the first 🙂',
+    rv_anon:'Anonymous',
+    rv_rating:'Rating',
+    rv_ph:'A few words about your experience (optional)',
+    rv_need:'Give a rating from 1 to 5 ⭐',
+    err_fail:'Didn\'t work: ',
+    p_fewrates:'few ratings',
+    d_breed:'🏷 Breed',
+    d_age:'📅 Age',
+    d_sex:'⚥ Sex',
+    d_status:'📊 Status',
+    d_region:'🗺 District',
+    d_weight:'⚖️ Weight',
+    d_ster:'🏥 Sterilised',
+    d_vacc:'💉 Vaccines',
+    d_color:'🎨 Colour',
+    d_tag:'🔖 Tag',
+    d_donor:'🩸 Donor',
+    d_dog:'Dog',
+    d_yes:'yes',
+    d_dash:'—',
+    d_kg:' kg',
+    d_days:' d',
+    b_mine:'💛 mine',
+    b_seeking:'🏡 needs a home',
+    b_donor:'🩸 donor',
+    b_approx:'≈ approx. district',
+    a_share:'↗️ Share this dog',
+    a_here:'✅ Dog is here',
+    a_edit:'✏️ Edit profile',
+    a_comments:'💬 Comments',
+    a_gallery:'🖼 Gallery',
+    a_walks:'📍 Walks here',
+    a_updgeo:'📍 Update location',
+    a_showmap:'🗺 Show on map',
+    p_onmod:'⏳ pending review',
+    p_closed:'⛔ closed',
+    p_night:'🌙 open 24/7',
+    p_noreviews:'no reviews yet',
+    p_fix:'✏️ Correct details',
+    p_review:'⭐ Leave a review',
+    p_readrev:'💬 Read reviews',
     sf_all:'All', sf_mine:'💛 Mine', sf_home:'Home', sf_street:'Street', sf_lost:'🚨 Lost',
     tab_map:'🗺', tab_map_l:'Map', tab_dogs:'🐾', tab_dogs_l:'Dogs',
     tab_sitters:'🧑', tab_sitters_l:'Sitters', tab_profile:'👤', tab_profile_l:'Profile',
@@ -639,21 +840,21 @@ function filterPlacesMap(list) {
 
 function placePopupHtml(p) {
   const tinfo = PLACE_TYPES[p.type] || PLACE_TYPES.Other;
-  const stars = p.rating != null ? '⭐'.repeat(Math.round(p.rating)) + ` ${p.rating} (${p.ratingCount})` : (p.ratingCount ? `мало оценок (${p.ratingCount})` : 'пока без отзывов');
+  const stars = p.rating != null ? '⭐'.repeat(Math.round(p.rating)) + ` ${p.rating} (${p.ratingCount})` : (p.ratingCount ? `${t('p_fewrates')} (${p.ratingCount})` : t('p_noreviews'));
   return `<div class="pop-title">${tinfo.icon} ${escapeHtml(p.name)}</div>
     <div class="pop-row">🏷 ${escapeHtml(p.typeLabel || tinfo.label)}</div>
     ${p.address ? `<div class="pop-row">${escapeHtml(p.address)}</div>` : ''}
     ${p.phone ? `<div class="pop-row">📞 <a href="tel:${escapeAttr(p.phone)}">${escapeHtml(p.phone)}</a></div>` : ''}
     <div class="pop-row">${stars}</div>
     <div class="pop-badges">
-      ${p.onModeration ? '<span class="badge warn">⏳ на проверке</span>' : ''}
-      ${p.night ? '<span class="badge">🌙 круглосуточно</span>' : ''}
-      ${p.closed ? '<span class="badge warn">⛔ не работает</span>' : ''}
+      ${p.onModeration ? `<span class="badge warn">${t('p_onmod')}</span>` : ''}
+      ${p.night ? `<span class="badge">${t('p_night')}</span>` : ''}
+      ${p.closed ? `<span class="badge warn">${t('p_closed')}</span>` : ''}
     </div>
     <div class="pop-actions">
-      <button class="pop-btn" onclick="openReviewSheet('${p.id}','${escapeAttr(p.name)}','Places')">⭐ Оставить отзыв</button>
-      <button class="pop-btn secondary" onclick="showReviews('Places','${p.id}','${escapeAttr(p.name)}')">💬 Читать отзывы</button>
-      <button class="pop-btn secondary" onclick='openSuggestSheet(${JSON.stringify(p).replace(/'/g, "&#39;")})'>✏️ Уточнить данные</button>
+      <button class="pop-btn" onclick="openReviewSheet('${p.id}','${escapeAttr(p.name)}','Places')">${t('p_review')}</button>
+      <button class="pop-btn secondary" onclick="showReviews('Places','${p.id}','${escapeAttr(p.name)}')">${t('p_readrev')}</button>
+      <button class="pop-btn secondary" onclick='openSuggestSheet(${JSON.stringify(p).replace(/'/g, "&#39;")})'>${t('p_fix')}</button>
     </div>`;
 }
 
@@ -873,24 +1074,24 @@ function findDog(id) { return (dataCache.dogs || []).find(d => d.id.toString() =
 async function openDogCard(d) {
   const isStreet = d.status === 'Уличная';
   const rows = [
-    ['🏷 Порода', d.breed || '—'],
-    d.color ? ['🎨 Окрас', d.color] : null,
-    d.tagNumber ? ['🔖 Бирка', d.tagNumber + (d.tagColor ? ' · ' + d.tagColor : '')] : null,
-    ['📅 Возраст', d.age || '—'],
-    ['⚥ Пол', d.sex || '—'],
-    ['📊 Статус', d.status || '—'],
-    ['🗺 Район', ((d.city || '') + (d.region ? ', ' + d.region : '')) || '—'],
-    d.sterilized ? ['🏥 Стерилизация', d.sterilized] : null,
-    d.weightKg ? ['⚖️ Вес', d.weightKg + ' кг'] : null,
-    d.vaccinated ? ['💉 Прививки', d.vaccinated] : null,
-    d.isDonor ? ['🩸 Донор', d.donorMemo || 'да'] : null
+    [t('d_breed'), d.breed || '—'],
+    d.color ? [t('d_color'), d.color] : null,
+    d.tagNumber ? [t('d_tag'), d.tagNumber + (d.tagColor ? ' · ' + d.tagColor : '')] : null,
+    [t('d_age'), d.age || '—'],
+    [t('d_sex'), d.sex || '—'],
+    [t('d_status'), d.status || '—'],
+    [t('d_region'), ((d.city || '') + (d.region ? ', ' + d.region : '')) || '—'],
+    d.sterilized ? [t('d_ster'), d.sterilized] : null,
+    d.weightKg ? [t('d_weight'), d.weightKg + t('d_kg')] : null,
+    d.vaccinated ? [t('d_vacc'), d.vaccinated] : null,
+    d.isDonor ? [t('d_donor'), d.donorMemo || 'да'] : null
   ].filter(Boolean);
   const badges = [
-    d.mine ? '<span class="badge brand">💛 моя</span>' : '',
-    d.seekingHome ? '<span class="badge ok">🏡 ищет дом</span>' : '',
-    d.isDonor ? '<span class="badge">🩸 донор</span>' : '',
-    d.lost ? `<span class="badge warn">🚨 потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + ' дн.' : ''}</span>` : '',
-    !d.exactLocation && !d.lost ? '<span class="badge">≈ примерно район</span>' : ''
+    d.mine ? `<span class="badge brand">${t('b_mine')}</span>` : '',
+    d.seekingHome ? `<span class="badge ok">${t('b_seeking')}</span>` : '',
+    d.isDonor ? `<span class="badge">${t('b_donor')}</span>` : '',
+    d.lost ? `<span class="badge warn">🚨 потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + t('d_days') : ''}</span>` : '',
+    !d.exactLocation && !d.lost ? `<span class="badge">${t('b_approx')}</span>` : ''
   ].join('');
 
   // Роли — зеркало логики бота (showDogCard):
@@ -904,21 +1105,21 @@ async function openDogCard(d) {
   // Именно эти подтверждения удерживают собаку на карте (>3 мес — метка «устарело»,
   // >1 год — уходит с карты, >2 лет — становится неактивной).
   if (isStreet && !d.lost) {
-    actions += `<button class="pop-btn" onclick="confirmDogGeo('${d.id}','${escapeAttr(d.name || '')}')">✅ Собака здесь</button>`;
+    actions += `<button class="pop-btn" onclick="confirmDogGeo('${d.id}','${escapeAttr(d.name || '')}')">${t('a_here')}</button>`;
   }
-  if (d.lat) actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">🗺 Показать на карте</button>`;
-  actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">↗️ Поделиться собакой</button>`;
-  actions += `<button class="pop-btn secondary" onclick="showDogGallery('${d.id}','${escapeAttr(d.name || '')}',${canEditGallery})">🖼 Галерея</button>`;
-  actions += `<button class="pop-btn secondary" onclick="showDogComments('${d.id}','${escapeAttr(d.name || '')}')">💬 Комментарии</button>`;
+  if (d.lat) actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">${t('a_showmap')}</button>`;
+  actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">${t('a_share')}</button>`;
+  actions += `<button class="pop-btn secondary" onclick="showDogGallery('${d.id}','${escapeAttr(d.name || '')}',${canEditGallery})">${t('a_gallery')}</button>`;
+  actions += `<button class="pop-btn secondary" onclick="showDogComments('${d.id}','${escapeAttr(d.name || '')}')">${t('a_comments')}</button>`;
   if (d.mine) {
-    actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Редактировать анкету</button>`;
+    actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">${t('a_edit')}</button>`;
     if (isHomeMine) {
-      actions += `<button class="pop-btn secondary" onclick="walkHereMine('${d.id}')">📍 Гуляет тут</button>`;
+      actions += `<button class="pop-btn secondary" onclick="walkHereMine('${d.id}')">${t('a_walks')}</button>`;
       actions += d.isDonor
         ? `<button class="pop-btn secondary" onclick="removeDonor('${d.id}')">🚫 Убрать из доноров</button>`
         : `<button class="pop-btn secondary" onclick="openDonorSheet('${d.id}','${escapeAttr(d.name || '')}')">🩸 Стать донором крови</button>`;
     } else {
-      actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить геопозицию</button>`;
+      actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">${t('a_updgeo')}</button>`;
     }
     if (isGuardianMine) {
       actions += d.seekingHome
@@ -939,7 +1140,7 @@ async function openDogCard(d) {
     if (!d.hasOwner || d.status !== 'У владельца') {
       actions += `<button class="pop-btn secondary" onclick="takeCare('${d.id}','${escapeAttr(d.name || '')}')">🤲 Взять опекунство</button>`;
     }
-    if (isStreet) actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">📍 Уточнить геопозицию</button>`;
+    if (isStreet) actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">${t('a_updgeo')}</button>`;
   }
 
   openSheet(`
@@ -1021,13 +1222,13 @@ async function submitDogEdit(id) {
   const res = await callApi('editDog', { dogId: id, changes });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('✅ Анкета обновлена', 2000); }
-  else alert('Не получилось: ' + (res.error === 'bad breed' ? 'недопустимые символы в породе' : (res.error || '')));
+  else alert(t('err_fail') + (res.error === 'bad breed' ? 'недопустимые символы в породе' : (res.error || '')));
 }
 
 function walkHereMine(dogId) {
   // «Гуляет тут» — координаты именно ЭТОЙ собаки
   openSheet(`
-    <h3>📍 Гуляет тут</h3>
+    <h3>${t('a_walks')}</h3>
     <div class="geo-note" style="margin-bottom:12px">Точка этой собаки станет видна другим на карте — так соседи смогут познакомиться.</div>
     <div class="pop-actions vertical">
       <button class="pop-btn" onclick="walkSetGeo('${dogId}')">📍 Моя текущая позиция</button>
@@ -1042,7 +1243,7 @@ async function walkApply(payload, okText) {
     haptic(); closeSheet(); map.closePopup();
     dataCache.dogs = null; await renderLayer(); renderDogsScreen();
     setStatus(okText, 2400);
-  } else { setStatus(null); alert('Не получилось: ' + (res.error || '')); }
+  } else { setStatus(null); alert(t('err_fail') + (res.error || '')); }
   return res.ok;
 }
 async function walkSetGeo(dogId) {
@@ -1067,7 +1268,7 @@ async function setDogGeoFromCard(dogId) {
   if (!choice) return;
   const res = await callApi('walkHere', { dogId, lat: choice.lat, lng: choice.lng });
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); setStatus('✅ Геопозиция обновлена', 2000); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 
 async function markLost(dogId) {
@@ -1078,13 +1279,13 @@ async function markLost(dogId) {
   setStatus(null);
   closeSheet();
   if (res.ok) { haptic('warning'); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🚨 Отмечено. Пусть найдётся скорее!', 2600); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 async function markFound(dogId) {
   const res = await callApi('setFound', { dogId });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🎉 Ура! Снята метка «потерялась»', 2400); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 function askDeleteDog(dogId, name) {
   openSheet(`
@@ -1103,7 +1304,7 @@ async function submitDeleteDog(dogId) {
   const res = await callApi('deleteDog', { dogId, reason });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('Анкета удалена', 2000); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 
 // Список собак пользователя прямо в профиле (все — списком, тап открывает карточку)
@@ -1152,34 +1353,34 @@ async function submitDonor(dogId) {
   });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🩸 Записали в доноры — спасибо!', 2400); }
-  else alert('Не получилось: ' + (res.error === 'home only' ? 'донорство доступно только домашним собакам' : (res.error || '')));
+  else alert(t('err_fail') + (res.error === 'home only' ? 'донорство доступно только домашним собакам' : (res.error || '')));
 }
 async function removeDonor(dogId) {
   if (!confirm('Убрать собаку из списка доноров?')) return;
   const res = await callApi('setDonor', { dogId, enable: false });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('Убрали из доноров', 2000); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 async function toggleSeeking(dogId, on) {
   const res = await callApi('setSeeking', { dogId, on });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(on ? '🏡 Отметили — пусть найдётся дом!' : 'Сняли метку «ищет дом»', 2200); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 async function giveUpCare(dogId, name) {
   if (!confirm(`Точно отказаться от опеки над «${name}»? Собака снова станет «уличной» без опекуна.`)) return;
   const res = await callApi('giveUpCare', { dogId });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('Готово, ты больше не опекун', 2200); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 async function takeCare(dogId, name) {
   if (!confirm(`Взять опекунство над «${name}»? Ты станешь отвечать за анкету и геопозицию.`)) return;
   const res = await callApi('takeCare', { dogId });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🤲 Готово, теперь ты опекун!', 2200); }
-  else alert('Не получилось: ' + (res.error === 'limit' ? 'достигнут лимит анкет' : (res.error || '')));
+  else alert(t('err_fail') + (res.error === 'limit' ? 'достигнут лимит анкет' : (res.error || '')));
 }
 
 // ================== ДОБАВЛЕНИЕ СОБАКИ ==================
@@ -1263,7 +1464,7 @@ async function submitAddDog() {
     dataCache.dogs = null; await renderLayer(); renderDogsScreen();
     setStatus('✅ Собака добавлена!', 2200);
   } else if (res.error === 'limit') alert('Достигнут лимит анкет на одного человека.');
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 
 // ================== ЭКРАН «СОБАКИ» ==================
@@ -1348,9 +1549,9 @@ function renderDogsScreen() {
         <div style="font-size:22px">${d.mine ? '💛' : '🐕'}</div>
       </div>
       <div class="badges">
-        ${d.seekingHome ? '<span class="badge ok">🏡 ищет дом</span>' : ''}
-        ${d.isDonor ? '<span class="badge">🩸 донор ' + (d.weightKg ? d.weightKg + ' кг' : '') + '</span>' : ''}
-        ${d.lost ? `<span class="badge warn">потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + ' дн.' : ''}</span>` : ''}
+        ${d.seekingHome ? `<span class="badge ok">${t('b_seeking')}</span>` : ''}
+        ${d.isDonor ? '<span class="badge">🩸 донор ' + (d.weightKg ? d.weightKg + t('d_kg') : '') + '</span>' : ''}
+        ${d.lost ? `<span class="badge warn">потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + t('d_days') : ''}</span>` : ''}
         ${d.tagNumber ? '<span class="badge">🔖 ' + escapeHtml(d.tagNumber) + '</span>' : ''}
         ${!d.lat ? '<span class="badge">🗺 нет на карте — без координат</span>' : ''}
       </div>
@@ -1408,31 +1609,31 @@ function renderSitters(err) {
   if (err) { box.innerHTML = `<div class="empty">Не получилось загрузить (${escapeHtml(err)})</div>`; return; }
   selfSlot.innerHTML = (mySitterProfile && mySitterProfile.active)
     ? `<div class="btn-row" style="margin-bottom:12px">
-        <button class="pop-btn secondary" onclick="openBecomeSitterSheet(true)">✏️ Моя анкета</button>
-        <button class="pop-btn secondary" onclick="stopSitter()">🚫 Больше не ситтер</button>
+        <button class="pop-btn secondary" onclick="openBecomeSitterSheet(true)">${t('si_myform')}</button>
+        <button class="pop-btn secondary" onclick="stopSitter()">${t('si_quit')}</button>
       </div>`
-    : `<button class="pop-btn" style="margin-bottom:12px" onclick="openBecomeSitterSheet(!!mySitterProfile)">🙋 ${mySitterProfile ? 'Вернуться в ситтеры' : 'Стать догситтером'}</button>`;
+    : `<button class="pop-btn" style="margin-bottom:12px" onclick="openBecomeSitterSheet(!!mySitterProfile)">🙋 ${mySitterProfile ? t('si_back') : t('si_become')}</button>`;
   let list = sittersCache || [];
   if (sitterFilter !== 'all') list = list.filter(s => s[sitterFilter]);
   if (!list.length) {
-    box.innerHTML = `<div class="empty"><div class="big">🧑</div>${sitterFilter === 'all' ? 'Ситтеров пока нет — стань первым!' : 'В этом формате пока никто не работает'}</div>`;
+    box.innerHTML = `<div class="empty"><div class="big">🧑</div>${sitterFilter === 'all' ? t('si_none') : t('si_none_fmt')}</div>`;
     return;
   }
   box.innerHTML = list.map(s => {
-    const rating = s.rating != null ? `⭐ ${s.rating} (${s.ratingCount})` : (s.ratingCount ? `мало оценок (${s.ratingCount})` : 'без оценок');
+    const rating = s.rating != null ? `⭐ ${s.rating} (${s.ratingCount})` : (s.ratingCount ? `мало оценок (${s.ratingCount})` : t('si_norates'));
     return `<div class="card">
       <div class="row-between">
-        <div class="list-title">${s.self ? '💛 ' : '🙋 '}${escapeHtml(s.name || 'Ситтер')}</div>
+        <div class="list-title">${s.self ? '💛 ' : '🙋 '}${escapeHtml(s.name || t('si_word'))}</div>
         <span class="badge">${rating}</span>
       </div>
       <div class="badges">${sitterServiceBadges(s)}</div>
       ${s.desc ? `<div class="list-sub" style="margin-top:6px">${escapeHtml(s.desc)}</div>` : ''}
       ${s.price ? `<div class="list-sub">💰 ${escapeHtml(s.price)}</div>` : ''}
-      ${s.phone ? `<div class="list-sub tappable" style="margin-top:4px" onclick="copyToClipboard('${escapeAttr(s.phone)}','телефон')">📞 ${escapeHtml(s.phone)} <span style="opacity:.5">(нажми, чтобы скопировать)</span></div>` : ''}
+      ${s.phone ? `<div class="list-sub tappable" style="margin-top:4px" onclick="copyToClipboard('${escapeAttr(s.phone)}',t('si_phone'))">📞 ${escapeHtml(s.phone)} <span style="opacity:.5">${t('si_copyhint')}</span></div>` : ''}
       <div class="btn-row" style="margin-top:10px">
-        ${s.tg && !s.self ? `<button class="pop-btn" onclick="openTgUser('${escapeAttr(s.tg)}')">✍️ Написать</button>` : ''}
-        ${s.phone ? `<a class="pop-btn secondary" style="text-align:center;text-decoration:none;line-height:1.3" href="tel:${escapeAttr(s.phone)}">📞 Позвонить</a>` : ''}
-        ${!s.self ? `<button class="pop-btn secondary" onclick="openReviewSheet('${s.id}','${escapeAttr(s.name || 'Ситтер')}','DogSitter')">⭐ Оценить</button>` : ''}
+        ${s.tg && !s.self ? `<button class="pop-btn" onclick="openTgUser('${escapeAttr(s.tg)}')">${t('si_write')}</button>` : ''}
+        ${s.phone ? `<a class="pop-btn secondary" style="text-align:center;text-decoration:none;line-height:1.3" href="tel:${escapeAttr(s.phone)}">${t('si_call')}</a>` : ''}
+        ${!s.self ? `<button class="pop-btn secondary" onclick="openReviewSheet('${s.id}','${escapeAttr(s.name || t('si_word'))}','DogSitter')">⭐ Оценить</button>` : ''}
         ${s.ratingCount ? `<button class="pop-btn secondary small" onclick="showReviews('DogSitter','${s.id}','${escapeAttr(s.name || '')}')">💬 Отзывы</button>` : ''}
       </div>
     </div>`;
@@ -1450,7 +1651,7 @@ function openBecomeSitterSheet(isEdit) {
     </div>`).join('');
   const profileName = (me && me.profile && me.profile.name && me.profile.name !== 'Не указано') ? me.profile.name : '';
   openSheet(`
-    <h3>${isEdit ? '✏️ Моя анкета ситтера' : '🙋 Стать догситтером'}</h3>
+    <h3>${isEdit ? t('si_myform_h') : t('si_become_h')}</h3>
     ${!profileName ? `<div class="field"><label>Твоё имя * (увидят владельцы собак)</label><input type="text" id="sitName" placeholder="Как тебя зовут?"></div>` : ''}
     <div class="field"><label>Форматы работы * (хотя бы один)</label>
       <div style="background:var(--card);border-radius:12px;padding:4px 12px">${svcToggles}</div>
@@ -1481,24 +1682,24 @@ async function submitBecomeSitter() {
   if (res.ok) me = null; // имя могло обновиться — профиль перечитаем
   closeSheet();
   if (res.ok) { haptic(); sittersCache = null; loadSitters(true); setStatus('✅ Анкета опубликована!', 2200); }
-  else alert('Не получилось: ' + (res.error === 'service required' ? 'выбери хотя бы один формат' : (res.error || '')));
+  else alert(t('err_fail') + (res.error === 'service required' ? 'выбери хотя бы один формат' : (res.error || '')));
 }
 async function stopSitter() {
   if (!confirm('Убрать себя из списка ситтеров? Данные сохранятся — вернуться можно в любой момент.')) return;
   const res = await callApi('stopSitter', {});
   if (res.ok) { haptic(); sittersCache = null; loadSitters(true); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 
 // ================== ОТЗЫВЫ ==================
 function openReviewSheet(id, name, itemType) {
   openSheet(`
     <h3>Отзыв — «${escapeHtml(name)}»</h3>
-    <div class="field"><label>Оценка</label>
+    <div class="field"><label>${t('rv_rating')}</label>
       <div class="stars" id="starsPick" data-rating="0">${[1,2,3,4,5].map(n => `<span class="star" data-v="${n}" onclick="pickStar(${n})">☆</span>`).join('')}</div>
     </div>
-    <div class="field"><textarea id="reviewText" maxlength="500" oninput="updCount(this,500)" placeholder="Коротко о впечатлениях (необязательно)"></textarea></div>
-    <button class="pop-btn" onclick="submitReview('${id}','${itemType}')">Отправить</button>
+    <div class="field"><textarea id="reviewText" maxlength="500" oninput="updCount(this,500)" placeholder="${t('rv_ph')}"></textarea></div>
+    <button class="pop-btn" onclick="submitReview('${id}','${itemType}')">${t('cm_send')}</button>
   `);
 }
 function pickStar(n) {
@@ -1509,7 +1710,7 @@ function pickStar(n) {
 }
 async function submitReview(id, itemType) {
   const rating = parseInt(document.getElementById('starsPick').dataset.rating || '0', 10);
-  if (!rating) { alert('Поставь оценку от 1 до 5 ⭐'); return; }
+  if (!rating) { alert(t('rv_need')); return; }
   const text = document.getElementById('reviewText').value;
   const res = await callApi('addReview', { type: itemType, id, rating, text });
   closeSheet();
@@ -1518,7 +1719,7 @@ async function submitReview(id, itemType) {
     if (itemType === 'DogSitter') { sittersCache = null; loadSitters(true); }
     else { dataCache.places = null; renderLayer(); }
     setStatus('✅ Спасибо за отзыв!', 2000);
-  } else alert('Не получилось: ' + (res.error === 'self review' ? 'себя оценивать нельзя 🙂' : (res.error || '')));
+  } else alert(t('err_fail') + (res.error === 'self review' ? 'себя оценивать нельзя 🙂' : (res.error || '')));
 }
 
 let geoConfirming = false;
@@ -1534,53 +1735,53 @@ async function confirmDogGeo(dogId, dogName) {
       const fresh = findDog(dogId);
       if (fresh) openDogCard(fresh);   // перерисовать карточку с новой датой
     } else {
-      alert('Не получилось: ' + (res.error || ''));
+      alert(t('err_fail') + (res.error || ''));
     }
   } finally { geoConfirming = false; }
 }
 
 // ================== ГАЛЕРЕЯ ФОТО СОБАКИ ==================
 async function showDogGallery(dogId, dogName, canEdit) {
-  openSheet(`<h3>🖼 Галерея — «${escapeHtml(dogName)}»</h3><div class="empty">Загружаю…</div>`);
+  openSheet(`<h3>${t('gl_head')} — «${escapeHtml(dogName)}»</h3><div class="empty">Загружаю…</div>`);
   const r = await fetch(`${API_URL}?type=dogGallery&dogId=${encodeURIComponent(dogId)}`);
   const j = await r.json().catch(() => ({ ok: false }));
   const photos = (j.ok ? j.photos : []) || [];
   openSheet(`
-    <h3>🖼 Галерея — «${escapeHtml(dogName)}»</h3>
+    <h3>${t('gl_head')} — «${escapeHtml(dogName)}»</h3>
     ${photos.length ? `<div class="gallery-grid">${photos.map(p => `
       <div class="gallery-item">
         <img src="${p.url}" loading="lazy">
-        ${p.isCover ? '<span class="gallery-cover-tag">обложка</span>' : ''}
+        ${p.isCover ? `<span class="gallery-cover-tag">${t('gl_cover')}</span>` : ''}
         ${(canEdit && !p.isCover) ? `<button class="gallery-del" onclick="deleteGalleryPhoto('${p.id}','${dogId}','${escapeAttr(dogName)}',${canEdit})">✕</button>` : ''}
-      </div>`).join('')}</div>` : '<div class="empty">Пока пусто 🙂</div>'}
-    ${canEdit ? `<button class="pop-btn secondary" style="margin-top:10px" onclick="openBotDeepLink('gallery_${dogId}')">➕ Добавить фото</button>` : ''}
+      </div>`).join('')}</div>` : `<div class="empty">${t('gl_empty')}</div>`}
+    ${canEdit ? `<button class="pop-btn secondary" style="margin-top:10px" onclick="openBotDeepLink('gallery_${dogId}')">${t('gl_add')}</button>` : ''}
   `);
 }
 async function deleteGalleryPhoto(photoId, dogId, dogName, canEdit) {
   const res = await callApi('deleteGalleryPhoto', { photoId, dogId });
   if (res.ok) { haptic(); showDogGallery(dogId, dogName, canEdit); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 
 // ================== КОММЕНТАРИИ К СОБАКЕ (открытая лента) ==================
 async function showDogComments(dogId, dogName) {
-  openSheet(`<h3>💬 Комментарии — «${escapeHtml(dogName)}»</h3><div class="empty">Загружаю…</div>`);
+  openSheet(`<h3>${t('cm_head')} — «${escapeHtml(dogName)}»</h3><div class="empty">Загружаю…</div>`);
   const res = await callApi('getComments', { dogId });
   const items = res.ok ? (res.comments || []) : [];
   const canModerate = res.ok && res.canModerate;
   openSheet(`
-    <h3>💬 Комментарии — «${escapeHtml(dogName)}»</h3>
+    <h3>${t('cm_head')} — «${escapeHtml(dogName)}»</h3>
     <div id="commentsList">
       ${items.length ? items.map(c => `
         <div class="review-item">
-          <div class="row-between"><span class="who">${escapeHtml(c.author || 'Гость')}</span>
+          <div class="row-between"><span class="who">${escapeHtml(c.author || t('cm_guest'))}</span>
             ${canModerate ? `<button class="pop-btn danger small" style="padding:3px 9px" onclick="deleteComment('${c.id}','${dogId}','${escapeAttr(dogName)}')">🗑</button>` : ''}</div>
           <div class="txt">${escapeHtml(c.text)}</div>
           <div class="when">${escapeHtml(c.date || '')}</div>
-        </div>`).join('') : '<div class="empty">Пока пусто — напиши первым(ой) 🙂</div>'}
+        </div>`).join('') : `<div class="empty">${t('cm_empty')}</div>`}
     </div>
-    <div class="field" style="margin-top:12px"><textarea id="commentText" placeholder="Написать комментарий…" maxlength="500" oninput="updCount(this,500)"></textarea></div>
-    <button class="pop-btn" id="commentSendBtn" onclick="submitComment('${dogId}','${escapeAttr(dogName)}')">Отправить</button>
+    <div class="field" style="margin-top:12px"><textarea id="commentText" placeholder="${t('cm_ph')}" maxlength="500" oninput="updCount(this,500)"></textarea></div>
+    <button class="pop-btn" id="commentSendBtn" onclick="submitComment('${dogId}','${escapeAttr(dogName)}')">${t('cm_send')}</button>
   `);
 }
 let commentSubmitting = false;
@@ -1588,13 +1789,13 @@ async function submitComment(dogId, dogName) {
   if (commentSubmitting) return; // повторный тап, пока запрос в полёте, — игнорируем
   const field = document.getElementById('commentText');
   const text = field.value.trim();
-  if (!text) { alert('Напиши текст комментария 🙂'); return; }
+  if (!text) { alert(t('cm_empty_text')); return; }
   const btn = document.getElementById('commentSendBtn');
   commentSubmitting = true;
   // Блокируем кнопку и показываем прогресс прямо на ней: раньше окно с введённым
   // текстом «висело» неизменным, и было неясно, ушёл ли комментарий — люди жали
   // второй раз и получали дубль.
-  if (btn) { btn.disabled = true; btn.textContent = 'Отправляю…'; }
+  if (btn) { btn.disabled = true; btn.textContent = t('cm_sending'); }
   field.disabled = true;
   try {
     const res = await callApi('addComment', { dogId, text });
@@ -1618,12 +1819,12 @@ async function submitComment(dogId, dogName) {
       }
       field.value = '';
     } else {
-      alert('Не получилось: ' + (res.error || ''));
+      alert(t('err_fail') + (res.error || ''));
     }
   } finally {
     commentSubmitting = false;
     field.disabled = false;
-    if (btn) { btn.disabled = false; btn.textContent = 'Отправить'; }
+    if (btn) { btn.disabled = false; btn.textContent = t('cm_send'); }
   }
 }
 async function deleteComment(commentId, dogId, dogName) {
@@ -1633,18 +1834,18 @@ async function deleteComment(commentId, dogId, dogName) {
 }
 
 async function showReviews(itemType, id, name) {
-  openSheet(`<h3>💬 Отзывы — «${escapeHtml(name)}»</h3><div class="empty">Загружаю…</div>`);
+  openSheet(`<h3>${t('rv_head')} — «${escapeHtml(name)}»</h3><div class="empty">Загружаю…</div>`);
   const res = await callApi('getReviews', { type: itemType, id });
   const items = res.ok ? (res.reviews || []) : [];
   openSheet(`
-    <h3>💬 Отзывы — «${escapeHtml(name)}»</h3>
+    <h3>${t('rv_head')} — «${escapeHtml(name)}»</h3>
     ${items.length ? items.map(r => `
       <div class="review-item">
-        <div class="row-between"><span class="who">${escapeHtml(r.username || 'Аноним')}</span>
+        <div class="row-between"><span class="who">${escapeHtml(r.username || t('rv_anon'))}</span>
           <span class="stars-small">${'⭐'.repeat(r.rating)}</span></div>
         ${r.text ? `<div class="txt">${escapeHtml(r.text)}</div>` : ''}
         <div class="when">${escapeHtml(r.date || '')}</div>
-      </div>`).join('') : '<div class="empty">Пока пусто — будь первым 🙂</div>'}
+      </div>`).join('') : `<div class="empty">${t('rv_empty')}</div>`}
   `);
 }
 
@@ -1692,14 +1893,14 @@ async function submitSuggest(id) {
   pendingGeo = null;
   closeSheet();
   if (res.ok) { haptic(); setStatus('✅ Отправлено модератору', 2400); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 async function submitDelete(id, name) {
   if (!confirm(`Предложить удалить «${name}»? Место скроется после подтверждения модератором.`)) return;
   const res = await callApi('suggestEdit', { type: 'Places', id, changes: { _delete: true } });
   closeSheet();
   if (res.ok) { haptic(); setStatus('Запрос на удаление отправлен', 2400); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 
 document.getElementById('fab').onclick = () => {
@@ -1763,7 +1964,7 @@ async function submitAddPlace() {
   pendingGeo = null;
   closeSheet();
   if (res.ok) { haptic(); setStatus('✅ Появится на карте после проверки', 2600); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 
 // ================== ПРОФИЛЬ ==================
@@ -1935,7 +2136,7 @@ async function submitProfileEdit() {
   }});
   closeSheet();
   if (res.ok) { haptic(); me = null; loadProfile(true); setStatus('✅ Профиль обновлён', 2000); }
-  else alert('Не получилось: ' + (res.error || ''));
+  else alert(t('err_fail') + (res.error || ''));
 }
 
 // ================== СТАРТ ==================
