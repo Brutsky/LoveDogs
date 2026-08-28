@@ -240,15 +240,18 @@
     background: color-mix(in srgb, var(--bg) 88%, transparent);
     backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid var(--line); display: flex; padding-bottom: env(safe-area-inset-bottom); }
-  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 3px; font-size: 10.5px; font-weight: 700; letter-spacing: .02em; color: var(--hint);
-    cursor: pointer; user-select: none; position: relative; }
-  .nav-item .ico { font-size: 21px; line-height: 1; transition: transform .15s ease; }
+  /* Навигация без подписей: иконки самодостаточны, а подписи съедали высоту
+     и мешали на маленьких экранах. Активный пункт выделяем «таблеткой». */
+  .nav-item { flex: 1; display: flex; align-items: center; justify-content: center;
+    color: var(--hint); cursor: pointer; user-select: none; position: relative;
+    height: 46px; transition: color .15s ease; }
+  .nav-item .ico { font-size: 23px; line-height: 1; transition: transform .18s ease; }
   .nav-item.active { color: var(--paw-deep); }
-  .nav-item.active::before { content: ""; position: absolute; top: 7px; width: 44px; height: 30px;
+  .nav-item.active::before { content: ""; position: absolute; width: 52px; height: 34px;
     border-radius: 999px; background: var(--paw-soft); z-index: -1; }
-  .nav-item.active .ico { transform: translateY(-1px); }
-  .nav-dot { position: absolute; margin-left: 22px; margin-top: -22px; width: 8px; height: 8px;
+  .nav-item.active .ico { transform: translateY(-1px) scale(1.06); }
+  .nav-item:active .ico { transform: scale(.92); }
+  .nav-dot { position: absolute; top: 8px; right: calc(50% - 16px); width: 8px; height: 8px;
     border-radius: 50%; background: var(--red); display: none; border: 1.5px solid var(--bg); }
   .nav-dot.show { display: block; }
 
@@ -351,8 +354,8 @@
   <div id="map"></div>
   <div id="map-topbar">
     <div id="tabs">
-      <div class="tab active" data-k="dogs"data-i18n="seg_dogs">🐕 Собаки</div>
-      <div class="tab" data-k="places"data-i18n="seg_places">📍 Места</div>
+      <div class="tab active" data-k="dogs" data-i18n="seg_dogs">🐕 Собаки</div>
+      <div class="tab" data-k="places" data-i18n="seg_places">📍 Места</div>
     </div>
     <div id="subfilters"></div>
   </div>
@@ -361,25 +364,25 @@
   <button id="fab">+</button>
   <div id="pick-pin">📍</div>
   <div id="pick-bar">
-    <div class="pick-hint"data-i18n="pick_hint">Двигай карту — точка встанет по центру экрана</div>
+    <div class="pick-hint" data-i18n="pick_hint">Двигай карту — точка встанет по центру экрана</div>
     <div class="row">
-      <button class="pop-btn secondary" onclick="cancelMapPick()"data-i18n="pick_cancel">Отмена</button>
-      <button class="pop-btn" onclick="confirmMapPick()"data-i18n="pick_ok">✅ Точка здесь</button>
+      <button class="pop-btn secondary" onclick="cancelMapPick()" data-i18n="pick_cancel">Отмена</button>
+      <button class="pop-btn" onclick="confirmMapPick()" data-i18n="pick_ok">✅ Точка здесь</button>
     </div>
   </div>
 
   <!-- ===== Экраны ===== -->
   <div class="screen" id="screen-dogs">
-    <h2data-i18n="f_dogs">🐾 Собаки</h2>
+    <h2 data-i18n="f_dogs">🐾 Собаки</h2>
     <div class="searchbox">🔍<input id="dogSearch" type="text" placeholder="Кличка, порода, окрас или № бирки (от 4 знаков)" oninput="renderDogsScreen()"></div>
     <div class="seg-scroll" id="dogSegments"></div>
-    <div class="field" style="margin-bottom:8px"><select id="dogRegion" onchange="renderDogsScreen()" style="width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:13.5px"><option value=""data-i18n="f_all_districts">🗺 Все районы</option></select></div>
+    <div class="field" style="margin-bottom:8px"><select id="dogRegion" onchange="renderDogsScreen()" style="width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:13.5px"><option value="" data-i18n="f_all_districts">🗺 Все районы</option></select></div>
     <div id="donor-panel">
       <div class="fline"><span>⚖️ Вес от <b id="dwLabel">0</b> кг</span>
         <input type="range" min="0" max="60" step="5" value="0" id="donorWeight" oninput="document.getElementById('dwLabel').textContent=this.value; renderDogsScreen()"></div>
-      <div class="fline"><spandata-i18n="f_vacc">💉 Только привитые</span>
+      <div class="fline"><span data-i18n="f_vacc">💉 Только привитые</span>
         <label class="switch"><input type="checkbox" id="donorVacc" onchange="renderDogsScreen()"><span class="slider-t"></span></label></div>
-      <div class="fline"><spandata-i18n="f_ster">🏥 Только стерилизованные</span>
+      <div class="fline"><span data-i18n="f_ster">🏥 Только стерилизованные</span>
         <label class="switch"><input type="checkbox" id="donorSter" onchange="renderDogsScreen()"><span class="slider-t"></span></label></div>
     </div>
     <div id="dogsList"></div>
@@ -399,10 +402,10 @@
 
   <!-- ===== Нижняя навигация ===== -->
   <div id="tabbar">
-    <div class="nav-item active" data-screen="map"><span class="ico">🗺</spandata-i18n="tab_map_l">К</div>
-    <div class="nav-item" data-screen="dogs"><span class="ico">🐾</spandata-i18n="tab_dogs_l">С<span class="nav-dot" id="lostDot"></span></div>
-    <div class="nav-item" data-screen="sitters"><span class="ico">🧑</spandata-i18n="tab_sitters_l">С</div>
-    <div class="nav-item" data-screen="profile"><span class="ico">👤</spandata-i18n="tab_profile_l">П</div>
+    <div class="nav-item active" data-screen="map" data-i18n-title="tab_map_l"><span class="ico">🗺</span></div>
+    <div class="nav-item" data-screen="dogs" data-i18n-title="tab_dogs_l"><span class="ico">🐾</span><span class="nav-dot" id="lostDot"></span></div>
+    <div class="nav-item" data-screen="sitters" data-i18n-title="tab_sitters_l"><span class="ico">🧑</span></div>
+    <div class="nav-item" data-screen="profile" data-i18n-title="tab_profile_l"><span class="ico">👤</span></div>
   </div>
 </div>
 
@@ -426,6 +429,37 @@ const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initData
 // а когда загрузится профиль — уточняем сохранённым выбором пользователя.
 const I18N = {
   RU: {
+    fd_new:'🐕 Новая собака',
+    fd_who:'Кто это?',
+    fd_home:'🏠 Домашняя',
+    fd_street:'🌳 Уличная',
+    fd_guard:'🤝 У опекуна',
+    fd_name:'Кличка *',
+    fd_name_ph:'Как зовут?',
+    fd_name2:'Имя',
+    fd_breed:'Порода',
+    fd_breed_ph:'Порода (только буквы и дефис)',
+    fd_age:'Возраст',
+    fd_sex:'Пол',
+    fd_region:'Район',
+    fd_region_tb:'Район (Тбилиси)',
+    fd_color:'Окрас',
+    fd_color_ph:'Например: рыжий, чёрно-белый',
+    fd_ster:'Стерилизация',
+    fd_vacc:'Прививки',
+    fd_weight:'Вес (кг)',
+    fd_tag:'Бирка (если есть)',
+    fd_tag_ph:'Номер',
+    fd_notes:'Заметки',
+    fd_save:'Сохранить',
+    fd_add:'Добавить',
+    fd_type_text:'✍️ Указать текстом…',
+    fd_unknown:'Неизвестно',
+    fd_pin:'📍 Отметить точку на карте',
+    fd_pin_set:'📍 Точка выбрана — изменить',
+    fd_pin_hint:'Необязательно: без точки собака встанет по центру района',
+    fd_photo_hint:'📷 Фото добавляется через бота — открой анкету после сохранения',
+    fd_breed_err:'Порода — только буквы и дефис «-», без цифр и других символов.',
     si_myform_h:'✏️ Моя анкета ситтера', si_become_h:'🙋 Стать догситтером',
     si_none:'Ситтеров пока нет — стань первым!',
     si_none_fmt:'В этом формате пока никто не работает',
@@ -504,6 +538,37 @@ const I18N = {
     empty:'Пусто', cancel:'Отмена', save:'Сохранить', close:'Закрыть'
   },
   GE: {
+    fd_new:'🐕 ახალი ძაღლი',
+    fd_who:'ვინ არის?',
+    fd_home:'🏠 შინაური',
+    fd_street:'🌳 ქუჩის',
+    fd_guard:'🤝 მეურვესთან',
+    fd_name:'სახელი *',
+    fd_name_ph:'რა ჰქვია?',
+    fd_name2:'სახელი',
+    fd_breed:'ჯიში',
+    fd_breed_ph:'ჯიში (მხოლოდ ასოები და დეფისი)',
+    fd_age:'ასაკი',
+    fd_sex:'სქესი',
+    fd_region:'რაიონი',
+    fd_region_tb:'რაიონი (თბილისი)',
+    fd_color:'ფერი',
+    fd_color_ph:'მაგალითად: წითური, შავ-თეთრი',
+    fd_ster:'სტერილიზაცია',
+    fd_vacc:'აცრები',
+    fd_weight:'წონა (კგ)',
+    fd_tag:'ჟეტონი (თუ აქვს)',
+    fd_tag_ph:'ნომერი',
+    fd_notes:'შენიშვნები',
+    fd_save:'შენახვა',
+    fd_add:'დამატება',
+    fd_type_text:'✍️ ტექსტით მითითება…',
+    fd_unknown:'უცნობი',
+    fd_pin:'📍 წერტილის მონიშვნა რუკაზე',
+    fd_pin_set:'📍 წერტილი არჩეულია — შეცვლა',
+    fd_pin_hint:'არასავალდებულო: წერტილის გარეშე ძაღლი რაიონის ცენტრში დადგება',
+    fd_photo_hint:'📷 ფოტო ემატება ბოტში — გახსენი ანკეტა შენახვის შემდეგ',
+    fd_breed_err:'ჯიში — მხოლოდ ასოები და დეფისი «-», ციფრებისა და სხვა სიმბოლოების გარეშე.',
     si_myform_h:'✏️ ჩემი მომვლელის ანკეტა', si_become_h:'🙋 გახდი ძაღლის მომვლელი',
     si_none:'მომვლელები ჯერ არ არიან — გახდი პირველი!',
     si_none_fmt:'ამ ფორმატში ჯერ არავინ მუშაობს',
@@ -582,6 +647,37 @@ const I18N = {
     empty:'ცარიელია', cancel:'გაუქმება', save:'შენახვა', close:'დახურვა'
   },
   EN: {
+    fd_new:'🐕 New dog',
+    fd_who:'Who is this?',
+    fd_home:'🏠 Home dog',
+    fd_street:'🌳 Street dog',
+    fd_guard:'🤝 With a guardian',
+    fd_name:'Name *',
+    fd_name_ph:'What\'s their name?',
+    fd_name2:'Name',
+    fd_breed:'Breed',
+    fd_breed_ph:'Breed (letters and hyphen only)',
+    fd_age:'Age',
+    fd_sex:'Sex',
+    fd_region:'District',
+    fd_region_tb:'District (Tbilisi)',
+    fd_color:'Colour',
+    fd_color_ph:'E.g. ginger, black and white',
+    fd_ster:'Sterilised',
+    fd_vacc:'Vaccines',
+    fd_weight:'Weight (kg)',
+    fd_tag:'Ear tag (if any)',
+    fd_tag_ph:'Number',
+    fd_notes:'Notes',
+    fd_save:'Save',
+    fd_add:'Add',
+    fd_type_text:'✍️ Type it in…',
+    fd_unknown:'Unknown',
+    fd_pin:'📍 Set a pin on the map',
+    fd_pin_set:'📍 Pin set — change',
+    fd_pin_hint:'Optional: without a pin the dog sits at the district centre',
+    fd_photo_hint:'📷 Photos are added via the bot — open the profile after saving',
+    fd_breed_err:'Breed — letters and hyphen «-» only, no digits or other symbols.',
     si_myform_h:'✏️ My sitter profile', si_become_h:'🙋 Become a dog sitter',
     si_none:'No sitters yet — be the first!',
     si_none_fmt:'Nobody works in this format yet',
@@ -674,6 +770,11 @@ function t(key) {
 // Переводит статичную разметку: элементы помечены data-i18n="ключ".
 function applyStaticI18n() {
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+  // Иконочная навигация без подписей — переводим доступное имя, а не видимый текст
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const v = t(el.getAttribute('data-i18n-title'));
+    el.setAttribute('title', v); el.setAttribute('aria-label', v);
+  });
   document.documentElement.setAttribute('lang', LANG.toLowerCase());
 }
 // Вызывается после загрузки профиля: сохранённый в боте язык важнее языка Telegram.
@@ -729,7 +830,7 @@ function ageOptsHtml(sel, placeholder) {
     AGE_OPTIONS.map(a => `<option value="${a}" ${a === sel ? 'selected' : ''}>${AGE_LABELS[a]}</option>`).join('');
 }
 const SEX_OPTIONS = ['Кобель', 'Сука'];
-const TRISTATE = ['Да', 'Нет', 'Неизвестно'];
+const TRISTATE = ['Да', 'Нет', t('fd_unknown')];
 let COMMON_BREEDS = ['Метис', 'Не знаю', 'Дворняжка', 'Лабрадор', 'Немецкая овчарка', 'Хаски', 'Корги', 'Бигль', 'Такса', 'Чихуахуа', 'Золотистый ретривер', 'Шпиц'];
 let REGIONS_LIST = [];
 
@@ -1177,24 +1278,24 @@ function openDogEditSheet(d) {
   if (d.breed && breedList.indexOf(d.breed) < 0) breedList.unshift(d.breed);
   openSheet(`
     <h3>Редактировать «${escapeHtml(d.name || '')}»</h3>
-    <div class="field"><label>Имя</label><input type="text" id="edName" value="${escapeAttr(d.name || '')}"></div>
-    <div class="field"><label>Порода</label>
+    <div class="field"><label>${t('fd_name2')}</label><input type="text" id="edName" value="${escapeAttr(d.name || '')}"></div>
+    <div class="field"><label>${t('fd_breed')}</label>
       <select id="edBreedSel" onchange="document.getElementById('edBreedManual').style.display = this.value==='__manual__' ? 'block':'none'">
         ${selOpts(breedList, d.breed)}
-        <option value="__manual__">✍️ Указать текстом…</option>
+        <option value="__manual__">${t('fd_type_text')}</option>
       </select>
-      <input type="text" id="edBreedManual" placeholder="Порода (только буквы и дефис)" style="display:none;margin-top:6px">
+      <input type="text" id="edBreedManual" placeholder="${t('fd_breed_ph')}" style="display:none;margin-top:6px">
     </div>
-    <div class="field"><label>Окрас</label><input type="text" id="edColor" value="${escapeAttr(d.color || '')}" placeholder="Например: рыжий, чёрно-белый"></div>
-    <div class="field"><label>Возраст</label><select id="edAge">${ageOptsHtml(d.age, '—')}</select></div>
-    ${REGIONS_LIST.length ? `<div class="field"><label>Район</label><select id="edRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
-    <div class="field"><label>Пол</label><select id="edSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
-    <div class="field"><label>Стерилизация</label><select id="edSter">${selOpts(TRISTATE, d.sterilized || 'Неизвестно')}</select></div>
-    <div class="field"><label>Вес (кг)</label><input type="number" step="0.1" id="edWeight" value="${escapeAttr(d.weightKg || '')}"></div>
-    <div class="field"><label>Прививки</label><select id="edVacc">${selOpts(TRISTATE, d.vaccinated, '—')}</select></div>
-    <div class="field"><label>Заметки</label><textarea id="edMemo" maxlength="200" oninput="updCount(this,200)">${escapeHtml(d.memo || '')}</textarea></div>
-    <button class="pop-btn secondary" style="margin-bottom:8px" onclick="updateDogPhoto('${d.id}')">📷 ${d.photoId ? 'Обновить' : 'Добавить'} фото</button>
-    <button class="pop-btn" onclick="submitDogEdit('${d.id}')">Сохранить</button>
+    <div class="field"><label>${t('fd_color')}</label><input type="text" id="edColor" value="${escapeAttr(d.color || '')}" placeholder="${t('fd_color_ph')}"></div>
+    <div class="field"><label>${t('fd_age')}</label><select id="edAge">${ageOptsHtml(d.age, '—')}</select></div>
+    ${REGIONS_LIST.length ? `<div class="field"><label>${t('fd_region')}</label><select id="edRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
+    <div class="field"><label>${t('fd_sex')}</label><select id="edSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
+    <div class="field"><label>${t('fd_ster')}</label><select id="edSter">${selOpts(TRISTATE, d.sterilized || t('fd_unknown'))}</select></div>
+    <div class="field"><label>${t('fd_weight')}</label><input type="number" step="0.1" id="edWeight" value="${escapeAttr(d.weightKg || '')}"></div>
+    <div class="field"><label>${t('fd_vacc')}</label><select id="edVacc">${selOpts(TRISTATE, d.vaccinated, '—')}</select></div>
+    <div class="field"><label>${t('fd_notes')}</label><textarea id="edMemo" maxlength="200" oninput="updCount(this,200)">${escapeHtml(d.memo || '')}</textarea></div>
+    <button class="pop-btn secondary" style="margin-bottom:8px" onclick="updateDogPhoto('${d.id}')">📷 ${d.photoId ? 'Обновить' : t('fd_add')} фото</button>
+    <button class="pop-btn" onclick="submitDogEdit('${d.id}')">${t('fd_save')}</button>
   `);
 }
 function updateDogPhoto(dogId) {
@@ -1205,7 +1306,7 @@ async function submitDogEdit(id) {
   const breedSel = document.getElementById('edBreedSel').value;
   let breed = breedSel === '__manual__' ? document.getElementById('edBreedManual').value.trim() : breedSel;
   if (breedSel === '__manual__' && breed && !/^[A-Za-zА-Яа-яЁё\u10A0-\u10FF\s-]+$/.test(breed)) {
-    alert('Порода — только буквы и дефис «-», без цифр и других символов.'); return;
+    alert(t('fd_breed_err')); return;
   }
   const changes = {
     name: document.getElementById('edName').value,
@@ -1337,8 +1438,8 @@ function openDonorSheet(dogId, name) {
   openSheet(`
     <h3>🩸 «${escapeHtml(name)}» — донор крови</h3>
     <div class="geo-note" style="margin-bottom:10px">Донорство доступно домашним собакам. Данные увидят те, кто ищет донора для переливания.</div>
-    <div class="field"><label>Вес (кг)</label><input type="number" step="0.5" id="dnWeight" value="${escapeAttr(d.weightKg || '')}"></div>
-    <div class="field"><label>Прививки</label><select id="dnVacc">${selOpts(TRISTATE, d.vaccinated || 'Неизвестно')}</select></div>
+    <div class="field"><label>${t('fd_weight')}</label><input type="number" step="0.5" id="dnWeight" value="${escapeAttr(d.weightKg || '')}"></div>
+    <div class="field"><label>${t('fd_vacc')}</label><select id="dnVacc">${selOpts(TRISTATE, d.vaccinated || t('fd_unknown'))}</select></div>
     <div class="field"><label>Условия (когда можете, район, компенсация…)</label>
       <textarea id="dnMemo" maxlength="300" oninput="updCount(this,300)" placeholder="Например: будни после 18:00, только Ваке/Сабуртало">${escapeHtml(d.donorMemo || '')}</textarea></div>
     <button class="pop-btn" onclick="submitDonor('${dogId}')">🩸 Записать в доноры</button>
@@ -1392,38 +1493,38 @@ function openAddStreetDog() {
 function openAddDogSheet(draft) {
   addDogDraft = draft || addDogDraft || { status: 'У владельца' };
   const d = addDogDraft;
-  const statuses = [['У владельца','🏠 Домашняя'], ['Уличная','🌳 Уличная'], ['У опекуна','🤝 У опекуна']];
+  const statuses = [['У владельца',t('fd_home')], ['Уличная',t('fd_street')], ['У опекуна',t('fd_guard')]];
   openSheet(`
-    <h3>🐕 Новая собака</h3>
-    <div class="field"><label>Кто это?</label>
+    <h3>${t('fd_new')}</h3>
+    <div class="field"><label>${t('fd_who')}</label>
       <div class="seg-pick" id="adStatus">${statuses.map(([v, l]) =>
         `<div class="opt ${d.status === v ? 'active' : ''}" data-v="${v}">${l}</div>`).join('')}</div>
     </div>
-    <div class="field"><label>Кличка *</label><input type="text" id="adName" value="${escapeAttr(d.name || '')}" placeholder="Как зовут?"></div>
-    <div class="field"><label>Порода</label>
+    <div class="field"><label>${t('fd_name')}</label><input type="text" id="adName" value="${escapeAttr(d.name || '')}" placeholder="${t('fd_name_ph')}"></div>
+    <div class="field"><label>${t('fd_breed')}</label>
       <select id="adBreedSel" onchange="document.getElementById('adBreedManual').style.display = this.value==='__manual__' ? 'block':'none'">
         ${selOpts(COMMON_BREEDS, d.breed, '—')}
-        <option value="__manual__">✍️ Указать текстом…</option>
+        <option value="__manual__">${t('fd_type_text')}</option>
       </select>
-      <input type="text" id="adBreedManual" placeholder="Порода (только буквы и дефис)" style="display:none;margin-top:6px" value="${escapeAttr(d.breedManual || '')}">
+      <input type="text" id="adBreedManual" placeholder="${t('fd_breed_ph')}" style="display:none;margin-top:6px" value="${escapeAttr(d.breedManual || '')}">
     </div>
-    <div class="field"><label>Окрас</label><input type="text" id="adColor" value="${escapeAttr(d.color || '')}" placeholder="Например: рыжий, чёрно-белый"></div>
-    <div class="field"><label>Пол</label><select id="adSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
-    <div class="field"><label>Возраст</label><select id="adAge">${ageOptsHtml(d.age, '—')}</select></div>
-    ${REGIONS_LIST.length ? `<div class="field"><label>Район (Тбилиси)</label><select id="adRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
-    <div class="field"><label>Стерилизация</label><select id="adSter">${selOpts(TRISTATE, d.sterilized || 'Неизвестно')}</select></div>
-    <div class="field"><label>Бирка (если есть)</label>
+    <div class="field"><label>${t('fd_color')}</label><input type="text" id="adColor" value="${escapeAttr(d.color || '')}" placeholder="${t('fd_color_ph')}"></div>
+    <div class="field"><label>${t('fd_sex')}</label><select id="adSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
+    <div class="field"><label>${t('fd_age')}</label><select id="adAge">${ageOptsHtml(d.age, '—')}</select></div>
+    ${REGIONS_LIST.length ? `<div class="field"><label>${t('fd_region_tb')}</label><select id="adRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
+    <div class="field"><label>${t('fd_ster')}</label><select id="adSter">${selOpts(TRISTATE, d.sterilized || t('fd_unknown'))}</select></div>
+    <div class="field"><label>${t('fd_tag')}</label>
       <div class="field-row">
-        <input type="text" id="adTagNum" placeholder="Номер" value="${escapeAttr(d.tagNumber || '')}">
+        <input type="text" id="adTagNum" placeholder="${t('fd_tag_ph')}" value="${escapeAttr(d.tagNumber || '')}">
         <input type="text" id="adTagColor" placeholder="Цвет" value="${escapeAttr(d.tagColor || '')}">
       </div>
     </div>
-    <div class="field"><label>Заметки</label><textarea id="adMemo" maxlength="200" oninput="updCount(this,200)" placeholder="Характер, приметы, что важно знать…">${escapeHtml(d.memo || '')}</textarea></div>
-    <button class="pop-btn secondary" onclick="addDogPickGeo()">${d.lat ? '📍 Точка выбрана — изменить' : '📍 Отметить точку на карте'}</button>
-    <div class="geo-note">${d.lat ? '✅ ' + d.lat + ', ' + d.lng : 'Необязательно: без точки собака встанет по центру района'}</div>
+    <div class="field"><label>${t('fd_notes')}</label><textarea id="adMemo" maxlength="200" oninput="updCount(this,200)" placeholder="Характер, приметы, что важно знать…">${escapeHtml(d.memo || '')}</textarea></div>
+    <button class="pop-btn secondary" onclick="addDogPickGeo()">${d.lat ? t('fd_pin_set') : t('fd_pin')}</button>
+    <div class="geo-note">${d.lat ? '✅ ' + d.lat + ', ' + d.lng : t('fd_pin_hint')}</div>
     <div style="height:8px"></div>
-    <button class="pop-btn" onclick="submitAddDog()">Сохранить</button>
-    <div class="geo-note" style="text-align:center;margin-top:8px">📷 Фото добавляется через бота — открой анкету после сохранения</div>
+    <button class="pop-btn" onclick="submitAddDog()">${t('fd_save')}</button>
+    <div class="geo-note" style="text-align:center;margin-top:8px">${t('fd_photo_hint')}</div>
   `);
   document.querySelectorAll('#adStatus .opt').forEach(o => o.onclick = () => {
     document.querySelectorAll('#adStatus .opt').forEach(x => x.classList.remove('active'));
@@ -2105,7 +2206,7 @@ function openProfileEdit() {
   const cities = me.cities || [];
   openSheet(`
     <h3>✏️ Профиль</h3>
-    <div class="field"><label>Имя</label><input type="text" id="prName" value="${escapeAttr(p.name || '')}"></div>
+    <div class="field"><label>${t('fd_name2')}</label><input type="text" id="prName" value="${escapeAttr(p.name || '')}"></div>
     <div class="field"><label>Телефон</label><input type="tel" id="prTel" value="${escapeAttr(p.tel === 'Не указан' ? '' : (p.tel || ''))}" placeholder="+995…"></div>
     ${cities.length ? `<div class="field"><label>Город</label><select id="prCity">${selOpts(cities, p.city)}</select></div>` : ''}
     <div class="field"><label>Язык бота</label><select id="prLang">
@@ -2121,7 +2222,7 @@ function openProfileEdit() {
       <input type="checkbox" id="prLostAlerts" ${p.lostAlerts === false ? '' : 'checked'}>
       <label style="margin:0">🔔 Сообщать о потеряшках моего города</label>
     </div>
-    <button class="pop-btn" onclick="submitProfileEdit()">Сохранить</button>
+    <button class="pop-btn" onclick="submitProfileEdit()">${t('fd_save')}</button>
   `);
 }
 async function submitProfileEdit() {
