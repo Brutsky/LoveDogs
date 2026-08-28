@@ -278,6 +278,22 @@
     outline: none; border-color: var(--paw); box-shadow: 0 0 0 3px color-mix(in srgb, var(--paw) 22%, transparent); }
   .field textarea { resize: vertical; min-height: 64px; }
   .char-count { font-size: 11.5px; color: var(--hint); text-align: right; margin-top: 3px; }
+  /* --- Дашборд админа --- */
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 11px 9px; text-align: center; }
+  .kpi .val { font-family: var(--font-disp); font-size: 21px; font-weight: 800; color: var(--paw-deep); line-height: 1.1; }
+  .kpi .lbl { font-size: 10.5px; color: var(--hint); margin-top: 3px; line-height: 1.25; }
+  .kpi.wide { grid-column: span 3; }
+  .kpi.good .val { color: var(--green); } .kpi.warn .val { color: var(--red); }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 12.5px; }
+  .bar-row .nm { width: 96px; color: var(--hint); flex: 0 0 auto; }
+  .bar-track { flex: 1; height: 9px; background: var(--paw-soft); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--paw); border-radius: 999px; }
+  .bar-row .cnt { width: 34px; text-align: right; font-weight: 700; }
+  .spark { display: flex; align-items: flex-end; gap: 3px; height: 54px; margin-top: 8px; }
+  .spark div { flex: 1; background: var(--paw); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .85; }
+  .spark div.today { background: var(--paw-deep); opacity: 1; }
+  .spark-x { display: flex; justify-content: space-between; font-size: 10px; color: var(--hint); margin-top: 4px; }
   .char-count.over { color: var(--red); font-weight: 700; }
   .field-row { display: flex; align-items: center; gap: 8px; }
   .pop-actions.vertical { display: flex; flex-direction: column; gap: 8px; }
@@ -1729,9 +1745,93 @@ function renderProfile() {
       <div class="list-sub">реквизиты, чат, обратная связь</div>
     </div>
     ${resources ? `<div class="sec-label">📚 Полезные материалы</div>${resources}` : ''}
+    ${p.isAdmin ? `<div class="sec-label">📊 Аналитика</div>
+      <div class="card tappable" onclick="openAdminDashboard()">
+        <div class="list-title" style="font-size:14px">📊 Дашборд продукта</div>
+        <div class="list-sub">удержание, воронка, активность — только для админа</div>
+      </div>` : ''}
   `;
   renderProfileMyDogs(); // после вставки HTML — теперь #profileMyDogs существует
 }
+// ================== ДАШБОРД ПРОДУКТА (только админ) ==================
+// Все цифры считает сервер (computeMetrics_), клиент только рисует. Права проверяются
+// на сервере по подписанному initData — открыть «в обход» через DevTools нельзя.
+async function openAdminDashboard() {
+  openSheet(`<h3>📊 Дашборд продукта</h3><div class="empty">Считаю метрики…</div>`);
+  const res = await callApi('adminMetrics', {});
+  if (!res.ok) { openSheet(`<h3>📊 Дашборд</h3><div class="empty">Не получилось: ${escapeHtml(res.error || '')}</div>`); return; }
+  const m = res.metrics;
+  const maxSeries = Math.max(1, ...m.series.newUsers, ...m.series.active);
+  const spark = (arr) => arr.map((v, i) =>
+    `<div class="${i === arr.length - 1 ? 'today' : ''}" style="height:${Math.round(v / maxSeries * 100)}%" title="${v}"></div>`).join('');
+  // Воронка недели: сколько людей дошло до каждого шага
+  const f = [
+    ['Зарегистрировались', m.week.start],
+    ['Открыли карту', m.week.mapUsers],
+    ['Добавили собаку', m.week.dogAdded],
+    ['Добавили место', m.week.placeAdded],
+  ];
+  const fMax = Math.max(1, ...f.map(x => x[1]));
+  openSheet(`
+    <h3>📊 Дашборд продукта</h3>
+
+    <div class="sec-label">Живость</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="val">${m.users.d1}</div><div class="lbl">за 24 часа</div></div>
+      <div class="kpi"><div class="val">${m.users.d7}</div><div class="lbl">за 7 дней</div></div>
+      <div class="kpi"><div class="val">${m.users.d30}</div><div class="lbl">за 30 дней</div></div>
+      <div class="kpi"><div class="val">${m.users.total}</div><div class="lbl">всего</div></div>
+      <div class="kpi warn"><div class="val">${m.users.dormant}</div><div class="lbl">спят &gt;30 дн.</div></div>
+      <div class="kpi"><div class="val">${m.users.noData}</div><div class="lbl">без данных</div></div>
+    </div>
+
+    <div class="sec-label">Ключевое</div>
+    <div class="kpi-grid">
+      <div class="kpi ${m.funnel.activation >= 30 ? 'good' : 'warn'}">
+        <div class="val">${m.funnel.activation}%</div><div class="lbl">активация<br>(добавили собаку)</div></div>
+      <div class="kpi ${m.funnel.retention >= 30 ? 'good' : 'warn'}">
+        <div class="val">${m.funnel.retention}%</div><div class="lbl">возвраты<br>новичков</div></div>
+      <div class="kpi"><div class="val">${m.dogs.total}</div><div class="lbl">собак<br>в базе</div></div>
+    </div>
+    <div class="list-sub" style="margin:-2px 2px 8px">
+      Возвраты: ${m.funnel.cohortReturned} из ${m.funnel.cohortTotal} зарегистрировавшихся 2–14 дней назад.
+    </div>
+
+    <div class="sec-label">Новые пользователи, 14 дней</div>
+    <div class="card">
+      <div class="spark">${spark(m.series.newUsers)}</div>
+      <div class="spark-x"><span>${escapeHtml(m.series.days[0])}</span><span>${escapeHtml(m.series.days[m.series.days.length - 1])}</span></div>
+    </div>
+
+    <div class="sec-label">Активные по дням, 14 дней</div>
+    <div class="card">
+      <div class="spark">${spark(m.series.active)}</div>
+      <div class="spark-x"><span>${escapeHtml(m.series.days[0])}</span><span>${escapeHtml(m.series.days[m.series.days.length - 1])}</span></div>
+    </div>
+
+    <div class="sec-label">Воронка за 7 дней</div>
+    <div class="card">
+      ${f.map(([nm, v]) => `
+        <div class="bar-row">
+          <span class="nm">${nm}</span>
+          <span class="bar-track"><span class="bar-fill" style="width:${Math.round(v / fMax * 100)}%"></span></span>
+          <span class="cnt">${v}</span>
+        </div>`).join('')}
+      <div class="list-sub" style="margin-top:6px">Возвращались за неделю: ${m.week.returns} раз</div>
+    </div>
+
+    <div class="sec-label">Контент</div>
+    <div class="card">
+      <div class="info-row"><span>🏠 Домашних / 🌳 уличных</span><b>${m.dogs.home} / ${m.dogs.street}</b></div>
+      <div class="info-row"><span>🚨 Потеряшек сейчас</span><b>${m.dogs.lost}</b></div>
+      <div class="info-row"><span>⚠️ Уличных с устаревшей гео</span><b>${m.dogs.staleStreet}</b></div>
+      <div class="info-row"><span>📍 Мест опубликовано</span><b>${m.places.total}</b></div>
+      <div class="info-row"><span>⏳ Мест на модерации</span><b>${m.places.onModeration}</b></div>
+      <div class="info-row"><span>❔ Мест без координат</span><b>${m.places.noGeo}</b></div>
+    </div>
+  `);
+}
+
 function openProfileEdit() {
   const p = me.profile;
   const cities = me.cities || [];
