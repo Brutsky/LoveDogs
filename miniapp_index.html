@@ -351,8 +351,8 @@
   <div id="map"></div>
   <div id="map-topbar">
     <div id="tabs">
-      <div class="tab active" data-k="dogs">🐕 Собаки</div>
-      <div class="tab" data-k="places">📍 Места</div>
+      <div class="tab active" data-k="dogs"data-i18n="seg_dogs">🐕 Собаки</div>
+      <div class="tab" data-k="places"data-i18n="seg_places">📍 Места</div>
     </div>
     <div id="subfilters"></div>
   </div>
@@ -361,25 +361,25 @@
   <button id="fab">+</button>
   <div id="pick-pin">📍</div>
   <div id="pick-bar">
-    <div class="pick-hint">Двигай карту — точка встанет по центру экрана</div>
+    <div class="pick-hint"data-i18n="pick_hint">Двигай карту — точка встанет по центру экрана</div>
     <div class="row">
-      <button class="pop-btn secondary" onclick="cancelMapPick()">Отмена</button>
-      <button class="pop-btn" onclick="confirmMapPick()">✅ Точка здесь</button>
+      <button class="pop-btn secondary" onclick="cancelMapPick()"data-i18n="pick_cancel">Отмена</button>
+      <button class="pop-btn" onclick="confirmMapPick()"data-i18n="pick_ok">✅ Точка здесь</button>
     </div>
   </div>
 
   <!-- ===== Экраны ===== -->
   <div class="screen" id="screen-dogs">
-    <h2>🐾 Собаки</h2>
+    <h2data-i18n="f_dogs">🐾 Собаки</h2>
     <div class="searchbox">🔍<input id="dogSearch" type="text" placeholder="Кличка, порода, окрас или № бирки (от 4 знаков)" oninput="renderDogsScreen()"></div>
     <div class="seg-scroll" id="dogSegments"></div>
-    <div class="field" style="margin-bottom:8px"><select id="dogRegion" onchange="renderDogsScreen()" style="width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:13.5px"><option value="">🗺 Все районы</option></select></div>
+    <div class="field" style="margin-bottom:8px"><select id="dogRegion" onchange="renderDogsScreen()" style="width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:13.5px"><option value=""data-i18n="f_all_districts">🗺 Все районы</option></select></div>
     <div id="donor-panel">
       <div class="fline"><span>⚖️ Вес от <b id="dwLabel">0</b> кг</span>
         <input type="range" min="0" max="60" step="5" value="0" id="donorWeight" oninput="document.getElementById('dwLabel').textContent=this.value; renderDogsScreen()"></div>
-      <div class="fline"><span>💉 Только привитые</span>
+      <div class="fline"><spandata-i18n="f_vacc">💉 Только привитые</span>
         <label class="switch"><input type="checkbox" id="donorVacc" onchange="renderDogsScreen()"><span class="slider-t"></span></label></div>
-      <div class="fline"><span>🏥 Только стерилизованные</span>
+      <div class="fline"><spandata-i18n="f_ster">🏥 Только стерилизованные</span>
         <label class="switch"><input type="checkbox" id="donorSter" onchange="renderDogsScreen()"><span class="slider-t"></span></label></div>
     </div>
     <div id="dogsList"></div>
@@ -399,10 +399,10 @@
 
   <!-- ===== Нижняя навигация ===== -->
   <div id="tabbar">
-    <div class="nav-item active" data-screen="map"><span class="ico">🗺</span>Карта</div>
-    <div class="nav-item" data-screen="dogs"><span class="ico">🐾</span>Собаки<span class="nav-dot" id="lostDot"></span></div>
-    <div class="nav-item" data-screen="sitters"><span class="ico">🧑</span>Ситтеры</div>
-    <div class="nav-item" data-screen="profile"><span class="ico">👤</span>Профиль</div>
+    <div class="nav-item active" data-screen="map"><span class="ico">🗺</spandata-i18n="tab_map_l">Карта</div>
+    <div class="nav-item" data-screen="dogs"><span class="ico">🐾</spandata-i18n="tab_dogs_l">Собаки<span class="nav-dot" id="lostDot"></span></div>
+    <div class="nav-item" data-screen="sitters"><span class="ico">🧑</spandata-i18n="tab_sitters_l">Ситтеры</div>
+    <div class="nav-item" data-screen="profile"><span class="ico">👤</spandata-i18n="tab_profile_l">Профиль</div>
   </div>
 </div>
 
@@ -416,7 +416,70 @@ let BOT_USERNAME = "ВАШ_БОТ_USERNAME"; // подхватится из getM
 
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
+// Статичную разметку переводим сразу после определения LANG (см. ниже по файлу).
 const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user.id : '';
+
+// ================== ЛОКАЛИЗАЦИЯ МИНИ-АППА ==================
+// Механика повторяет бота: словарь + t(key) с откатом на русский, поэтому
+// непереведённые строки не ломают интерфейс, а просто остаются русскими.
+// Язык берём сразу из Telegram (чтобы UI был правильным с первого кадра),
+// а когда загрузится профиль — уточняем сохранённым выбором пользователя.
+const I18N = {
+  RU: {
+    sf_all:'Все', sf_mine:'💛 Мои', sf_home:'Домашние', sf_street:'Уличные', sf_lost:'🚨 Потеряшки',
+    tab_map:'🗺', tab_map_l:'Карта', tab_dogs:'🐾', tab_dogs_l:'Собаки',
+    tab_sitters:'🧑', tab_sitters_l:'Ситтеры', tab_profile:'👤', tab_profile_l:'Профиль',
+    seg_dogs:'🐕 Собаки', seg_places:'📍 Места',
+    pick_hint:'Двигай карту — точка встанет по центру экрана', pick_cancel:'Отмена', pick_ok:'✅ Точка здесь',
+    f_dogs:'🐾 Собаки', f_all_districts:'🗺 Все районы', f_weight:'⚖️ Вес от ', f_kg:' кг',
+    f_vacc:'💉 Только привитые', f_ster:'🏥 Только стерилизованные',
+    h_sitters:'🧑 Догситтеры ', h_profile:'👤 Профиль', loading:'Загружаю…',
+    empty:'Пусто', cancel:'Отмена', save:'Сохранить', close:'Закрыть'
+  },
+  GE: {
+    sf_all:'ყველა', sf_mine:'💛 ჩემი', sf_home:'შინაური', sf_street:'ქუჩის', sf_lost:'🚨 დაკარგულები',
+    tab_map:'🗺', tab_map_l:'რუკა', tab_dogs:'🐾', tab_dogs_l:'ძაღლები',
+    tab_sitters:'🧑', tab_sitters_l:'მომვლელები', tab_profile:'👤', tab_profile_l:'პროფილი',
+    seg_dogs:'🐕 ძაღლები', seg_places:'📍 ადგილები',
+    pick_hint:'გადაადგილე რუკა — წერტილი ეკრანის ცენტრში დადგება', pick_cancel:'გაუქმება', pick_ok:'✅ წერტილი აქ',
+    f_dogs:'🐾 ძაღლები', f_all_districts:'🗺 ყველა რაიონი', f_weight:'⚖️ წონა ', f_kg:' კგ-დან',
+    f_vacc:'💉 მხოლოდ აცრილები', f_ster:'🏥 მხოლოდ სტერილიზებულები',
+    h_sitters:'🧑 მომვლელები ', h_profile:'👤 პროფილი', loading:'იტვირთება…',
+    empty:'ცარიელია', cancel:'გაუქმება', save:'შენახვა', close:'დახურვა'
+  },
+  EN: {
+    sf_all:'All', sf_mine:'💛 Mine', sf_home:'Home', sf_street:'Street', sf_lost:'🚨 Lost',
+    tab_map:'🗺', tab_map_l:'Map', tab_dogs:'🐾', tab_dogs_l:'Dogs',
+    tab_sitters:'🧑', tab_sitters_l:'Sitters', tab_profile:'👤', tab_profile_l:'Profile',
+    seg_dogs:'🐕 Dogs', seg_places:'📍 Places',
+    pick_hint:'Drag the map — the pin lands in the centre', pick_cancel:'Cancel', pick_ok:'✅ Pin it here',
+    f_dogs:'🐾 Dogs', f_all_districts:'🗺 All districts', f_weight:'⚖️ Weight from ', f_kg:' kg',
+    f_vacc:'💉 Vaccinated only', f_ster:'🏥 Sterilised only',
+    h_sitters:'🧑 Dog sitters ', h_profile:'👤 Profile', loading:'Loading…',
+    empty:'Empty', cancel:'Cancel', save:'Save', close:'Close'
+  }
+};
+function langFromTg(code) {
+  const c = (code || '').toLowerCase();
+  if (c.startsWith('ru')) return 'RU';
+  if (c.startsWith('ka') || c.startsWith('ge')) return 'GE';
+  return c ? 'EN' : 'RU';
+}
+let LANG = langFromTg(tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.language_code : '');
+function t(key) {
+  const d = I18N[LANG] || I18N.RU;
+  return d[key] !== undefined ? d[key] : (I18N.RU[key] !== undefined ? I18N.RU[key] : key);
+}
+// Переводит статичную разметку: элементы помечены data-i18n="ключ".
+function applyStaticI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+  document.documentElement.setAttribute('lang', LANG.toLowerCase());
+}
+// Вызывается после загрузки профиля: сохранённый в боте язык важнее языка Telegram.
+function syncLangFromProfile(p) {
+  if (p && p.lang && I18N[p.lang] && p.lang !== LANG) { LANG = p.lang; applyStaticI18n(); return true; }
+  return false;
+}
 
 // ================== КАРТА ==================
 const CITY_CENTERS = {
@@ -522,9 +585,11 @@ function pinIcon(kind, item) {
     iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -18] });
 }
 
+// Подписи фильтров — ключи словаря: подставляются на каждом рендере, поэтому
+// смена языка применяется без перезагрузки мини-аппа.
 const SUBFILTERS = {
-  dogs: [['all','Все'], ['mine','💛 Мои'], ['home','Домашние'], ['street','Уличные'], ['lost','🚨 Потеряшки']],
-  places: [['all','Все'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Groom','✂️'], ['Kennel','🐶'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
+  dogs: [['all','sf_all'], ['mine','sf_mine'], ['home','sf_home'], ['street','sf_street'], ['lost','sf_lost']],
+  places: [['all','sf_all'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Groom','✂️'], ['Kennel','🐶'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
 };
 function renderSubfilters() {
   const box = document.getElementById('subfilters');
@@ -532,7 +597,8 @@ function renderSubfilters() {
   SUBFILTERS[activeTab].forEach(([k, label]) => {
     const chip = document.createElement('div');
     chip.className = 'chip' + (subFilter === k ? ' active' : '');
-    chip.textContent = label;
+    // если label — ключ словаря, переводим; иначе это эмодзи-иконка категории
+    chip.textContent = /^[a-z_]+$/.test(label) ? t(label) : label;
     chip.onclick = () => { subFilter = k; renderSubfilters(); renderLayer(); };
     box.appendChild(chip);
   });
@@ -1707,6 +1773,7 @@ async function loadProfile(force) {
   if (!res.ok) { document.getElementById('profileBody').innerHTML = `<div class="empty">Не получилось загрузить профиль (${escapeHtml(res.error || '')})</div>`; return; }
   me = res;
   if (me.botUsername) BOT_USERNAME = me.botUsername;
+  if (me.profile) syncLangFromProfile(me.profile);
   if (me.profile) centerMapByCity(me.profile.city);
   renderProfile();
 }
@@ -1891,6 +1958,7 @@ async function submitProfileEdit() {
   } catch (e) {}
 })();
 
+applyStaticI18n();   // перевести оболочку до первого рендера
 renderSubfilters();
 // Сначала узнаём город пользователя, ТОЛЬКО потом рисуем карту — иначе первый рендер
 // проходит с me=null и показывает собак всех городов.
@@ -1898,9 +1966,11 @@ callApi('getMe', {}).then(res => {
   if (res.ok) {
     me = res;
     if (me.botUsername) BOT_USERNAME = me.botUsername;
+    // Язык, выбранный в боте, важнее языка Telegram — применяем его к статике.
+    if (me.profile) syncLangFromProfile(me.profile);
     if (me.profile) centerMapByCity(me.profile.city);
   }
-}).finally(() => { renderLayer(); });
+}).finally(() => { renderSubfilters(); renderLayer(); });
 </script>
 </body>
 </html>
