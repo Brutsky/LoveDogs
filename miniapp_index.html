@@ -429,6 +429,38 @@ const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initData
 // а когда загрузится профиль — уточняем сохранённым выбором пользователя.
 const I18N = {
   RU: {
+    fp_title:'Добавить место',
+    fp_hint:'Добавляем только проверенные, полезные для собак места — и без дублей 🙏',
+    fp_type:'Тип места',
+    fp_name:'Название *',
+    fp_name_ph:'Название',
+    fp_addr:'Адрес',
+    fp_addr_ph:'Улица, дом',
+    fp_link:'Ссылка Google Maps ',
+    fp_optional:'(необязательно)',
+    fp_link_hint:'Добавит в карточку кнопку «Открыть в Google Maps» с деталями и маршрутом.',
+    fp_night:'Круглосуточно (24 часа)',
+    fp_submit:'Отправить на модерацию',
+    fp_pin:'📍 Отметить точку на карте',
+    fp_pin_ok:'✅ Точка выбрана',
+    fp_region_hint:'🗺 Район определится автоматически по точке на карте.',
+    pf_edit:'✏️ Профиль',
+    pf_city:'Город',
+    pf_phone:'Телефон',
+    pf_lang:'Язык бота',
+    pf_showtg:'Показывать мой юзернейм в «Кто рядом?»',
+    pf_lostalerts:'🔔 Сообщать о потеряшках моего города',
+    pf_saved:'✅ Профиль обновлён',
+    pf_nodogs:'У тебя пока нет добавленных собак. Открой «Собаки» → «＋», чтобы добавить.',
+    pf_noname:'Без клички',
+    pf_donor_btn:'🩸 Записать в доноры',
+    pf_donor_hint:'Донорство доступно домашним собакам. Данные увидят те, кто ищет донора для переливания.',
+    pf_donor_ph:'Условия (когда можете, район, компенсация…)',
+    dash_lost:'🚨 Потеряшек сейчас',
+    dash_stale:'⚠️ Уличных с устаревшей гео',
+    dash_pub:'📍 Мест опубликовано',
+    dash_mod:'⏳ Мест на модерации',
+    dash_nogeo:'❔ Мест без координат',
     fd_new:'🐕 Новая собака',
     fd_who:'Кто это?',
     fd_home:'🏠 Домашняя',
@@ -538,6 +570,38 @@ const I18N = {
     empty:'Пусто', cancel:'Отмена', save:'Сохранить', close:'Закрыть'
   },
   GE: {
+    fp_title:'ადგილის დამატება',
+    fp_hint:'ვამატებთ მხოლოდ შემოწმებულ, ძაღლებისთვის სასარგებლო ადგილებს — დუბლების გარეშე 🙏',
+    fp_type:'ადგილის ტიპი',
+    fp_name:'დასახელება *',
+    fp_name_ph:'დასახელება',
+    fp_addr:'მისამართი',
+    fp_addr_ph:'ქუჩა, სახლი',
+    fp_link:'Google Maps ბმული ',
+    fp_optional:'(არასავალდებულო)',
+    fp_link_hint:'ბარათში დაამატებს ღილაკს «Google Maps-ში გახსნა» დეტალებითა და მარშრუტით.',
+    fp_night:'24 საათი',
+    fp_submit:'მოდერაციაზე გაგზავნა',
+    fp_pin:'📍 წერტილის მონიშვნა რუკაზე',
+    fp_pin_ok:'✅ წერტილი არჩეულია',
+    fp_region_hint:'🗺 რაიონი ავტომატურად განისაზღვრება რუკის წერტილით.',
+    pf_edit:'✏️ პროფილი',
+    pf_city:'ქალაქი',
+    pf_phone:'ტელეფონი',
+    pf_lang:'ბოტის ენა',
+    pf_showtg:'ვაჩვენო ჩემი იუზერნეიმი «ვინ არის რაიონში»-ში',
+    pf_lostalerts:'🔔 შემატყობინე ჩემი ქალაქის დაკარგულებზე',
+    pf_saved:'✅ პროფილი განახლდა',
+    pf_nodogs:'ჯერ არ გაქვს დამატებული ძაღლები. გახსენი «ძაღლები» → «＋» დასამატებლად.',
+    pf_noname:'სახელის გარეშე',
+    pf_donor_btn:'🩸 დონორად ჩაწერა',
+    pf_donor_hint:'დონორობა ხელმისაწვდომია შინაური ძაღლებისთვის. მონაცემებს ნახავენ ისინი, ვინც ეძებს დონორს გადასხმისთვის.',
+    pf_donor_ph:'პირობები (როდის შეგიძლიათ, რაიონი, კომპენსაცია…)',
+    dash_lost:'🚨 ახლა დაკარგულია',
+    dash_stale:'⚠️ ქუჩის ძაღლები მოძველებული გეოთი',
+    dash_pub:'📍 გამოქვეყნებული ადგილები',
+    dash_mod:'⏳ ადგილები მოდერაციაზე',
+    dash_nogeo:'❔ ადგილები კოორდინატების გარეშე',
     fd_new:'🐕 ახალი ძაღლი',
     fd_who:'ვინ არის?',
     fd_home:'🏠 შინაური',
@@ -647,6 +711,38 @@ const I18N = {
     empty:'ცარიელია', cancel:'გაუქმება', save:'შენახვა', close:'დახურვა'
   },
   EN: {
+    fp_title:'Add a place',
+    fp_hint:'We only add verified, dog-useful places — and no duplicates 🙏',
+    fp_type:'Place type',
+    fp_name:'Name *',
+    fp_name_ph:'Name',
+    fp_addr:'Address',
+    fp_addr_ph:'Street, building',
+    fp_link:'Google Maps link ',
+    fp_optional:'(optional)',
+    fp_link_hint:'Adds an «Open in Google Maps» button with details and directions.',
+    fp_night:'Open 24/7',
+    fp_submit:'Send for moderation',
+    fp_pin:'📍 Set a pin on the map',
+    fp_pin_ok:'✅ Pin set',
+    fp_region_hint:'🗺 The district is detected automatically from the pin.',
+    pf_edit:'✏️ Profile',
+    pf_city:'City',
+    pf_phone:'Phone',
+    pf_lang:'Bot language',
+    pf_showtg:'Show my username in «Who\'s around»',
+    pf_lostalerts:'🔔 Notify me about lost dogs in my city',
+    pf_saved:'✅ Profile updated',
+    pf_nodogs:'You have no dogs yet. Open «Dogs» → «＋» to add one.',
+    pf_noname:'No name',
+    pf_donor_btn:'🩸 Register as a donor',
+    pf_donor_hint:'Donation is available for home dogs. The details are visible to those looking for a blood donor.',
+    pf_donor_ph:'Conditions (when you can, district, compensation…)',
+    dash_lost:'🚨 Lost right now',
+    dash_stale:'⚠️ Street dogs with stale location',
+    dash_pub:'📍 Places published',
+    dash_mod:'⏳ Places in moderation',
+    dash_nogeo:'❔ Places without coordinates',
     fd_new:'🐕 New dog',
     fd_who:'Who is this?',
     fd_home:'🏠 Home dog',
@@ -1416,7 +1512,7 @@ async function renderProfileMyDogs() {
   if (!dogs) { try { dogs = await loadData('dogs'); } catch (e) { dogs = []; } }
   const mine = (dogs || []).filter(d => d.mine);
   if (!mine.length) {
-    box.innerHTML = `<div class="card"><div class="list-sub">У тебя пока нет добавленных собак. Открой «Собаки» → «＋», чтобы добавить.</div></div>`;
+    box.innerHTML = `<div class="card"><div class="list-sub">${t('pf_nodogs')}</div></div>`;
     return;
   }
   const statusIco = s => s === 'У владельца' ? '🏠' : (s === 'У опекуна' ? '🤝' : '🌳');
@@ -1424,7 +1520,7 @@ async function renderProfileMyDogs() {
     <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
       <div class="row-between">
         <div>
-          <div class="list-title">${d.lost ? '🚨 ' : ''}${escapeHtml(d.name || 'Без клички')}</div>
+          <div class="list-title">${d.lost ? '🚨 ' : ''}${escapeHtml(d.name || t('pf_noname'))}</div>
           <div class="list-sub">${statusIco(d.status)} ${escapeHtml(d.status)}${d.breed ? ' · ' + escapeHtml(d.breed) : ''}</div>
         </div>
         <div style="font-size:22px">💛</div>
@@ -1437,12 +1533,12 @@ function openDonorSheet(dogId, name) {
   const d = findDog(dogId) || {};
   openSheet(`
     <h3>🩸 «${escapeHtml(name)}» — донор крови</h3>
-    <div class="geo-note" style="margin-bottom:10px">Донорство доступно домашним собакам. Данные увидят те, кто ищет донора для переливания.</div>
+    <div class="geo-note" style="margin-bottom:10px">${t('pf_donor_hint')}</div>
     <div class="field"><label>${t('fd_weight')}</label><input type="number" step="0.5" id="dnWeight" value="${escapeAttr(d.weightKg || '')}"></div>
     <div class="field"><label>${t('fd_vacc')}</label><select id="dnVacc">${selOpts(TRISTATE, d.vaccinated || t('fd_unknown'))}</select></div>
-    <div class="field"><label>Условия (когда можете, район, компенсация…)</label>
+    <div class="field"><label>${t('pf_donor_ph')}</label>
       <textarea id="dnMemo" maxlength="300" oninput="updCount(this,300)" placeholder="Например: будни после 18:00, только Ваке/Сабуртало">${escapeHtml(d.donorMemo || '')}</textarea></div>
-    <button class="pop-btn" onclick="submitDonor('${dogId}')">🩸 Записать в доноры</button>
+    <button class="pop-btn" onclick="submitDonor('${dogId}')">${t('pf_donor_btn')}</button>
   `);
 }
 async function submitDonor(dogId) {
@@ -1523,7 +1619,7 @@ function openAddDogSheet(draft) {
     <button class="pop-btn secondary" onclick="addDogPickGeo()">${d.lat ? t('fd_pin_set') : t('fd_pin')}</button>
     <div class="geo-note">${d.lat ? '✅ ' + d.lat + ', ' + d.lng : t('fd_pin_hint')}</div>
     <div style="height:8px"></div>
-    <button class="pop-btn" onclick="submitAddDog()">${t('fd_save')}</button>
+    <button class="pop-btn" id="addDogSaveBtn" onclick="submitAddDog()">${t('fd_save')}</button>
     <div class="geo-note" style="text-align:center;margin-top:8px">${t('fd_photo_hint')}</div>
   `);
   document.querySelectorAll('#adStatus .opt').forEach(o => o.onclick = () => {
@@ -1546,7 +1642,11 @@ async function addDogPickGeo() {
   if (choice) { addDogDraft.lat = choice.lat; addDogDraft.lng = choice.lng; }
   openAddDogSheet();
 }
+let addDogSubmitting = false;
 async function submitAddDog() {
+  // Сохранение идёт заметное время (запись в таблицу + уведомления), и без защиты
+  // повторные тапы создавали ДУБЛИ анкет. Блокируем кнопку на время запроса.
+  if (addDogSubmitting) return;
   collectAddDogDraft();
   const d = addDogDraft;
   if (!d.name || !d.name.trim()) { alert('Кличка обязательна 🐶'); return; }
@@ -1559,13 +1659,22 @@ async function submitAddDog() {
     region: d.region || '', sterilized: d.sterilized, tagNumber: d.tagNumber,
     tagColor: d.tagColor, memo: d.memo, lat: d.lat || '', lng: d.lng || ''
   };
-  const res = await callApi('addDog', payload);
-  if (res.ok) {
-    haptic(); addDogDraft = null; closeSheet();
-    dataCache.dogs = null; await renderLayer(); renderDogsScreen();
-    setStatus('✅ Собака добавлена!', 2200);
-  } else if (res.error === 'limit') alert('Достигнут лимит анкет на одного человека.');
-  else alert(t('err_fail') + (res.error || ''));
+  const btn = document.getElementById('addDogSaveBtn');
+  addDogSubmitting = true;
+  if (btn) { btn.disabled = true; btn.textContent = t('cm_sending'); }
+  try {
+    const res = await callApi('addDog', payload);
+    if (res.ok) {
+      haptic(); addDogDraft = null; closeSheet();
+      dataCache.dogs = null; await renderLayer(); renderDogsScreen();
+      setStatus('✅ Собака добавлена!', 2200);
+    } else if (res.error === 'limit') alert('Достигнут лимит анкет на одного человека.');
+    else if (res.error === 'duplicate') alert('Такая собака уже добавлена 🙂');
+    else alert(t('err_fail') + (res.error || ''));
+  } finally {
+    addDogSubmitting = false;
+    if (btn) { btn.disabled = false; btn.textContent = t('fd_save'); }
+  }
 }
 
 // ================== ЭКРАН «СОБАКИ» ==================
@@ -1644,7 +1753,7 @@ function renderDogsScreen() {
     <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
       <div class="row-between">
         <div>
-          <div class="list-title">${d.lost ? '🚨 ' : ''}${escapeHtml(d.name || 'Без клички')}</div>
+          <div class="list-title">${d.lost ? '🚨 ' : ''}${escapeHtml(d.name || t('pf_noname'))}</div>
           <div class="list-sub">${statusIco(d.status)} ${escapeHtml(d.status)} · ${escapeHtml(d.breed || 'порода не указана')}${d.region ? ' · ' + escapeHtml(d.region) : (d.city && d.city !== 'Тбилиси' ? ' · ' + escapeHtml(d.city) : '')}</div>
         </div>
         <div style="font-size:22px">${d.mine ? '💛' : '🐕'}</div>
@@ -1960,9 +2069,9 @@ function openSuggestSheet(current) {
   openSheet(`
     <h3>Уточнить данные — «${escapeHtml(name)}»</h3>
     <div class="field"><label>Название</label><input type="text" id="sugName" value="${escapeAttr(current.name || '')}"></div>
-    <div class="field"><label>Тип места</label><select id="sugType">${typeOpts}</select></div>
-    <div class="field"><label>Адрес</label><input type="text" id="sugAddress" value="${escapeAttr(current.address || '')}"></div>
-    <div class="field"><label>Телефон</label><input type="tel" id="sugPhone" value="${escapeAttr(current.phone || '')}"></div>
+    <div class="field"><label>${t('fp_type')}</label><select id="sugType">${typeOpts}</select></div>
+    <div class="field"><label>${t('fp_addr')}</label><input type="text" id="sugAddress" value="${escapeAttr(current.address || '')}"></div>
+    <div class="field"><label>${t('pf_phone')}</label><input type="tel" id="sugPhone" value="${escapeAttr(current.phone || '')}"></div>
     <div class="field field-row"><input type="checkbox" id="sugNight" ${current.night ? 'checked' : ''}><label style="margin:0">Круглосуточно</label></div>
     <div class="field field-row"><input type="checkbox" id="sugClosed" ${current.closed ? 'checked' : ''}><label style="margin:0">Сейчас не работает</label></div>
     <button class="pop-btn secondary" onclick="suggestPickGeo('${id}')">📍 Поправить точку на карте</button>
@@ -2009,21 +2118,21 @@ document.getElementById('fab').onclick = () => {
   const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
     `<option value="${tk}" ${(subFilter !== 'all' && subFilter === tk) ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`).join('');
   openSheet(`
-    <h3>Добавить место</h3>
-    <div class="geo-note" style="margin-bottom:10px">Добавляем только проверенные, полезные для собак места — и без дублей 🙏</div>
-    <div class="field"><label>Тип места</label><select id="addType">${typeOpts}</select></div>
-    <div class="field"><label>Название *</label><input type="text" id="addName" placeholder="Название"></div>
-    <button class="pop-btn secondary" onclick="addPlacePickGeo()">📍 Отметить точку на карте</button>
-    <div id="geo-status" style="font-size:12px;color:var(--hint);margin:4px 0">${pendingGeo ? '✅ Точка выбрана' : ''}</div>
-    <div class="geo-note" style="margin:6px 0">🗺 Район определится автоматически по точке на карте.</div>
-    <div class="field"><label>Адрес</label><input type="text" id="addAddress" placeholder="Улица, дом"></div>
-    <div class="field"><label>Телефон</label><input type="tel" id="addPhone" placeholder="+995…"></div>
-    <div class="field"><label>Ссылка Google Maps <span style="color:var(--hint);font-weight:400">(необязательно)</span></label>
+    <h3>${t('fp_title')}</h3>
+    <div class="geo-note" style="margin-bottom:10px">${t('fp_hint')}</div>
+    <div class="field"><label>${t('fp_type')}</label><select id="addType">${typeOpts}</select></div>
+    <div class="field"><label>${t('fp_name')}</label><input type="text" id="addName" placeholder="${t('fp_name_ph')}"></div>
+    <button class="pop-btn secondary" onclick="addPlacePickGeo()">${t('fp_pin')}</button>
+    <div id="geo-status" style="font-size:12px;color:var(--hint);margin:4px 0">${pendingGeo ? t('fp_pin_ok') : ''}</div>
+    <div class="geo-note" style="margin:6px 0">${t('fp_region_hint')}</div>
+    <div class="field"><label>${t('fp_addr')}</label><input type="text" id="addAddress" placeholder="${t('fp_addr_ph')}"></div>
+    <div class="field"><label>${t('pf_phone')}</label><input type="tel" id="addPhone" placeholder="+995…"></div>
+    <div class="field"><label>${t('fp_link')}<span style="color:var(--hint);font-weight:400">${t('fp_optional')}</span></label>
       <input type="text" id="addLink" placeholder="https://maps.app.goo.gl/…">
-      <div style="font-size:12px;color:var(--hint);margin-top:4px">Добавит в карточку кнопку «Открыть в Google Maps» с деталями и маршрутом.</div>
+      <div style="font-size:12px;color:var(--hint);margin-top:4px">${t('fp_link_hint')}</div>
     </div>
-    <div class="field field-row"><input type="checkbox" id="addNight"><label style="margin:0">Круглосуточно (24 часа)</label></div>
-    <button class="pop-btn" onclick="submitAddPlace()">Отправить на модерацию</button>
+    <div class="field field-row"><input type="checkbox" id="addNight"><label style="margin:0">${t('fp_night')}</label></div>
+    <button class="pop-btn" onclick="submitAddPlace()">${t('fp_submit')}</button>
   `);
   if (addPlaceDraft) {
     document.getElementById('addType').value = addPlaceDraft.type || document.getElementById('addType').value;
@@ -2098,7 +2207,7 @@ function renderProfile() {
       </div>
       <div class="info-row"><span>🏙 Город</span><b>${escapeHtml(p.city || '—')}</b></div>
       <div class="info-row"><span>📞 Телефон</span><b>${escapeHtml(p.tel || '—')}</b></div>
-      <div class="info-row"><span>Язык бота</span><b>${langNames[p.lang] || p.lang}</b></div>
+      <div class="info-row"><span>${t('pf_lang')}</span><b>${langNames[p.lang] || p.lang}</b></div>
       <div class="info-row"><span>🔔 Оповещения о потеряшках</span><b>${p.lostAlerts === false ? 'выкл' : 'вкл'}</b></div>
       <div class="info-row"><span>👁 Юзернейм в «Кто рядом?»</span><b>${p.showTg === 'Показан' ? 'показан' : 'скрыт'}</b></div>
       <div class="info-row"><span>🐕 Моих собак</span><b>${me.myDogsCount || 0}</b></div>
@@ -2192,11 +2301,11 @@ async function openAdminDashboard() {
     <div class="sec-label">Контент</div>
     <div class="card">
       <div class="info-row"><span>🏠 Домашних / 🌳 уличных</span><b>${m.dogs.home} / ${m.dogs.street}</b></div>
-      <div class="info-row"><span>🚨 Потеряшек сейчас</span><b>${m.dogs.lost}</b></div>
-      <div class="info-row"><span>⚠️ Уличных с устаревшей гео</span><b>${m.dogs.staleStreet}</b></div>
-      <div class="info-row"><span>📍 Мест опубликовано</span><b>${m.places.total}</b></div>
-      <div class="info-row"><span>⏳ Мест на модерации</span><b>${m.places.onModeration}</b></div>
-      <div class="info-row"><span>❔ Мест без координат</span><b>${m.places.noGeo}</b></div>
+      <div class="info-row"><span>${t('dash_lost')}</span><b>${m.dogs.lost}</b></div>
+      <div class="info-row"><span>${t('dash_stale')}</span><b>${m.dogs.staleStreet}</b></div>
+      <div class="info-row"><span>${t('dash_pub')}</span><b>${m.places.total}</b></div>
+      <div class="info-row"><span>${t('dash_mod')}</span><b>${m.places.onModeration}</b></div>
+      <div class="info-row"><span>${t('dash_nogeo')}</span><b>${m.places.noGeo}</b></div>
     </div>
   `);
 }
@@ -2205,22 +2314,22 @@ function openProfileEdit() {
   const p = me.profile;
   const cities = me.cities || [];
   openSheet(`
-    <h3>✏️ Профиль</h3>
+    <h3>${t('pf_edit')}</h3>
     <div class="field"><label>${t('fd_name2')}</label><input type="text" id="prName" value="${escapeAttr(p.name || '')}"></div>
-    <div class="field"><label>Телефон</label><input type="tel" id="prTel" value="${escapeAttr(p.tel === 'Не указан' ? '' : (p.tel || ''))}" placeholder="+995…"></div>
-    ${cities.length ? `<div class="field"><label>Город</label><select id="prCity">${selOpts(cities, p.city)}</select></div>` : ''}
-    <div class="field"><label>Язык бота</label><select id="prLang">
+    <div class="field"><label>${t('pf_phone')}</label><input type="tel" id="prTel" value="${escapeAttr(p.tel === 'Не указан' ? '' : (p.tel || ''))}" placeholder="+995…"></div>
+    ${cities.length ? `<div class="field"><label>${t('pf_city')}</label><select id="prCity">${selOpts(cities, p.city)}</select></div>` : ''}
+    <div class="field"><label>${t('pf_lang')}</label><select id="prLang">
       <option value="RU" ${p.lang === 'RU' ? 'selected' : ''}>🇷🇺 Русский</option>
       <option value="GE" ${p.lang === 'GE' ? 'selected' : ''}>🇬🇪 ქართული</option>
       <option value="EN" ${p.lang === 'EN' ? 'selected' : ''}>🇬🇧 English</option>
     </select></div>
     <div class="field field-row">
       <input type="checkbox" id="prShowTg" ${p.showTg === 'Показан' ? 'checked' : ''}>
-      <label style="margin:0">Показывать мой юзернейм в «Кто рядом?»</label>
+      <label style="margin:0">${t('pf_showtg')}</label>
     </div>
     <div class="field field-row">
       <input type="checkbox" id="prLostAlerts" ${p.lostAlerts === false ? '' : 'checked'}>
-      <label style="margin:0">🔔 Сообщать о потеряшках моего города</label>
+      <label style="margin:0">${t('pf_lostalerts')}</label>
     </div>
     <button class="pop-btn" onclick="submitProfileEdit()">${t('fd_save')}</button>
   `);
@@ -2236,7 +2345,7 @@ async function submitProfileEdit() {
     lostAlerts: document.getElementById('prLostAlerts').checked
   }});
   closeSheet();
-  if (res.ok) { haptic(); me = null; loadProfile(true); setStatus('✅ Профиль обновлён', 2000); }
+  if (res.ok) { haptic(); me = null; loadProfile(true); setStatus(t('pf_saved'), 2000); }
   else alert(t('err_fail') + (res.error || ''));
 }
 
