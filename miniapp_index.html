@@ -16,7 +16,6 @@
     /* семантика (имена сохранены — используются в JS-шаблонах) */
     --paw:      #e29c33;                /* латунь: собаки, первичные действия */
     --paw-deep: #b87a1d;
-    --paw-soft: #f6e7c8;
     --vet:      #1f5b4b;                /* хвоя: места */
     --shop:     #1f5b4b;
     --red:      #d24b3c;                /* потеряшки, опасные действия */
@@ -30,8 +29,15 @@
     --card:  var(--tg-theme-secondary-bg-color, #ffffff);
     --btnbg: var(--paw);
     --btntx: #2b2008;
-    --line:  rgba(39,34,25,.13);
     --line:  color-mix(in srgb, var(--text) 12%, transparent);
+
+    /* Подложки и обводки НЕ фиксируем светлыми: иначе в тёмной теме Telegram
+       поверх тёмного фона появлялись кремовые пятна, а тёмный текст на тёмном
+       становился нечитаемым. Выводим их из фона/текста темы — работает в обеих. */
+    --surface:      color-mix(in srgb, var(--paw) 14%, var(--card));  /* мягкая фирменная подложка */
+    --surface-soft: color-mix(in srgb, var(--paw) 8%, var(--card));   /* ещё тише — треки, плейсхолдеры */
+    --stroke:       var(--card);                                      /* обводка маркеров = цвет карточки */
+    --on-brand:     #2b2008;                                          /* текст поверх янтарной заливки */
     --shadow-s: 0 1px 2px rgba(39,34,25,.06), 0 4px 14px rgba(39,34,25,.06);
     --shadow-m: 0 2px 6px rgba(39,34,25,.10), 0 10px 30px rgba(39,34,25,.14);
     --r-card: 18px;
@@ -40,6 +46,25 @@
     --font-disp: "Unbounded", "Manrope", sans-serif;
     --tabbar-h: calc(62px + env(safe-area-inset-bottom));
   }
+  /* Тёмная тема. Telegram отдаёт свои цвета фона и текста, а фирменные подложки
+     считаются от них выше. Здесь только то, что нельзя вывести автоматически:
+     чуть приглушаем янтарь и делаем тени глубже — на тёмном фоне светлые тени не видны. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paw:      #d9973a;
+      --paw-deep: #f0b968;   /* на тёмном «глубокий» оттенок должен быть СВЕТЛЕЕ базового */
+      --shadow-s: 0 1px 2px rgba(0,0,0,.36), 0 4px 14px rgba(0,0,0,.30);
+      --shadow-m: 0 2px 6px rgba(0,0,0,.44), 0 10px 30px rgba(0,0,0,.40);
+    }
+  }
+  /* Telegram может явно сообщить тёмную схему — учитываем и это (класс ставится из JS). */
+  body.tg-dark {
+    --paw:      #d9973a;
+    --paw-deep: #f0b968;
+    --shadow-s: 0 1px 2px rgba(0,0,0,.36), 0 4px 14px rgba(0,0,0,.30);
+    --shadow-m: 0 2px 6px rgba(0,0,0,.44), 0 10px 30px rgba(0,0,0,.40);
+  }
+
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text);
     font-family: var(--font-body); font-size: 14px; line-height: 1.45; overflow: hidden;
@@ -108,7 +133,7 @@
     border-color: var(--line) !important; }
   .marker-pin { width: 30px; height: 30px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    border: 2.5px solid #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 10px rgba(0,0,0,.22); }
+    border: 2.5px solid var(--stroke); box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 10px rgba(0,0,0,.22); }
   .marker-pin span { font-size: 14px; }
   .marker-pin.lost { animation: pulse 1.5s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(210,75,60,.5);} 70% { box-shadow: 0 0 0 13px rgba(210,75,60,0);} 100% { box-shadow: 0 0 0 0 rgba(210,75,60,0);} }
@@ -165,7 +190,7 @@
     background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
   .badge.ok { background: rgba(46,125,91,.14);
     background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
-  .badge.brand { background: var(--paw-soft); color: var(--paw-deep); }
+  .badge.brand { background: var(--surface); color: var(--paw-deep); }
   .pop-badges, .badges { margin-top: 7px; display: flex; gap: 5px; flex-wrap: wrap; }
   .empty { text-align: center; color: var(--hint); font-size: 13.5px; padding: 34px 12px; }
   .empty .big { font-size: 38px; margin-bottom: 10px; }
@@ -205,7 +230,7 @@
   .pack-marker { background: none; border: none; }
   .pack-badge { background: var(--street, #6b7280); color: #fff; font-weight: 700; font-size: 12px;
     padding: 5px 10px; border-radius: 14px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.3);
-    border: 2px solid #fff; text-align: center; }
+    border: 2px solid var(--stroke); text-align: center; }
 
   /* донорские фильтры */
   #donor-panel { background: var(--card); border-radius: var(--r-card); padding: 13px 14px; margin-bottom: 10px;
@@ -220,12 +245,12 @@
     background: color-mix(in srgb, var(--text) 18%, transparent);
     border-radius: 999px; transition: background .15s; }
   .slider-t:before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px;
-    background: #fff; border-radius: 50%; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+    background: var(--card); border-radius: 50%; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
   .switch input:checked + .slider-t { background: var(--paw); }
   .switch input:checked + .slider-t:before { transform: translateX(18px); }
 
   /* профиль */
-  .avatar { width: 58px; height: 58px; border-radius: 50%; background: var(--paw-soft);
+  .avatar { width: 58px; height: 58px; border-radius: 50%; background: var(--surface);
     border: 2px solid color-mix(in srgb, var(--paw) 45%, transparent);
     display: flex; align-items: center; justify-content: center; font-size: 26px; flex: 0 0 auto; }
   .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line);
@@ -248,7 +273,7 @@
   .nav-item .ico { font-size: 23px; line-height: 1; transition: transform .18s ease; }
   .nav-item.active { color: var(--paw-deep); }
   .nav-item.active::before { content: ""; position: absolute; width: 52px; height: 34px;
-    border-radius: 999px; background: var(--paw-soft); z-index: -1; }
+    border-radius: 999px; background: var(--surface); z-index: -1; }
   .nav-item.active .ico { transform: translateY(-1px) scale(1.06); }
   .nav-item:active .ico { transform: scale(.92); }
   .nav-dot { position: absolute; top: 8px; right: calc(50% - 16px); width: 8px; height: 8px;
@@ -290,7 +315,7 @@
   .kpi.good .val { color: var(--green); } .kpi.warn .val { color: var(--red); }
   .bar-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 12.5px; }
   .bar-row .nm { width: 96px; color: var(--hint); flex: 0 0 auto; }
-  .bar-track { flex: 1; height: 9px; background: var(--paw-soft); border-radius: 999px; overflow: hidden; }
+  .bar-track { flex: 1; height: 9px; background: var(--surface-soft); border-radius: 999px; overflow: hidden; }
   .bar-fill { height: 100%; background: var(--paw); border-radius: 999px; }
   .bar-row .cnt { width: 34px; text-align: right; font-weight: 700; }
   .spark { display: flex; align-items: flex-end; gap: 3px; height: 54px; margin-top: 8px; }
@@ -313,13 +338,13 @@
     border-radius: 50%; background: var(--bg); box-shadow: inset 0 1px 2px rgba(0,0,0,.28); }
   .dog-card-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 0;
     border-bottom: 2px dashed color-mix(in srgb, var(--paw-deep) 55%, transparent); }
-  .dog-card-head h3 { margin: 0; color: #2b2008; font-family: var(--font-disp); font-size: 17px; }
+  .dog-card-head h3 { margin: 0; color: var(--on-brand); font-family: var(--font-disp); font-size: 17px; }
   .dog-card-head.hero h3 { font-size: 19px; text-align: center; }
   /* Фото — главный элемент карточки: крупное, во всю ширину. Раньше это был кружок
      64px сбоку от клички, из-за чего самая ценная часть анкеты почти не читалась. */
   .dog-photo { width: 100%; max-width: 300px; aspect-ratio: 1; border-radius: var(--r-ctl, 14px);
-    background: var(--paw-soft) center/cover no-repeat;
-    border: 3px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,.2);
+    background: var(--surface) center/cover no-repeat;
+    border: 3px solid var(--stroke); box-shadow: 0 3px 10px rgba(0,0,0,.2);
     display: flex; align-items: center; justify-content: center; font-size: 72px; flex: 0 0 auto;
     cursor: pointer; }
   .dog-photo.loaded { font-size: 0; }
@@ -332,14 +357,14 @@
     border: 1.5px solid var(--line); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none;
     transition: border-color .15s, color .15s, background .15s; }
   .seg-pick .opt.active { border-color: var(--paw); color: var(--paw-deep); font-weight: 800;
-    background: var(--paw-soft); }
+    background: var(--surface); }
   .review-item { padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
   .review-item:last-child { border-bottom: none; }
   .review-item .who { font-weight: 800; }
   .review-item .txt { color: var(--text); margin-top: 2px; }
   .review-item .when { color: var(--hint); font-size: 11.5px; margin-top: 2px; }
   .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0; }
-  .gallery-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--paw-soft); }
+  .gallery-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--surface-soft); }
   .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .gallery-del { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
     border: none; background: rgba(0,0,0,.55); color: #fff; font-size: 13px; line-height: 1; cursor: pointer;
@@ -419,6 +444,21 @@ let BOT_USERNAME = "ВАШ_БОТ_USERNAME"; // подхватится из getM
 
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
+// Telegram знает схему точнее браузера (пользователь мог включить тёмную только в
+// приложении). Вешаем класс и слушаем смену темы — цвета пересчитаются сами через CSS.
+function applyTgColorScheme() {
+  var dark = tg && (tg.colorScheme === 'dark' ||
+    (tg.themeParams && tg.themeParams.bg_color && isDarkHex(tg.themeParams.bg_color)));
+  document.body.classList.toggle('tg-dark', !!dark);
+}
+function isDarkHex(hex) {
+  var h = (hex || '').replace('#', '');
+  if (h.length !== 6) return false;
+  var r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 128;   // яркость по восприятию
+}
+applyTgColorScheme();
+if (tg && tg.onEvent) tg.onEvent('themeChanged', applyTgColorScheme);
 // Статичную разметку переводим сразу после определения LANG (см. ниже по файлу).
 const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user.id : '';
 
