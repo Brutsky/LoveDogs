@@ -10,6 +10,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
   /* ============ ТОКЕНЫ: «эмалевая табличка и латунный жетон» ============ */
   :root {
@@ -231,6 +234,11 @@
   .pack-badge { background: var(--street, #6b7280); color: #fff; font-weight: 700; font-size: 12px;
     padding: 5px 10px; border-radius: 14px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.3);
     border: 2px solid var(--stroke); text-align: center; }
+  /* Значок кластера маркеров (число слипшихся меток) */
+  .cluster-marker { background: transparent; }
+  .cluster-badge { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    background: var(--paw); color: var(--btntx, #2b2008); font-weight: 800; font-size: 13px;
+    border-radius: 50%; border: 2px solid var(--stroke); box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 
   /* донорские фильтры */
   #donor-panel { background: var(--card); border-radius: var(--r-card); padding: 13px 14px; margin-bottom: 10px;
@@ -941,7 +949,26 @@ L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=ru&x={x}&y={y}&z={z}', {
 }).addTo(map);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-let currentLayer = L.layerGroup().addTo(map);
+// Кластеризация: близкие маркеры (наплыв >50% при текущем зуме) объединяются в значок
+// с числом; при увеличении масштаба / клике по кластеру — разъединяются.
+// maxClusterRadius≈16px ≈ половина иконки 30px → кластер возникает только при наплыве >50%.
+let currentLayer = L.markerClusterGroup({
+  maxClusterRadius: 16,
+  showCoverageOnHover: false,
+  spiderfyOnMaxZoom: true,
+  zoomToBoundsOnClick: true,
+  removeOutsideVisibleBounds: true,
+  chunkedLoading: true,
+  iconCreateFunction: function (cluster) {
+    var n = cluster.getChildCount();
+    var size = n < 10 ? 34 : (n < 100 ? 40 : 46);
+    return L.divIcon({
+      html: '<div class="cluster-badge">' + n + '</div>',
+      className: 'cluster-marker',
+      iconSize: [size, size], iconAnchor: [size / 2, size / 2]
+    });
+  }
+}).addTo(map);
 let dataCache = { dogs: null, places: null };
 let activeTab = 'dogs';     // слой карты
 let subFilter = 'all';
