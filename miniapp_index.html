@@ -596,6 +596,8 @@ const I18N = {
     a_here:'✅ Собака здесь',
     a_edit:'✏️ Редактировать анкету',
     a_comments:'💬 Комментарии',
+    a_sub:'🔔 Подписаться',
+    a_unsub:'🔕 Отписаться',
     a_gallery:'🖼 Галерея',
     a_walks:'📍 Гуляет тут',
     a_updgeo:'📍 Уточнить геопозицию',
@@ -737,6 +739,8 @@ const I18N = {
     a_here:'✅ ძაღლი აქ არის',
     a_edit:'✏️ ანკეტის რედაქტირება',
     a_comments:'💬 კომენტარები',
+    a_sub:'🔔 გამოწერა',
+    a_unsub:'🔕 გამოწერის გაუქმება',
     a_gallery:'🖼 გალერეა',
     a_walks:'📍 აქ სეირნობს',
     a_updgeo:'📍 გეოლოკაციის დაზუსტება',
@@ -878,6 +882,8 @@ const I18N = {
     a_here:'✅ Dog is here',
     a_edit:'✏️ Edit profile',
     a_comments:'💬 Comments',
+    a_sub:'🔔 Follow',
+    a_unsub:'🔕 Unfollow',
     a_gallery:'🖼 Gallery',
     a_walks:'📍 Walks here',
     a_updgeo:'📍 Update location',
@@ -1375,6 +1381,7 @@ async function openDogCard(d) {
   actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">${t('a_share')}</button>`;
   actions += `<button class="pop-btn secondary" onclick="showDogGallery('${d.id}','${escapeAttr(d.name || '')}',${canEditGallery})">${t('a_gallery')}</button>`;
   actions += `<button class="pop-btn secondary" onclick="showDogComments('${d.id}','${escapeAttr(d.name || '')}')">${t('a_comments')}</button>`;
+  if (isStreet) actions += `<button class="pop-btn secondary" id="subBtn-${d.id}" onclick="toggleDogSub('${d.id}')">${d.subscribed ? t('a_unsub') : t('a_sub')}</button>`;
   if (d.mine) {
     actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">${t('a_edit')}</button>`;
     if (isHomeMine) {
@@ -2022,6 +2029,19 @@ async function confirmDogGeo(dogId, dogName) {
       alert(t('err_fail') + (res.error || ''));
     }
   } finally { geoConfirming = false; }
+}
+
+async function toggleDogSub(id) {
+  const res = await callApi('toggleDogSub', { dogId: id });
+  if (res && res.ok) {
+    const btn = document.getElementById('subBtn-' + id);
+    if (btn) btn.textContent = res.subscribed ? t('a_unsub') : t('a_sub');
+    const dog = findDog(id); if (dog) dog.subscribed = res.subscribed;   // чтобы переоткрытие карточки было верным
+    haptic();
+    setStatus(res.subscribed ? t('a_sub') : t('a_unsub'), 1800);
+  } else if (res && res.error === 'street_only') {
+    alert('Подписка доступна только для уличных собак.');
+  }
 }
 
 // ================== ГАЛЕРЕЯ ФОТО СОБАКИ ==================
