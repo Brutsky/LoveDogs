@@ -1690,6 +1690,10 @@ async function submitAddDog() {
   collectAddDogDraft();
   const d = addDogDraft;
   if (!d.name || !d.name.trim()) { alert('Кличка обязательна 🐶'); return; }
+  if (d.status === 'Уличная') {
+    alert('📸 Уличную собаку добавляй через бота — нужно фото, без которого её не опознать. Открой бота → «Добавить собаку».');
+    return;
+  }
   let breed = d.breed === '__manual__' ? (d.breedManual || '').trim() : d.breed;
   if (d.breed === '__manual__' && breed && !/^[A-Za-zА-Яа-яЁё\u10A0-\u10FF\s-]+$/.test(breed)) {
     alert('Порода — только буквы и дефис.'); return;
@@ -1710,6 +1714,9 @@ async function submitAddDog() {
       setStatus('✅ Собака добавлена!', 2200);
     } else if (res.error === 'limit') alert('Достигнут лимит анкет на одного человека.');
     else if (res.error === 'duplicate') alert('Такая собака уже добавлена 🙂');
+    else if (res.error === 'tag_required') alert('🏷️ У уличной собаки бирка обязательна.');
+    else if (res.error === 'geo_required') alert('📍 Для уличной собаки отметь точку на карте.');
+    else if (res.error === 'street_use_bot') alert('📸 Уличную собаку добавляй через бота — там можно приложить фото.');
     else alert(t('err_fail') + (res.error || ''));
   } finally {
     addDogSubmitting = false;
@@ -2413,15 +2420,19 @@ applyStaticI18n();   // перевести оболочку до первого 
 renderSubfilters();
 // Сначала узнаём город пользователя, ТОЛЬКО потом рисуем карту — иначе первый рендер
 // проходит с me=null и показывает собак всех городов.
-callApi('getMe', {}).then(res => {
-  if (res.ok) {
-    me = res;
-    if (me.botUsername) BOT_USERNAME = me.botUsername;
-    // Язык, выбранный в боте, важнее языка Telegram — применяем его к статике.
-    if (me.profile) syncLangFromProfile(me.profile);
-    if (me.profile) centerMapByCity(me.profile.city);
-  }
-}).finally(() => { renderSubfilters(); renderLayer(); });
+// Профиль и слой карты грузим ПАРАЛЛЕЛЬНО — раньше карта ждала getMe и старт был долгим.
+Promise.all([
+  callApi('getMe', {}).then(res => {
+    if (res.ok) {
+      me = res;
+      if (me.botUsername) BOT_USERNAME = me.botUsername;
+      // Язык, выбранный в боте, важнее языка Telegram — применяем его к статике.
+      if (me.profile) syncLangFromProfile(me.profile);
+      if (me.profile) centerMapByCity(me.profile.city);
+    }
+  }).catch(() => {}),
+  loadData('dogs').catch(() => {})
+]).finally(() => { renderSubfilters(); renderLayer(); });
 </script>
 </body>
 </html>
