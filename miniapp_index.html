@@ -1332,10 +1332,22 @@ function openSupportSheet() {
   `);
 }
 function openTgLink(url) { if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank'); }
-function shareDog(dogId, name) {
-  // Диалог шаринга Telegram с диплинком на карточку — «увидел собаку → скинул соседям»
+async function shareDog(dogId, name) {
+  // Bot API 8.0: делимся ГОТОВЫМ сообщением с фото собаки и кнопкой, а не голой ссылкой
+  // (по ссылке t.me/bot Telegram рисует превью бота, а не собаку — выглядело ущербно).
+  if (tg && typeof tg.shareMessage === 'function' && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
+    try {
+      const res = await callApi('prepareShare', { dogId });
+      if (res && res.ok && res.prepared_id) {
+        tg.shareMessage(res.prepared_id, (ok) => { if (ok) haptic('success'); });
+        return;
+      }
+      if (res && res.error) setStatus('Не удалось подготовить: ' + res.error, 2500);
+    } catch (e) {}
+  }
+  // Фолбэк для старых клиентов Telegram: ссылка + текст.
   const deep = `https://t.me/${BOT_USERNAME}?start=dog_${dogId}`;
-  const shareText = `🐕 Познакомься с ${name}!\n\nЭто карточка из Love Dogs — живой карты собак нашего района. Тут домашние, дворовые и потеряшки. Загляни, добавь своего пса или помоги найти чужого 🐾\n\nОткрыть 👇`;
+  const shareText = `🐕 Познакомься с ${name}!\n\nЭто карточка из Love Dogs — живой карты собак района. Загляни, добавь своего пса или помоги найти чужого 🐾\n\nОткрыть 👇`;
   const share = `https://t.me/share/url?url=${encodeURIComponent(deep)}&text=${encodeURIComponent(shareText)}`;
   if (tg && tg.openTelegramLink) tg.openTelegramLink(share); else window.open(share, '_blank');
 }
