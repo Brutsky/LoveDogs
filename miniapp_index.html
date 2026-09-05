@@ -354,8 +354,26 @@
     background: var(--surface) center/cover no-repeat;
     border: 3px solid var(--stroke); box-shadow: 0 3px 10px rgba(0,0,0,.2);
     display: flex; align-items: center; justify-content: center; font-size: 72px; flex: 0 0 auto;
-    cursor: pointer; }
+    cursor: pointer; position: relative; }
   .dog-photo.loaded { font-size: 0; }
+  .photo-count { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.62); color: #fff;
+    font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 12px; pointer-events: none; }
+  .more-toggle { background: none; border: none; color: var(--vet, #1f5b4b); font-weight: 700; font-size: 13px; padding: 7px 0; cursor: pointer; }
+  .comments-block { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .comments-title { font-weight: 800; font-size: 14px; margin-bottom: 8px; }
+  .comments-inline .review-item { margin-bottom: 8px; }
+  .comment-compose { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .comment-compose textarea { width: 100%; }
+  .hint-p { color: var(--hint); font-size: 13px; margin: 0 0 10px; }
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.93); z-index: 9999; display: none; align-items: center; justify-content: center; }
+  .lightbox.show { display: flex; }
+  .lb-img { max-width: 96vw; max-height: 86vh; border-radius: 8px; object-fit: contain; }
+  .lb-close { position: absolute; top: 14px; right: 16px; background: rgba(255,255,255,.15); color: #fff; border: none; width: 38px; height: 38px; border-radius: 50%; font-size: 20px; cursor: pointer; }
+  .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.15); color: #fff; border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 28px; line-height: 1; cursor: pointer; }
+  .lb-prev { left: 10px; } .lb-next { right: 10px; }
+  .lb-dots { position: absolute; bottom: 18px; left: 0; right: 0; display: flex; gap: 6px; justify-content: center; }
+  .lb-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.4); }
+  .lb-dot.on { background: #fff; }
   .dog-memo { background: rgba(39,34,25,.05);
     background: color-mix(in srgb, var(--text) 5%, transparent); border-radius: var(--r-ctl);
     padding: 10px 12px; font-size: 13px; margin: 9px 0; }
@@ -596,6 +614,11 @@ const I18N = {
     a_here:'✅ Собака здесь',
     a_edit:'✏️ Редактировать анкету',
     a_comments:'💬 Комментарии',
+    a_addphoto:'📷 Добавить фото',
+    d_more:'Показать все данные', d_less:'Скрыть',
+    co_head:'✉️ Связаться с хозяином', co_hint:'Сообщение о «{name}» уйдёт хозяину/опекуну от бота вместе с твоим юзернеймом.',
+    co_ph:'Напиши сообщение…', co_send:'Отправить', co_cancel:'Отмена',
+    co_sent:'✅ Отправлено! Ждём ответа', co_empty:'Напиши сообщение', co_noowner:'У этой собаки нет хозяина для связи',
     a_sub:'🔔 Подписаться',
     a_unsub:'🔕 Отписаться',
     a_gallery:'🖼 Галерея',
@@ -739,6 +762,11 @@ const I18N = {
     a_here:'✅ ძაღლი აქ არის',
     a_edit:'✏️ ანკეტის რედაქტირება',
     a_comments:'💬 კომენტარები',
+    a_addphoto:'📷 ფოტოს დამატება',
+    d_more:'ყველა მონაცემი', d_less:'დამალვა',
+    co_head:'✉️ პატრონთან დაკავშირება', co_hint:'შეტყობინება «{name}»-ზე გაეგზავნება პატრონს/მეურვეს ბოტისგან შენი იუზერნეიმით.',
+    co_ph:'დაწერე შეტყობინება…', co_send:'გაგზავნა', co_cancel:'გაუქმება',
+    co_sent:'✅ გაგზავნილია! ველოდებით პასუხს', co_empty:'დაწერე შეტყობინება', co_noowner:'ამ ძაღლს არ ჰყავს პატრონი',
     a_sub:'🔔 გამოწერა',
     a_unsub:'🔕 გამოწერის გაუქმება',
     a_gallery:'🖼 გალერეა',
@@ -882,6 +910,11 @@ const I18N = {
     a_here:'✅ Dog is here',
     a_edit:'✏️ Edit profile',
     a_comments:'💬 Comments',
+    a_addphoto:'📷 Add photo',
+    d_more:'Show all details', d_less:'Hide',
+    co_head:'✉️ Message the owner', co_hint:'Your message about “{name}” will be delivered to the owner/guardian by the bot with your username.',
+    co_ph:'Write a message…', co_send:'Send', co_cancel:'Cancel',
+    co_sent:'✅ Sent! Fingers crossed for a reply', co_empty:'Write a message', co_noowner:'This dog has no owner to contact',
     a_sub:'🔔 Follow',
     a_unsub:'🔕 Unfollow',
     a_gallery:'🖼 Gallery',
@@ -1239,7 +1272,35 @@ function openBotDeepLink(payloadStr) {
   const url = `https://t.me/${BOT_USERNAME}?start=${payloadStr}`;
   if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
 }
-function contactOwner(dogId) { openBotDeepLink('contact_' + dogId); }
+function contactOwner(dogId, dogName) {
+  openSheet(`
+    <h3>${t('co_head')}</h3>
+    <p class="hint-p">${t('co_hint').replace('{name}', escapeHtml(dogName || ''))}</p>
+    <div class="field"><textarea id="contactText" placeholder="${t('co_ph')}" maxlength="800" oninput="updCount(this,800)"></textarea></div>
+    <button class="pop-btn" id="contactSendBtn" onclick="submitContactOwner('${dogId}')">${t('co_send')}</button>
+    <button class="pop-btn secondary" onclick="closeSheet()">${t('co_cancel')}</button>
+  `);
+}
+async function submitContactOwner(dogId) {
+  const field = document.getElementById('contactText');
+  const text = (field.value || '').trim();
+  if (!text) { alert(t('co_empty')); return; }
+  const btn = document.getElementById('contactSendBtn');
+  if (btn) { btn.disabled = true; btn.textContent = t('cm_sending'); }
+  field.disabled = true;
+  try {
+    const res = await callApi('contactOwner', { dogId, text });
+    if (res.ok) { haptic('success'); closeSheet(); setStatus(t('co_sent'), 2200); }
+    else {
+      alert(res.error === 'no_owner' ? t('co_noowner') : (t('err_fail') + (res.error || '')));
+      if (btn) { btn.disabled = false; btn.textContent = t('co_send'); }
+      field.disabled = false;
+    }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = t('co_send'); }
+    field.disabled = false;
+  }
+}
 function copyToClipboard(text, label) {
   const done = () => setStatus('📋 Скопировано: ' + (label || text), 1800);
   try {
@@ -1343,19 +1404,23 @@ function findDog(id) { return (dataCache.dogs || []).find(d => d.id.toString() =
 
 async function openDogCard(d) {
   const isStreet = d.status === 'Уличная';
-  const rows = [
-    [t('d_breed'), d.breed || '—'],
+  // Важное — всегда; второстепенное (только заполненное) — под «показать всё».
+  const impRows = [
+    d.breed ? [t('d_breed'), d.breed] : null,
+    d.age ? [t('d_age'), d.age] : null,
+    d.sex ? [t('d_sex'), d.sex] : null,
+    [t('d_region'), ((d.city || '') + (d.region ? ', ' + d.region : '')) || '—'],
+    [t('d_status'), d.status || '—']
+  ].filter(Boolean);
+  const extraRows = [
     d.color ? [t('d_color'), d.color] : null,
     d.tagNumber ? [t('d_tag'), d.tagNumber + (d.tagColor ? ' · ' + d.tagColor : '')] : null,
-    [t('d_age'), d.age || '—'],
-    [t('d_sex'), d.sex || '—'],
-    [t('d_status'), d.status || '—'],
-    [t('d_region'), ((d.city || '') + (d.region ? ', ' + d.region : '')) || '—'],
     d.sterilized ? [t('d_ster'), d.sterilized] : null,
     d.weightKg ? [t('d_weight'), d.weightKg + t('d_kg')] : null,
     d.vaccinated ? [t('d_vacc'), d.vaccinated] : null,
     d.isDonor ? [t('d_donor'), d.donorMemo || 'да'] : null
   ].filter(Boolean);
+  const infoHtml = rr => rr.map(r => `<div class="info-row"><span>${r[0]}</span><b>${escapeHtml(r[1])}</b></div>`).join('');
   const badges = [
     d.mine ? `<span class="badge brand">${t('b_mine')}</span>` : '',
     d.seekingHome ? `<span class="badge ok">${t('b_seeking')}</span>` : '',
@@ -1379,8 +1444,7 @@ async function openDogCard(d) {
   }
   if (d.lat) actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">${t('a_showmap')}</button>`;
   actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">${t('a_share')}</button>`;
-  actions += `<button class="pop-btn secondary" onclick="showDogGallery('${d.id}','${escapeAttr(d.name || '')}',${canEditGallery})">${t('a_gallery')}</button>`;
-  actions += `<button class="pop-btn secondary" onclick="showDogComments('${d.id}','${escapeAttr(d.name || '')}')">${t('a_comments')}</button>`;
+  if (canEditGallery) actions += `<button class="pop-btn secondary" onclick="openBotDeepLink('gallery_${d.id}')">${t('a_addphoto')}</button>`;
   if (isStreet) actions += `<button class="pop-btn secondary" id="subBtn-${d.id}" onclick="toggleDogSub('${d.id}')">${d.subscribed ? t('a_unsub') : t('a_sub')}</button>`;
   if (d.mine) {
     actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">${t('a_edit')}</button>`;
@@ -1402,7 +1466,7 @@ async function openDogCard(d) {
     else actions += `<button class="pop-btn" style="background:var(--green)" onclick="markFound('${d.id}')">🎉 Нашлась!</button>`;
     actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}')">🗑 Удалить анкету</button>`;
   } else {
-    if (d.hasOwner) actions += `<button class="pop-btn" onclick="contactOwner('${d.id}')">✉️ Связаться с хозяином</button>`;
+    if (d.hasOwner) actions += `<button class="pop-btn" onclick="contactOwner('${d.id}','${escapeAttr(d.name || '')}')">✉️ Связаться с хозяином</button>`;
     // Уличную без владельца может дозаполнить любой (первичные данные)
     if (isStreet && !d.hasOwner) {
       actions += `<button class="pop-btn secondary" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Дополнить анкету</button>`;
@@ -1415,21 +1479,119 @@ async function openDogCard(d) {
   }
 
   openSheet(`
-    <div class="dog-card-head hero"><div id="dogPhoto" class="dog-photo" onclick="showDogGallery('${d.id}','${escapeAttr(d.name || '')}',${canEditGallery})">🐕</div><h3>${escapeHtml(d.name || 'Собака')}</h3></div>
+    <div class="dog-card-head hero">
+      <div id="dogPhoto" class="dog-photo" onclick="openDogLightbox()">🐕<span id="dogPhotoCount" class="photo-count" style="display:none"></span></div>
+      <h3>${escapeHtml(d.name || 'Собака')}</h3>
+    </div>
     <div class="badges">${badges}</div>
-    <div class="dog-info">${rows.map(r => `<div class="info-row"><span>${r[0]}</span><b>${escapeHtml(r[1])}</b></div>`).join('')}</div>
+    <div class="dog-info">${infoHtml(impRows)}</div>
+    ${extraRows.length ? `<button class="more-toggle" id="moreToggle" onclick="toggleDogExtra()">${t('d_more')} ⌄</button>
+      <div class="dog-info" id="dogExtra" style="display:none">${infoHtml(extraRows)}</div>` : ''}
     ${d.memo ? `<div class="dog-memo">📝 ${escapeHtml(d.memo)}</div>` : ''}
     <div class="pop-actions vertical">${actions}</div>
+    <div class="comments-block">
+      <div class="comments-title">${t('cm_head')}</div>
+      <div id="commentsList" class="comments-inline"><div class="empty">…</div></div>
+      <div class="comment-compose">
+        <textarea id="commentText" placeholder="${t('cm_ph')}" maxlength="500" oninput="updCount(this,500)"></textarea>
+        <button class="pop-btn" id="commentSendBtn" onclick="submitComment('${d.id}','${escapeAttr(d.name || '')}')">${t('cm_send')}</button>
+      </div>
+    </div>
   `);
 
+  loadDogMedia(d);
+  loadDogCommentsInline(d.id, d.name || '');
+}
+
+// Фото: быстро показываем обложку, затем подгружаем всю галерею для счётчика и листания.
+async function loadDogMedia(d) {
+  window._lbPhotos = [];
+  const el = document.getElementById('dogPhoto');
   if (d.photoId) {
     try {
       const r = await fetch(`${API_URL}?type=photoUrl&file_id=${encodeURIComponent(d.photoId)}`);
       const j = await r.json();
-      const el = document.getElementById('dogPhoto');
-      if (j.ok && j.url && el) { el.style.backgroundImage = `url('${j.url}')`; el.classList.add('loaded'); }
+      if (j.ok && j.url && el) { el.style.backgroundImage = `url('${j.url}')`; el.classList.add('loaded'); window._lbPhotos = [j.url]; }
     } catch (e) {}
   }
+  try {
+    const r = await fetch(`${API_URL}?type=dogGallery&dogId=${encodeURIComponent(d.id)}`);
+    const j = await r.json();
+    const photos = (j.ok ? j.photos : []) || [];
+    if (photos.length) {
+      photos.sort((a, b) => (b.isCover ? 1 : 0) - (a.isCover ? 1 : 0));
+      window._lbPhotos = photos.map(p => p.url);
+      if (el && photos[0] && photos[0].url) { el.style.backgroundImage = `url('${photos[0].url}')`; el.classList.add('loaded'); }
+    }
+    const cnt = document.getElementById('dogPhotoCount');
+    if (cnt && window._lbPhotos.length > 1) { cnt.textContent = '📷 ' + window._lbPhotos.length; cnt.style.display = ''; }
+  } catch (e) {}
+}
+
+function toggleDogExtra() {
+  const ex = document.getElementById('dogExtra'), btn = document.getElementById('moreToggle');
+  if (!ex) return;
+  const open = ex.style.display === 'none';
+  ex.style.display = open ? '' : 'none';
+  if (btn) btn.textContent = (open ? t('d_less') + ' ⌃' : t('d_more') + ' ⌄');
+}
+
+// Лайтбокс: фото на весь экран с листанием (свайп / стрелки / точки).
+function openDogLightbox() {
+  const photos = window._lbPhotos || [];
+  if (!photos.length) return;
+  window._lbIdx = 0;
+  let ov = document.getElementById('lightbox');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'lightbox'; ov.className = 'lightbox';
+    ov.innerHTML = `<button class="lb-close" onclick="closeLightbox()">✕</button>
+      <button class="lb-nav lb-prev" onclick="event.stopPropagation();lbNav(-1)">‹</button>
+      <img id="lbImg" class="lb-img" src="">
+      <button class="lb-nav lb-next" onclick="event.stopPropagation();lbNav(1)">›</button>
+      <div id="lbDots" class="lb-dots"></div>`;
+    ov.onclick = (e) => { if (e.target === ov) closeLightbox(); };
+    let sx = 0;
+    ov.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+    ov.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 40) lbNav(dx < 0 ? 1 : -1); }, { passive: true });
+    document.body.appendChild(ov);
+  }
+  lbShow();
+  ov.classList.add('show');
+}
+function lbShow() {
+  const photos = window._lbPhotos || [];
+  const img = document.getElementById('lbImg');
+  if (img) img.src = photos[window._lbIdx] || '';
+  const dots = document.getElementById('lbDots');
+  if (dots) dots.innerHTML = photos.length > 1 ? photos.map((_, i) => `<span class="lb-dot ${i === window._lbIdx ? 'on' : ''}"></span>`).join('') : '';
+  document.querySelectorAll('#lightbox .lb-nav').forEach(b => b.style.display = photos.length > 1 ? '' : 'none');
+}
+function lbNav(dir) {
+  const photos = window._lbPhotos || [];
+  if (!photos.length) return;
+  window._lbIdx = (window._lbIdx + dir + photos.length) % photos.length;
+  lbShow();
+}
+function closeLightbox() { const ov = document.getElementById('lightbox'); if (ov) ov.classList.remove('show'); }
+
+// Комментарии прямо в карточке (лента + написать новый; submitComment переиспользуется).
+async function loadDogCommentsInline(dogId, dogName) {
+  const list = document.getElementById('commentsList');
+  if (!list) return;
+  try {
+    const res = await callApi('getComments', { dogId });
+    const items = res.ok ? (res.comments || []) : [];
+    const canModerate = res.ok && res.canModerate;
+    if (!items.length) { list.innerHTML = `<div class="empty">${t('cm_empty')}</div>`; return; }
+    list.innerHTML = items.map(c => `
+      <div class="review-item">
+        <div class="row-between"><span class="who">${escapeHtml(c.author || t('cm_guest'))}</span>
+          ${canModerate ? `<button class="pop-btn danger small" style="padding:3px 9px" onclick="deleteComment('${c.id}','${dogId}','${escapeAttr(dogName)}')">🗑</button>` : ''}</div>
+        <div class="txt">${escapeHtml(c.text)}</div>
+        <div class="when">${escapeHtml(c.date || '')}</div>
+      </div>`).join('');
+  } catch (e) { list.innerHTML = `<div class="empty">${t('cm_empty')}</div>`; }
 }
 
 function showDogOnMap(id) {
@@ -2133,7 +2295,7 @@ async function submitComment(dogId, dogName) {
 }
 async function deleteComment(commentId, dogId, dogName) {
   const res = await callApi('deleteComment', { commentId, dogId });
-  if (res.ok) { haptic(); showDogComments(dogId, dogName); }
+  if (res.ok) { haptic(); loadDogCommentsInline(dogId, dogName); }
   else alert('Не получилось удалить: ' + (res.error || ''));
 }
 
