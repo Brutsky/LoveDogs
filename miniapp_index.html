@@ -1114,7 +1114,7 @@ async function loadData(kind, force) {
   setStatus('Загружаю…');
   try {
     const uid = (kind === 'dogs' && MY_UID) ? MY_UID : '';
-    const res = await fetch(`${API_URL}?type=${kind}${uid ? '&uid=' + uid : ''}`);
+    const res = await fetch(`${API_URL}?type=${kind}${uid ? '&uid=' + uid : ''}&${initDataQS()}`);
     const json = await res.json();
     dataCache[kind] = json[kind] || [];
     setStatus(null);
@@ -1261,6 +1261,29 @@ function showScreen(name) {
 document.querySelectorAll('#tabbar .nav-item').forEach(n => n.onclick = () => showScreen(n.dataset.screen));
 
 // ================== API ==================
+// Подписанный initData подставляем и в GET-запросы: сервер по нему понимает, кто
+// спрашивает (флаг «моя собака», точные координаты своих собак), а в строгом режиме
+// без него данные не отдаёт вовсе.
+function initDataQS() { return 'initData=' + encodeURIComponent(tg ? (tg.initData || '') : ''); }
+
+// Фото приходят с сервера как data URI: раньше бэкенд отдавал прямую ссылку на
+// Telegram, а в ней содержится токен бота. Держим кэш промисов, чтобы одно и то же
+// фото не загружалось повторно при каждом открытии карточки.
+const _photoCache = new Map();
+function photoSrc(fileId) {
+  if (!fileId) return Promise.resolve('');
+  if (_photoCache.has(fileId)) return _photoCache.get(fileId);
+  const p = (async () => {
+    try {
+      const r = await fetch(`${API_URL}?type=photoUrl&file_id=${encodeURIComponent(fileId)}&${initDataQS()}`);
+      const j = await r.json();
+      return (j.ok && j.url) ? j.url : '';
+    } catch (e) { return ''; }
+  })();
+  _photoCache.set(fileId, p);
+  return p;
+}
+
 async function callApi(action, payload) {
   const initData = tg ? tg.initData : '';
   try {
@@ -1515,25 +1538,29 @@ async function openDogCard(d) {
   loadDogCommentsInline(d.id, d.name || '');
 }
 
-// Фото: быстро показываем обложку, затем подгружаем всю галерею для счётчика и листания.
+// Фото: быстро показываем обложку, затем подгружаем список галереи для счётчика и
+// листания. Сервер отдаёт только идентификаторы файлов — сами картинки тянем по одной
+// через photoSrc(), чтобы не собирать многомегабайтный ответ на один запрос.
 async function loadDogMedia(d) {
   window._lbPhotos = [];
   const el = document.getElementById('dogPhoto');
   if (d.photoId) {
     try {
-      const r = await fetch(`${API_URL}?type=photoUrl&file_id=${encodeURIComponent(d.photoId)}`);
-      const j = await r.json();
-      if (j.ok && j.url && el) { el.style.backgroundImage = `url('${j.url}')`; el.classList.add('loaded'); window._lbPhotos = [j.url]; }
+      const src = await photoSrc(d.photoId);
+      if (src && el) { el.style.backgroundImage = `url("${src}")`; el.classList.add('loaded'); window._lbPhotos = [d.photoId]; }
     } catch (e) {}
   }
   try {
-    const r = await fetch(`${API_URL}?type=dogGallery&dogId=${encodeURIComponent(d.id)}`);
+    const r = await fetch(`${API_URL}?type=dogGallery&dogId=${encodeURIComponent(d.id)}&${initDataQS()}`);
     const j = await r.json();
     const photos = (j.ok ? j.photos : []) || [];
     if (photos.length) {
       photos.sort((a, b) => (b.isCover ? 1 : 0) - (a.isCover ? 1 : 0));
-      window._lbPhotos = photos.map(p => p.url);
-      if (el && photos[0] && photos[0].url) { el.style.backgroundImage = `url('${photos[0].url}')`; el.classList.add('loaded'); }
+      window._lbPhotos = photos.map(p => p.fileId).filter(Boolean);
+      if (el && !el.classList.contains('loaded') && window._lbPhotos[0]) {
+        const src0 = await photoSrc(window._lbPhotos[0]);
+        if (src0) { el.style.backgroundImage = `url("${src0}")`; el.classList.add('loaded'); }
+      }
     }
     const cnt = document.getElementById('dogPhotoCount');
     if (cnt && window._lbPhotos.length > 1) { cnt.textContent = '📷 ' + window._lbPhotos.length; cnt.style.display = ''; }
@@ -1571,10 +1598,15 @@ function openDogLightbox() {
   lbShow();
   ov.classList.add('show');
 }
-function lbShow() {
+async function lbShow() {
   const photos = window._lbPhotos || [];
   const img = document.getElementById('lbImg');
-  if (img) img.src = photos[window._lbIdx] || '';
+  const idx = window._lbIdx;
+  if (img) {
+    img.src = '';
+    const src = await photoSrc(photos[idx]);
+    if (window._lbIdx === idx) img.src = src || '';   // пока грузили, могли пролистать дальше
+  }
   const dots = document.getElementById('lbDots');
   if (dots) dots.innerHTML = photos.length > 1 ? photos.map((_, i) => `<span class="lb-dot ${i === window._lbIdx ? 'on' : ''}"></span>`).join('') : '';
   document.querySelectorAll('#lightbox .lb-nav').forEach(b => b.style.display = photos.length > 1 ? '' : 'none');
@@ -2221,19 +2253,29 @@ async function toggleDogSub(id) {
 // ================== ГАЛЕРЕЯ ФОТО СОБАКИ ==================
 async function showDogGallery(dogId, dogName, canEdit) {
   openSheet(`<h3>${t('gl_head')} — «${escapeHtml(dogName)}»</h3><div class="empty">Загружаю…</div>`);
-  const r = await fetch(`${API_URL}?type=dogGallery&dogId=${encodeURIComponent(dogId)}`);
+  const r = await fetch(`${API_URL}?type=dogGallery&dogId=${encodeURIComponent(dogId)}&${initDataQS()}`);
   const j = await r.json().catch(() => ({ ok: false }));
   const photos = (j.ok ? j.photos : []) || [];
+  const stamp = Date.now();                 // метка отрисовки: если лист успели закрыть, не дорисовываем
+  window._galStamp = stamp;
   openSheet(`
     <h3>${t('gl_head')} — «${escapeHtml(dogName)}»</h3>
-    ${photos.length ? `<div class="gallery-grid">${photos.map(p => `
+    ${photos.length ? `<div class="gallery-grid">${photos.map((p, i) => `
       <div class="gallery-item">
-        <img src="${p.url}" loading="lazy">
+        <img id="galimg-${stamp}-${i}" alt="">
         ${p.isCover ? `<span class="gallery-cover-tag">${t('gl_cover')}</span>` : ''}
         ${(canEdit && !p.isCover) ? `<button class="gallery-del" onclick="deleteGalleryPhoto('${p.id}','${dogId}','${escapeAttr(dogName)}',${canEdit})">✕</button>` : ''}
       </div>`).join('')}</div>` : `<div class="empty">${t('gl_empty')}</div>`}
     ${canEdit ? `<button class="pop-btn secondary" style="margin-top:10px" onclick="openBotDeepLink('gallery_${dogId}')">${t('gl_add')}</button>` : ''}
   `);
+  // Картинки подтягиваем по одной: каждая — отдельный запрос к скрипту, параллельный
+  // залп на десяток фото упёрся бы в лимит одновременных выполнений Apps Script.
+  for (let i = 0; i < photos.length; i++) {
+    if (window._galStamp !== stamp) return;
+    const src = await photoSrc(photos[i].fileId);
+    const img = document.getElementById(`galimg-${stamp}-${i}`);
+    if (img && src) img.src = src;
+  }
 }
 async function deleteGalleryPhoto(photoId, dogId, dogName, canEdit) {
   const res = await callApi('deleteGalleryPhoto', { photoId, dogId });
@@ -2620,11 +2662,11 @@ async function submitProfileEdit() {
 // ================== СТАРТ ==================
 (async function loadRefData() {
   try {
-    const r = await fetch(`${API_URL}?type=breeds`); const j = await r.json();
+    const r = await fetch(`${API_URL}?type=breeds&${initDataQS()}`); const j = await r.json();
     if (j.breeds && j.breeds.length) COMMON_BREEDS = j.breeds;
   } catch (e) {}
   try {
-    const r2 = await fetch(`${API_URL}?type=regions`); const j2 = await r2.json();
+    const r2 = await fetch(`${API_URL}?type=regions&${initDataQS()}`); const j2 = await r2.json();
     if (j2.regions && j2.regions.length) REGIONS_LIST = j2.regions;
   } catch (e) {}
 })();
