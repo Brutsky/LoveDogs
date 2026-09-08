@@ -611,7 +611,7 @@ const I18N = {
     d_kg:' кг',
     d_days:' дн.',
     b_mine:'💛 моя',
-    b_seeking:'🏡 ищет дом',
+    b_seeking:'🏡 ищет новый дом',
     b_donor:'🩸 донор',
     b_approx:'≈ примерно район',
     a_share:'↗️ Поделиться собакой',
@@ -759,7 +759,7 @@ const I18N = {
     d_kg:' კგ',
     d_days:' დღე',
     b_mine:'💛 ჩემი',
-    b_seeking:'🏡 ეძებს სახლს',
+    b_seeking:'🏡 ეძებს ახალ სახლს',
     b_donor:'🩸 დონორი',
     b_approx:'≈ სავარაუდო რაიონი',
     a_share:'↗️ ძაღლის გაზიარება',
@@ -907,7 +907,7 @@ const I18N = {
     d_kg:' kg',
     d_days:' d',
     b_mine:'💛 mine',
-    b_seeking:'🏡 needs a home',
+    b_seeking:'🏡 needs a new home',
     b_donor:'🩸 donor',
     b_approx:'≈ approx. district',
     a_share:'↗️ Share this dog',
@@ -1502,8 +1502,8 @@ async function openDogCard(d) {
     if (isStreetMine) {
       // Собаку с биркой пристраивают официально, через приют или организацию, —
       // отметка «ищет дом» для неё недоступна (та же проверка есть и на сервере).
-      if (d.seekingHome) actions += `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', false)">🏡 Снять «ищет дом»</button>`;
-      else if (!hasTag) actions += `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', true)">🏡 Отметить «ищет дом»</button>`;
+      if (d.seekingHome) actions += `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', false)">🏡 Снять «ищет новый дом»</button>`;
+      else if (!hasTag) actions += `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', true)">🏡 Отметить «ищет новый дом»</button>`;
       actions += `<button class="pop-btn secondary" onclick="giveUpCare('${d.id}','${escapeAttr(d.name || '')}')">🙅 Больше не слежу за этой собакой</button>`;
     }
     if (!d.lost) actions += `<button class="pop-btn danger" onclick="markLost('${d.id}')">🚨 Собака потерялась</button>`;
@@ -1984,7 +1984,7 @@ async function submitAddDog() {
 
 // ================== ЭКРАН «СОБАКИ» ==================
 let dogSegment = 'all'; // по умолчанию — все собаки города (без фильтров)
-const DOG_SEGMENTS = [['all','Все'], ['street','🌳 Уличные'], ['home','🏠 Домашние'], ['mine','💛 Мои'], ['lost','🚨 Потеряшки'], ['seeking','🏡 Ищут дом'], ['donors','🩸 Доноры']];
+const DOG_SEGMENTS = [['all','Все'], ['street','🌳 Уличные'], ['home','🏠 Домашние'], ['mine','💛 Мои'], ['lost','🚨 Потеряшки'], ['seeking','🏡 Ищут новый дом'], ['donors','🩸 Доноры']];
 async function initDogsScreen() {
   await loadData('dogs');
   if (dogSegment === null) dogSegment = 'all';
@@ -2049,7 +2049,7 @@ function renderDogsScreen() {
     ? `<button class="pop-btn" style="margin-bottom:12px" onclick="openAddDogSheet({status:'У владельца'})">➕ Добавить собаку</button>` : '';
   if (!filtered.length) {
     const msgs = { mine: 'У тебя пока нет анкет — добавь первую! 🐶', lost: 'Потеряшек нет — и это отлично 🎉',
-      seeking: 'Сейчас никто не ищет дом', donors: 'По этим фильтрам никого — попробуй ослабить', all: 'Ничего не нашлось' };
+      seeking: 'Сейчас никто не ищет новый дом', donors: 'По этим фильтрам никого — попробуй ослабить', all: 'Ничего не нашлось' };
     box.innerHTML = addBtn + `<div class="empty"><div class="big">🐾</div>${q ? 'По запросу ничего не нашлось' : msgs[dogSegment]}</div>`;
     return;
   }
