@@ -1485,13 +1485,15 @@ async function openDogCard(d) {
   const isHomeMine = d.mine && d.status === 'У владельца';
   const isStreetMine = d.mine && d.status !== 'У владельца';
   const hasTag = !!(d.tagNumber && String(d.tagNumber).trim());
-  // Зеркало canEditDog_: своя собака ИЛИ любая уличная (её дополняет кто угодно)
-  const canEditGallery = !!d.mine || isStreet;
+  // Зеркало canEditDog_: своя собака ИЛИ любая уличная — но пристраиваемую ведёт
+  // только тот, кто её завёл: пока идёт поиск дома, чужие правки только путают.
+  const seekLocked = !!d.seekingHome && !d.mine;
+  const canEditGallery = !!d.mine || (isStreet && !seekLocked);
   let actions = '';
   // Уличная: подтвердить, что пёс всё там же — один тап, без отправки новой точки.
   // Именно эти подтверждения удерживают собаку на карте (>3 мес — метка «устарело»,
   // >1 год — уходит с карты, >2 лет — становится неактивной).
-  if (isStreet && !d.lost) {
+  if (isStreet && !d.lost && !seekLocked) {
     actions += `<button class="pop-btn" onclick="confirmDogGeo('${d.id}','${escapeAttr(d.name || '')}')">${t('a_here')}</button>`;
   }
   if (d.lat) actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">${t('a_showmap')}</button>`;
@@ -1525,14 +1527,19 @@ async function openDogCard(d) {
     if (d.hasOwner && (!isStreet || d.seekingHome)) {
       actions += `<button class="pop-btn" onclick="contactOwner('${d.id}','${escapeAttr(d.name || '')}')">${isStreet ? '🏡 Написать про пристройство' : '✉️ Связаться с хозяином'}</button>`;
     }
-    // Уличную дополняет любой (первичные данные о найденном псе)
-    if (isStreet) {
+    // Уличную дополняет любой (первичные данные о найденном псе) — кроме той,
+    // что сейчас ищет новый дом: её анкету ведёт один человек.
+    if (isStreet && !seekLocked) {
       actions += `<button class="pop-btn secondary" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Дополнить анкету</button>`;
     }
-    if (isStreet) actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">${t('a_updgeo')}</button>`;
+    // Спрятанные без объяснения кнопки читаются как поломка, поэтому говорим прямо.
+    if (seekLocked) {
+      actions += `<div class="list-sub" style="margin-top:8px">🏡 Анкету ведёт тот, кто ищет собаке дом. Когда отметка «ищет новый дом» будет снята, её снова сможет дополнять кто угодно.</div>`;
+    }
+    if (isStreet && !seekLocked) actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">${t('a_updgeo')}</button>`;
     // Дубли и анкеты собак, которых давно нет во дворе, иначе вычистить некому.
     // Запрос уходит модератору — сам пользователь чужую анкету не сносит.
-    if (isStreet) actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}', true)">🗑 Предложить удалить</button>`;
+    if (isStreet && !seekLocked) actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}', true)">🗑 Предложить удалить</button>`;
   }
 
   openSheet(`
@@ -1767,6 +1774,7 @@ async function setDogGeoFromCard(dogId) {
   if (!choice) return;
   const res = await callApi('walkHere', { dogId, lat: choice.lat, lng: choice.lng });
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); setStatus('✅ Геопозиция обновлена', 2000); }
+  else if (res.error === 'seeking_locked') alert('🏡 Эта собака ищет новый дом — пока идёт пристройство, её анкету ведёт тот, кто её завёл.');
   else alert(t('err_fail') + (res.error || ''));
 }
 
@@ -2258,6 +2266,8 @@ async function confirmDogGeo(dogId, dogName) {
       await loadData('dogs', true);    // перечитать слой собак, минуя кэш
       const fresh = findDog(dogId);
       if (fresh) openDogCard(fresh);   // перерисовать карточку с новой датой
+    } else if (res.error === 'seeking_locked') {
+      alert('🏡 Эта собака ищет новый дом — пока идёт пристройство, её анкету ведёт тот, кто её завёл.');
     } else {
       alert(t('err_fail') + (res.error || ''));
     }
