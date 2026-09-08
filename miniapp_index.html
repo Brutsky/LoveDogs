@@ -150,6 +150,10 @@
   .marker-pin { position: relative; }
   /* Уличная с устаревшей гео (>3 мес без подтверждений): приглушённая и с пунктирным
      кольцом — читается как «не подтверждено», но не спорит с алармом потеряшки. */
+  /* «Ищет дом»: зелёная заливка + мягкое свечение. Метка должна цеплять взгляд на
+     карте, но не спорить с красной пульсацией потеряшки — там срочность выше. */
+  .marker-pin.seeking { border-color: #fff; border-width: 3px;
+    box-shadow: 0 0 0 3px rgba(46,160,90,.28), 0 2px 6px rgba(0,0,0,.25); }
   .marker-pin.stale { border-style: dashed; opacity: .6; }
   .marker-pin.stale span { opacity: .75; }
 
@@ -1078,7 +1082,10 @@ function pinIcon(kind, item) {
     if (item.mine) cls += ' mine';
     if (item.geoStale) cls += ' stale'; // >3 мес без подтверждения — визуально приглушаем
     if (item.lost) { cls += ' lost'; color = cssVar('--red'); emoji = '🚨'; }
-    else emoji = item.status === 'У владельца' ? '🏠' : (item.status === 'У опекуна' ? '🤝' : '🐕');
+    // «Ищет дом» важнее статуса: это призыв к действию, а статус у таких собак всегда
+    // уличный. Потеряшка всё равно перекрывает — там счёт идёт на часы.
+    else if (item.seekingHome) { cls += ' seeking'; color = cssVar('--green'); emoji = '🏡'; }
+    else emoji = item.status === 'У владельца' ? '🏠' : '🐕';
   } else {
     color = ratingColor(item.rating);
     if (item.closed) cls += ' closed';
@@ -1129,7 +1136,7 @@ function filterDogsMap(list) {
   const myCity = me && me.profile ? me.profile.city : null;
   if (myCity) list = list.filter(d => !d.city || d.city === myCity); // только мой город
   if (subFilter === 'mine') return list.filter(d => d.mine);
-  if (subFilter === 'home') return list.filter(d => d.status === 'У владельца' || d.status === 'У опекуна');
+  if (subFilter === 'home') return list.filter(d => d.status === 'У владельца');
   if (subFilter === 'street') return list.filter(d => d.status === 'Уличная');
   if (subFilter === 'lost') return list.filter(d => d.lost);
   return list;
@@ -1464,12 +1471,13 @@ async function openDogCard(d) {
     !d.exactLocation && !d.lost ? `<span class="badge">${t('b_approx')}</span>` : ''
   ].join('');
 
-  // Роли — зеркало логики бота (showDogCard):
-  // домашняя моя / под опекой (в т.ч. уличная, где я записан опекуном) / чужая
+  // Роли — зеркало логики бота (showDogCard). Опекунства больше нет: для уличной
+  // собаки «моя» означает лишь «я её внёс и числюсь контактом».
   const isHomeMine = d.mine && d.status === 'У владельца';
-  const isGuardianMine = d.mine && (d.status === 'У опекуна' || d.status === 'Уличная');
-  // Зеркало canEditDog_: свой владелец/опекун ИЛИ бесхозная уличная (её редактирует любой)
-  const canEditGallery = !!d.mine || (isStreet && !d.hasOwner);
+  const isStreetMine = d.mine && d.status !== 'У владельца';
+  const hasTag = !!(d.tagNumber && String(d.tagNumber).trim());
+  // Зеркало canEditDog_: своя собака ИЛИ любая уличная (её дополняет кто угодно)
+  const canEditGallery = !!d.mine || isStreet;
   let actions = '';
   // Уличная: подтвердить, что пёс всё там же — один тап, без отправки новой точки.
   // Именно эти подтверждения удерживают собаку на карте (>3 мес — метка «устарело»,
@@ -1491,24 +1499,26 @@ async function openDogCard(d) {
     } else {
       actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">${t('a_updgeo')}</button>`;
     }
-    if (isGuardianMine) {
-      actions += d.seekingHome
-        ? `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', false)">🏡 Снять «ищет дом»</button>`
-        : `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', true)">🏡 Отметить «ищет дом»</button>`;
-      actions += `<button class="pop-btn secondary" onclick="giveUpCare('${d.id}','${escapeAttr(d.name || '')}')">🙅 Отказаться от опеки</button>`;
+    if (isStreetMine) {
+      // Собаку с биркой пристраивают официально, через приют или организацию, —
+      // отметка «ищет дом» для неё недоступна (та же проверка есть и на сервере).
+      if (d.seekingHome) actions += `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', false)">🏡 Снять «ищет дом»</button>`;
+      else if (!hasTag) actions += `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', true)">🏡 Отметить «ищет дом»</button>`;
+      actions += `<button class="pop-btn secondary" onclick="giveUpCare('${d.id}','${escapeAttr(d.name || '')}')">🙅 Больше не слежу за этой собакой</button>`;
     }
     if (!d.lost) actions += `<button class="pop-btn danger" onclick="markLost('${d.id}')">🚨 Собака потерялась</button>`;
     else actions += `<button class="pop-btn" style="background:var(--green)" onclick="markFound('${d.id}')">🎉 Нашлась!</button>`;
     actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}')">🗑 Удалить анкету</button>`;
   } else {
-    if (d.hasOwner) actions += `<button class="pop-btn" onclick="contactOwner('${d.id}','${escapeAttr(d.name || '')}')">✉️ Связаться с хозяином</button>`;
-    // Уличную без владельца может дозаполнить любой (первичные данные)
-    if (isStreet && !d.hasOwner) {
-      actions += `<button class="pop-btn secondary" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Дополнить анкету</button>`;
+    // Связаться можно с владельцем домашней собаки — или с тем, кто ведёт уличную,
+    // но только если она отмечена как «ищет дом». В остальных случаях человек,
+    // внёсший пса на карту, не обязан отвечать за него перед незнакомыми.
+    if (d.hasOwner && (!isStreet || d.seekingHome)) {
+      actions += `<button class="pop-btn" onclick="contactOwner('${d.id}','${escapeAttr(d.name || '')}')">${isStreet ? '🏡 Написать про пристройство' : '✉️ Связаться с хозяином'}</button>`;
     }
-    // Взять опекунство: как в боте — если хозяина нет вовсе или собака не домашняя
-    if (!d.hasOwner || d.status !== 'У владельца') {
-      actions += `<button class="pop-btn secondary" onclick="takeCare('${d.id}','${escapeAttr(d.name || '')}')">🤲 Взять опекунство</button>`;
+    // Уличную дополняет любой (первичные данные о найденном псе)
+    if (isStreet) {
+      actions += `<button class="pop-btn secondary" onclick="openDogEditSheet(findDog('${d.id}'))">✏️ Дополнить анкету</button>`;
     }
     if (isStreet) actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">${t('a_updgeo')}</button>`;
   }
@@ -1795,7 +1805,7 @@ async function renderProfileMyDogs() {
     box.innerHTML = `<div class="card"><div class="list-sub">${t('pf_nodogs')}</div></div>`;
     return;
   }
-  const statusIco = s => s === 'У владельца' ? '🏠' : (s === 'У опекуна' ? '🤝' : '🌳');
+  const statusIco = s => s === 'У владельца' ? '🏠' : '🌳';
   box.innerHTML = mine.map(d => `
     <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
       <div class="row-between">
@@ -1843,21 +1853,18 @@ async function toggleSeeking(dogId, on) {
   const res = await callApi('setSeeking', { dogId, on });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(on ? '🏡 Отметили — пусть найдётся дом!' : 'Сняли метку «ищет дом»', 2200); }
+  else if (res.error === 'tagged_dog') alert('🏷 У этой собаки есть бирка — значит, она уже в муниципальной программе, и пристройство оформляется официально, через приют или организацию. Отметка «ищет дом» доступна только для собак без бирки.');
   else alert(t('err_fail') + (res.error || ''));
 }
+// Опекунство (takeCare) убрано: в Грузии это юридическая процедура, и кнопка в
+// приложении создавала впечатление оформленного статуса. Осталась только возможность
+// снять себя как контакт по уличной собаке.
 async function giveUpCare(dogId, name) {
-  if (!confirm(`Точно отказаться от опеки над «${name}»? Собака снова станет «уличной» без опекуна.`)) return;
+  if (!confirm(`Убрать себя из контактов по «${name}»? Собака останется на карте, но связаться по ней будет не с кем, а отметка «ищет дом» снимется.`)) return;
   const res = await callApi('giveUpCare', { dogId });
   closeSheet();
-  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('Готово, ты больше не опекун', 2200); }
+  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('Готово, ты больше не контакт по этой собаке', 2200); }
   else alert(t('err_fail') + (res.error || ''));
-}
-async function takeCare(dogId, name) {
-  if (!confirm(`Взять опекунство над «${name}»? Ты станешь отвечать за анкету и геопозицию.`)) return;
-  const res = await callApi('takeCare', { dogId });
-  closeSheet();
-  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🤲 Готово, теперь ты опекун!', 2200); }
-  else alert(t('err_fail') + (res.error === 'limit' ? 'достигнут лимит анкет' : (res.error || '')));
 }
 
 // ================== ДОБАВЛЕНИЕ СОБАКИ ==================
@@ -1869,7 +1876,7 @@ function openAddStreetDog() {
 function openAddDogSheet(draft) {
   addDogDraft = draft || addDogDraft || { status: 'У владельца' };
   const d = addDogDraft;
-  const statuses = [['У владельца',t('fd_home')], ['Уличная',t('fd_street')], ['У опекуна',t('fd_guard')]];
+  const statuses = [['У владельца',t('fd_home')], ['Уличная',t('fd_street')]];
   openSheet(`
     <h3>${t('fd_new')}</h3>
     <div class="field"><label>${t('fd_who')}</label>
@@ -2003,7 +2010,7 @@ function renderDogsScreen() {
   if (!q) {
     if (dogSegment === 'mine') filtered = scoped.filter(d => d.mine);
     if (dogSegment === 'street') filtered = scoped.filter(d => d.status === 'Уличная');
-    if (dogSegment === 'home') filtered = scoped.filter(d => d.status === 'У владельца' || d.status === 'У опекуна');
+    if (dogSegment === 'home') filtered = scoped.filter(d => d.status === 'У владельца');
     if (dogSegment === 'lost') filtered = scoped.filter(d => d.lost);
     if (dogSegment === 'seeking') filtered = scoped.filter(d => d.seekingHome);
     if (dogSegment === 'donors') {
@@ -2035,7 +2042,7 @@ function renderDogsScreen() {
     box.innerHTML = addBtn + `<div class="empty"><div class="big">🐾</div>${q ? 'По запросу ничего не нашлось' : msgs[dogSegment]}</div>`;
     return;
   }
-  const statusIco = s => s === 'У владельца' ? '🏠' : (s === 'У опекуна' ? '🤝' : '🌳');
+  const statusIco = s => s === 'У владельца' ? '🏠' : '🌳';
   box.innerHTML = addBtn + filtered.map(d => `
     <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
       <div class="row-between">
