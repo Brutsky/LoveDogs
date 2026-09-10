@@ -1517,8 +1517,13 @@ async function openDogCard(d) {
       else if (!hasTag) actions += `<button class="pop-btn secondary" onclick="toggleSeeking('${d.id}', true)">🏡 Отметить «ищет новый дом»</button>`;
       actions += `<button class="pop-btn secondary" onclick="giveUpCare('${d.id}','${escapeAttr(d.name || '')}')">🙅 Больше не слежу за этой собакой</button>`;
     }
-    if (!d.lost) actions += `<button class="pop-btn danger" onclick="markLost('${d.id}')">🚨 Собака потерялась</button>`;
-    else actions += `<button class="pop-btn" style="background:var(--green)" onclick="markFound('${d.id}')">🎉 Нашлась!</button>`;
+    // «Потерялась» — только у домашней собаки. У уличной этого статуса нет: она
+    // перемещается по району, и тревожная метка там обесценивала бы сигнал. Актуальность
+    // держится подтверждениями «Собака здесь» и жизненным циклом геопозиции.
+    // «Нашлась» показываем при любом статусе, если флаг стоит: у старых уличных анкет
+    // он мог остаться, и его нужно чем-то снять.
+    if (d.lost) actions += `<button class="pop-btn" style="background:var(--green)" onclick="markFound('${d.id}')">🎉 Нашлась!</button>`;
+    else if (!isStreet) actions += `<button class="pop-btn danger" onclick="markLost('${d.id}')">🚨 Собака потерялась</button>`;
     actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}')">🗑 Удалить анкету</button>`;
   } else {
     // Связаться можно с владельцем домашней собаки — или с тем, кто ведёт уличную,
