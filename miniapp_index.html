@@ -142,7 +142,8 @@
     border-radius: 999px; box-shadow: var(--shadow-m); pointer-events: none; opacity: 0;
     transition: opacity .2s ease; max-width: 86%; text-align: center; }
   #status.show { opacity: 1; }
-  #count-badge { position: absolute; bottom: calc(var(--tabbar-h) + 62px); left: 14px; z-index: 600;
+  #count-badge { position: absolute; bottom: calc(var(--tabbar-h) + 16px); left: 60px; z-index: 750;
+    cursor: pointer;
     background: rgba(248,244,236,.9);
     background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px); color: var(--text); font-size: 12px; font-weight: 700;
@@ -226,11 +227,13 @@
   #pick-bar .row { display: flex; gap: 8px; }
   body.picking #pick-pin, body.picking #pick-bar { display: block; }
   body.picking #map-topbar, body.picking #fab, body.picking #legendBtn, body.picking #count-badge, body.picking #tabbar { display: none; }
+  body:not([data-screen="map"]) #count-badge { display: none; }
   body.picking #map { inset: 0; }
 
   /* Хром карты — только на экране карты */
   body:not([data-screen="map"]) #map-topbar,
   body:not([data-screen="map"]) #count-badge,
+  body:not([data-screen="map"]) .leaflet-control-container,
   body:not([data-screen="map"]) #fab,
   body:not([data-screen="map"]) #status { display: none !important; }
 
@@ -479,7 +482,7 @@
     <div id="subfilters"></div>
   </div>
   <div id="status"></div>
-  <div id="count-badge">—</div>
+  <div id="count-badge" onclick="showScreen('dogs')" title="Открыть списком">—</div>
   <button id="fab"><span class="fab-plus">+</span><span id="fabLabel">Добавить</span></button>
   <button id="legendBtn" onclick="openLegend()" aria-label="Легенда">
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
@@ -530,12 +533,12 @@
     <div class="nav-item active" data-screen="map" data-i18n-title="tab_map_l"><span class="ico">🗺</span></div>
     <div class="nav-item" data-screen="dogs" data-i18n-title="tab_dogs_l"><span class="ico">🐾</span><span class="nav-dot" id="lostDot"></span></div>
     <div class="nav-item" data-screen="sitters" data-i18n-title="tab_sitters_l"><span class="ico">🧑</span></div>
-    <div class="nav-item" onclick="openResourcesSheet()" title="Полезные материалы"><span class="ico">
+    <div class="nav-item" data-action="resources" title="Полезные материалы"><span class="ico">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
         <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 15.5z"/>
         <path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5z"/>
       </svg></span></div>
-    <div class="nav-item" onclick="openSupportSheet()" title="Поддержать проект"><span class="ico">
+    <div class="nav-item" data-action="support" title="Поддержать проект"><span class="ico">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
         <path d="M12 20s-7-4.3-7-9.2A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.8C19 15.7 12 20 12 20z"/>
       </svg></span></div>
@@ -1072,7 +1075,7 @@ function centerMapByCity(city) {
 L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=ru&x={x}&y={y}&z={z}', {
   maxZoom: 20, subdomains: ['0', '1', '2', '3']
 }).addTo(map);
-L.control.zoom({ position: 'bottomright' }).addTo(map);
+// (зум добавляется один раз выше, слева сверху — второй контрол давал две пары кнопок)
 
 // Кластеризация: близкие маркеры (наплыв >50% при текущем зуме) объединяются в значок
 // с числом; при увеличении масштаба / клике по кластеру — разъединяются.
@@ -1386,7 +1389,14 @@ function showScreen(name) {
   if (name === 'profile') loadProfile();
   if (name === 'map') setTimeout(() => map.invalidateSize(), 60);
 }
-document.querySelectorAll('#tabbar .nav-item').forEach(n => n.onclick = () => showScreen(n.dataset.screen));
+// Пункты меню бывают двух видов: экран (data-screen) и действие-шторка (data-action).
+// Раньше действия висели на inline-onclick и не срабатывали, потому что этот обработчик
+// назначался тем же элементам позже и затирал их.
+document.querySelectorAll('#tabbar .nav-item').forEach(n => n.onclick = () => {
+  if (n.dataset.action === 'resources') { openResourcesSheet(); return; }
+  if (n.dataset.action === 'support') { openSupportSheet(); return; }
+  showScreen(n.dataset.screen);
+});
 
 // ================== API ==================
 // Подписанный initData подставляем и в GET-запросы: сервер по нему понимает, кто
@@ -1449,7 +1459,17 @@ function openLegend() {
     `<button class="pop-btn secondary" style="margin-top:12px" onclick="closeSheet()">Понятно</button>`);
 }
 
-function openBotDeepLink(payloadStr) {
+async function openBotDeepLink(payloadStr) {
+  // BOT_USERNAME приходит из getMe. Если профиль ещё не загружался (человек открыл
+  // карточку сразу с карты), в переменной оставалась заглушка — и ссылка вела в никуда.
+  // Именно поэтому не работала кнопка «Добавить фото».
+  if (!BOT_USERNAME || BOT_USERNAME.indexOf('_') !== -1 || /[А-Яа-я]/.test(BOT_USERNAME)) {
+    try {
+      const res = await callApi('getMe', {});
+      if (res && res.ok && res.botUsername) BOT_USERNAME = res.botUsername;
+    } catch (e) {}
+  }
+  if (!BOT_USERNAME || /[А-Яа-я]/.test(BOT_USERNAME)) { alert('Не получилось открыть бота — попробуй ещё раз через минуту.'); return; }
   const url = `https://t.me/${BOT_USERNAME}?start=${payloadStr}`;
   if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
 }
@@ -1716,6 +1736,8 @@ async function openDogCard(d) {
   loadDogCommentsInline(d.id, d.name || '');
 }
 
+// Счётчик фотографий поверх обложки: раньше о том, что снимков несколько, можно было
+// узнать только открыв галерею — а значит, почти никто и не открывал.
 // Фото: быстро показываем обложку, затем подгружаем список галереи для счётчика и
 // листания. Сервер отдаёт только идентификаторы файлов — сами картинки тянем по одной
 // через photoSrc(), чтобы не собирать многомегабайтный ответ на один запрос.
@@ -1741,7 +1763,11 @@ async function loadDogMedia(d) {
       }
     }
     const cnt = document.getElementById('dogPhotoCount');
-    if (cnt && window._lbPhotos.length > 1) { cnt.textContent = '📷 ' + window._lbPhotos.length; cnt.style.display = ''; }
+    if (cnt && window._lbPhotos.length > 1) {
+      cnt.innerHTML = '<span style="font-size:13px">📷</span> ' + window._lbPhotos.length + ' фото';
+      cnt.style.display = '';
+      cnt.classList.add('has-more');
+    }
   } catch (e) {}
 }
 
@@ -1927,15 +1953,13 @@ async function setDogGeoFromCard(dogId) {
   else alert(t('err_fail') + (res.error || ''));
 }
 
-async function markLost(dogId) {
-  if (!confirm('Отметить, что собака потерялась?\n\nПосле подтверждения:\n• 📣 всем пользователям города уйдёт оповещение с карточкой, местом и твоими открытыми контактами (телефон и TG);\n• 🗺 собака появится на карте с тревожной меткой и в «Потеряшках» — до 2 месяцев или пока не нажмёшь «Нашлась!»')) return;
-  setStatus('📍 Пробую взять место, где видели в последний раз…');
-  const geo = await getGeo();
-  const res = await callApi('setLost', Object.assign({ dogId }, geo || {}));
-  setStatus(null);
+// Оповещение о пропаже ведём ТОЛЬКО через бота — одним путём с остальными.
+// Раньше мини-апп звал setLost напрямую: рассылка уходила сразу, без обстоятельств
+// и без предпросмотра, то есть без того самого экрана «вот что увидят соседи».
+// Держать два разных пути у действия, которое пишет сотне людей, нельзя.
+function markLost(dogId) {
   closeSheet();
-  if (res.ok) { haptic('warning'); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🚨 Отмечено. Пусть найдётся скорее!', 2600); }
-  else alert(t('err_fail') + (res.error || ''));
+  openBotDeepLink('lost_' + dogId);
 }
 async function markFound(dogId) {
   const res = await callApi('setFound', { dogId });
