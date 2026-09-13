@@ -97,6 +97,38 @@
   .tab[data-k="places"].active { background: var(--vet); }
   #subfilters { display: flex; gap: 6px; margin-top: 9px; overflow-x: auto; padding: 2px; }
   #subfilters::-webkit-scrollbar { display: none; }
+  /* Зум Leaflet по умолчанию — белые квадраты с синей рамкой, чужие для этой темы.
+     Приводим к тем же скруглениям, цветам и теням, что у остальных элементов. */
+  .leaflet-control-zoom { border: none !important; box-shadow: var(--shadow-s) !important;
+    border-radius: 14px !important; overflow: hidden; }
+  .leaflet-control-zoom a { width: 38px !important; height: 38px !important; line-height: 38px !important;
+    background: color-mix(in srgb, var(--bg) 92%, transparent) !important;
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    color: var(--text) !important; border: none !important;
+    border-bottom: 1px solid var(--line) !important; font-size: 19px !important; font-weight: 600; }
+  .leaflet-control-zoom a:last-child { border-bottom: none !important; }
+  .leaflet-control-zoom a:hover { background: var(--bg) !important; }
+  .leaflet-control-attribution { border-radius: 10px 0 0 0; font-size: 9px; opacity: .65; }
+  .title-sub { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .sw { position: relative; display: inline-block; width: 44px; height: 26px; }
+  .sw input { opacity: 0; width: 0; height: 0; }
+  .sw span { position: absolute; inset: 0; background: var(--line); border-radius: 999px; transition: .2s; }
+  .sw span::before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%; transition: .2s; box-shadow: var(--shadow-s); }
+  .sw input:checked + span { background: var(--vet); }
+  .sw input:checked + span::before { transform: translateX(18px); }
+  .legend-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+  .legend-row { display: flex; gap: 12px; align-items: flex-start; }
+  .legend-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; font-size: 17px;
+    background: var(--bg); border: 2px solid var(--line); box-shadow: var(--shadow-s); }
+  #legendBtn { position: absolute; bottom: calc(var(--tabbar-h) + 16px); left: 14px; z-index: 750;
+    height: 38px; padding: 0 14px; border-radius: 19px; display: none; align-items: center; gap: 6px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    border: 1px solid var(--line); color: var(--text); font-size: 13px; font-weight: 600;
+    box-shadow: var(--shadow-s); cursor: pointer; }
+  #legendBtn.show { display: flex; }
   .chip { white-space: nowrap; font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: 999px;
     background: rgba(248,244,236,.88);
     background: color-mix(in srgb, var(--bg) 86%, transparent);
@@ -109,17 +141,41 @@
     border-radius: 999px; box-shadow: var(--shadow-m); pointer-events: none; opacity: 0;
     transition: opacity .2s ease; max-width: 86%; text-align: center; }
   #status.show { opacity: 1; }
-  #count-badge { position: absolute; bottom: calc(var(--tabbar-h) + 14px); left: 14px; z-index: 600;
+  #count-badge { position: absolute; bottom: calc(var(--tabbar-h) + 62px); left: 14px; z-index: 600;
     background: rgba(248,244,236,.9);
     background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px); color: var(--text); font-size: 12px; font-weight: 700;
     letter-spacing: .01em; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--line);
     box-shadow: var(--shadow-s); }
-  #fab { position: absolute; top: 108px; right: 14px; z-index: 750;
-    width: 52px; height: 52px; border-radius: 18px; background: var(--vet); color: #fff; border: none;
-    font-size: 26px; font-weight: 400; box-shadow: var(--shadow-m); cursor: pointer; display: none;
-    align-items: center; justify-content: center; transition: transform .12s ease; }
+  /* Кнопка добавления: раньше это был безымянный «+» в углу, который легко принять
+     за элемент карты. Теперь — подпись, ощутимый размер и мягкое «дыхание» первые
+     секунды после загрузки, чтобы её заметили, но она не мельтешила постоянно. */
+  #fab { position: absolute; bottom: calc(var(--tabbar-h) + 16px); right: 14px; z-index: 750;
+    height: 52px; padding: 0 20px 0 16px; border-radius: 26px; background: var(--vet); color: #fff;
+    border: none; font-size: 15px; font-weight: 700; letter-spacing: .01em;
+    box-shadow: 0 6px 20px rgba(0,0,0,.22); cursor: pointer; display: none;
+    align-items: center; gap: 8px; transition: transform .12s ease, box-shadow .2s ease; }
+  #fab .fab-plus { font-size: 22px; font-weight: 400; line-height: 1; margin-top: -2px; }
   #fab:active { transform: scale(.94); }
+  /* Индикатор занятости — три «дышащие» точки поверх затемнения. Без него длинная
+     операция выглядит как зависание, и человек жмёт кнопку второй раз. */
+  #busy { position: fixed; inset: 0; z-index: 2000; display: none;
+    align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--bg) 45%, transparent);
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+  #busy.show { display: flex; }
+  .busy-dots { display: flex; gap: 7px; padding: 16px 20px; border-radius: 18px;
+    background: var(--bg); border: 1px solid var(--line); box-shadow: var(--shadow-m); }
+  .busy-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--vet);
+    animation: busyBounce 1s ease-in-out infinite; }
+  .busy-dots i:nth-child(2) { animation-delay: .15s; }
+  .busy-dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes busyBounce { 0%,80%,100% { transform: translateY(0); opacity: .45; }
+                          40% { transform: translateY(-7px); opacity: 1; } }
+  #fab.show { animation: fabIn .45s ease both, fabPulse 2.4s ease-in-out 1.2s 2; }
+  @keyframes fabIn { from { opacity: 0; transform: translateY(12px) scale(.9); } to { opacity: 1; transform: none; } }
+  @keyframes fabPulse { 0%,100% { box-shadow: 0 6px 20px rgba(0,0,0,.22); }
+                        50% { box-shadow: 0 6px 28px rgba(0,0,0,.28), 0 0 0 10px color-mix(in srgb, var(--vet) 14%, transparent); } }
   #fab.show { display: flex; }
 
   /* Маркеры-«жетоны»: эмалевый кружок с латунным ободком */
@@ -166,7 +222,7 @@
   #pick-bar .pick-hint { font-size: 12.5px; color: var(--hint); margin-bottom: 10px; text-align: center; }
   #pick-bar .row { display: flex; gap: 8px; }
   body.picking #pick-pin, body.picking #pick-bar { display: block; }
-  body.picking #map-topbar, body.picking #fab, body.picking #count-badge, body.picking #tabbar { display: none; }
+  body.picking #map-topbar, body.picking #fab, body.picking #legendBtn, body.picking #count-badge, body.picking #tabbar { display: none; }
   body.picking #map { inset: 0; }
 
   /* Хром карты — только на экране карты */
@@ -416,7 +472,9 @@
   </div>
   <div id="status"></div>
   <div id="count-badge">—</div>
-  <button id="fab">+</button>
+  <button id="fab"><span class="fab-plus">+</span><span id="fabLabel">Добавить</span></button>
+  <button id="legendBtn" onclick="openLegend()">❔ Легенда</button>
+  <div id="busy"><div class="busy-dots"><i></i><i></i><i></i></div></div>
   <div id="pick-pin">📍</div>
   <div id="pick-bar">
     <div class="pick-hint" data-i18n="pick_hint">Двигай карту — точка встанет по центру экрана</div>
@@ -451,7 +509,7 @@
   </div>
 
   <div class="screen" id="screen-profile">
-    <h2>👤 Профиль</h2>
+    <h2 id="profileTitle">👤 Профиль</h2>
     <div id="profileBody"><div class="empty">Загружаю…</div></div>
   </div>
 
@@ -1064,6 +1122,15 @@ function normalizeTag(s) {
 function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function escapeHtml(s) { return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
+// Глобальный индикатор занятости: любая операция, которая ходит на сервер, может
+// длиться секунды — без визуального отклика экран выглядит зависшим, и человек
+// жмёт кнопку повторно (именно так появлялись дубли анкет).
+let _busyDepth = 0;
+function setBusy(on) {
+  _busyDepth = Math.max(0, _busyDepth + (on ? 1 : -1));
+  const el = document.getElementById('busy');
+  if (el) el.classList.toggle('show', _busyDepth > 0);
+}
 function setStatus(text, ms) {
   const el = document.getElementById('status');
   if (!text) { el.classList.remove('show'); return; }
@@ -1108,7 +1175,11 @@ function pinIcon(kind, item) {
 // Подписи фильтров — ключи словаря: подставляются на каждом рендере, поэтому
 // смена языка применяется без перезагрузки мини-аппа.
 const SUBFILTERS = {
-  dogs: [['all','sf_all'], ['mine','sf_mine'], ['home','sf_home'], ['street','sf_street'], ['lost','sf_lost']],
+  // Порядок осмысленный: сначала «все», потом два основных типа, затем срочное
+  // и особое, и в самом конце «мои» — личный фильтр нужен реже всего, но искать
+  // его привычно в конце ряда.
+  dogs: [['all','sf_all'], ['home','🏠 Домашние'], ['street','🌳 Уличные'],
+         ['lost','🚨 Потеряшки'], ['seeking','🏡 Ищут дом'], ['mine','💛 Мои']],
   places: [['all','sf_all'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Groom','✂️'], ['Kennel','🐶'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
 };
 function renderSubfilters() {
@@ -1123,6 +1194,7 @@ function renderSubfilters() {
     box.appendChild(chip);
   });
   document.getElementById('fab').classList.toggle('show', activeScreen === 'map');
+  document.getElementById('legendBtn').classList.toggle('show', activeScreen === 'map');
 }
 
 async function loadData(kind, force) {
@@ -1130,6 +1202,7 @@ async function loadData(kind, force) {
   setStatus('Загружаю…');
   try {
     const uid = (kind === 'dogs' && MY_UID) ? MY_UID : '';
+    setBusy(true);
     const res = await fetch(`${API_URL}?type=${kind}${uid ? '&uid=' + uid : ''}&${initDataQS()}`);
     const json = await res.json();
     dataCache[kind] = json[kind] || [];
@@ -1137,7 +1210,7 @@ async function loadData(kind, force) {
   } catch (err) {
     dataCache[kind] = [];
     setStatus('Не получилось загрузить данные 😔', 2500);
-  }
+  } finally { setBusy(false); }
   return dataCache[kind];
 }
 
@@ -1148,6 +1221,7 @@ function filterDogsMap(list) {
   if (subFilter === 'home') return list.filter(d => d.status === 'У владельца');
   if (subFilter === 'street') return list.filter(d => d.status === 'Уличная');
   if (subFilter === 'lost') return list.filter(d => d.lost);
+  if (subFilter === 'seeking') return list.filter(d => d.seekingHome);
   return list;
 }
 function filterPlacesMap(list) {
@@ -1269,6 +1343,7 @@ function showScreen(name) {
   document.querySelectorAll('#tabbar .nav-item').forEach(n => n.classList.toggle('active', n.dataset.screen === name));
   if (name !== 'map') document.getElementById('screen-' + name).classList.add('show');
   document.getElementById('fab').classList.toggle('show', name === 'map');
+  document.getElementById('legendBtn').classList.toggle('show', name === 'map');
   if (name === 'dogs') { dogSegment = dogSegment || 'all'; initDogsScreen(); }
   if (name === 'sitters') loadSitters();
   if (name === 'profile') loadProfile();
@@ -1302,11 +1377,31 @@ function photoSrc(fileId) {
 
 async function callApi(action, payload) {
   const initData = tg ? tg.initData : '';
+  setBusy(true);
   try {
     const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action, initData, payload }) });
     return await res.json();
   } catch (e) { return { ok: false, error: 'network' }; }
+  finally { setBusy(false); }
 }
+// Легенда: значков на карте много (статусы собак, категории мест, устаревшие данные),
+// и догадываться об их значении человек не обязан.
+function openLegend() {
+  openSheet(`
+    <h3>🗺 Что означают значки</h3>
+    <div class="legend-grid">
+      <div class="legend-row"><span class="legend-ico">🏠</span><div><b>Домашняя собака</b><br><span class="list-sub">Живёт с хозяином, отмечена на прогулке</span></div></div>
+      <div class="legend-row"><span class="legend-ico">🐕</span><div><b>Уличная</b><br><span class="list-sub">Живёт в районе, её ведёт кто-то из соседей</span></div></div>
+      <div class="legend-row"><span class="legend-ico">🏡</span><div><b>Ищет новый дом</b><br><span class="list-sub">Можно забрать себе или показать знакомым</span></div></div>
+      <div class="legend-row"><span class="legend-ico">🚨</span><div><b>Потерялась</b><br><span class="list-sub">Ищут прямо сейчас — посмотри по сторонам</span></div></div>
+      <div class="legend-row"><span class="legend-ico">🩸</span><div><b>Донор крови</b><br><span class="list-sub">Хозяин готов помочь в экстренном случае</span></div></div>
+      <div class="legend-row"><span class="legend-ico" style="opacity:.5;border-style:dashed">🐕</span><div><b>Данные устарели</b><br><span class="list-sub">Собаку не видели больше трёх месяцев. Встретишь — подтверди</span></div></div>
+      <div class="legend-row"><span class="legend-ico">🏥</span><div><b>Места</b><br><span class="list-sub">🏥 клиника · 🏪 зоомагазин · 🌳 площадка · ✂️ груминг · 🐶 питомник · ☕ dog-friendly</span></div></div>
+    </div>
+    <button class="pop-btn secondary" style="margin-top:12px" onclick="closeSheet()">Понятно</button>
+  `);
+}
+
 function openBotDeepLink(payloadStr) {
   const url = `https://t.me/${BOT_USERNAME}?start=${payloadStr}`;
   if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
@@ -1496,7 +1591,9 @@ async function openDogCard(d) {
   if (isStreet && !d.lost && !seekLocked) {
     actions += `<button class="pop-btn" onclick="confirmDogGeo('${d.id}','${escapeAttr(d.name || '')}')">${t('a_here')}</button>`;
   }
-  if (d.lat) actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">${t('a_showmap')}</button>`;
+  // Кнопка «показать на карте» бессмысленна, когда карточку и открыли с карты —
+  // человек уже смотрит на эту точку.
+  if (d.lat && activeScreen !== 'map') actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">${t('a_showmap')}</button>`;
   actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">${t('a_share')}</button>`;
   if (canEditGallery) actions += `<button class="pop-btn secondary" onclick="openBotDeepLink('gallery_${d.id}')">${t('a_addphoto')}</button>`;
   if (isStreet) actions += `<button class="pop-btn secondary" id="subBtn-${d.id}" onclick="toggleDogSub('${d.id}')">${d.subscribed ? t('a_unsub') : t('a_sub')}</button>`;
@@ -2006,7 +2103,10 @@ async function submitAddDog() {
 
 // ================== ЭКРАН «СОБАКИ» ==================
 let dogSegment = 'all'; // по умолчанию — все собаки города (без фильтров)
-const DOG_SEGMENTS = [['all','Все'], ['street','🌳 Уличные'], ['home','🏠 Домашние'], ['mine','💛 Мои'], ['lost','🚨 Потеряшки'], ['seeking','🏡 Ищут новый дом'], ['donors','🩸 Доноры']];
+// Порядок повторяет фильтры на карте: список — это то же самое, только другим
+// представлением, и переключаться между ними не должно быть как между разными приложениями.
+const DOG_SEGMENTS = [['all','Все'], ['home','🏠 Домашние'], ['street','🌳 Уличные'],
+  ['lost','🚨 Потеряшки'], ['seeking','🏡 Ищут дом'], ['donors','🩸 Доноры'], ['mine','💛 Мои']];
 async function initDogsScreen() {
   await loadData('dogs');
   if (dogSegment === null) dogSegment = 'all';
@@ -2548,15 +2648,15 @@ function renderProfile() {
       <div class="list-title" style="font-size:14px">🔗 ${escapeHtml(r.title)}</div>
       ${r.url ? `<div class="list-sub">${escapeHtml(r.url)}</div>` : ''}
     </div>`).join('');
+  // Имя и ник переезжают в заголовок экрана: отдельная плашка занимала треть первого
+  // экрана и не несла действий — только повторяла то, что человек и так о себе знает.
+  const titleEl = document.getElementById('profileTitle');
+  if (titleEl) titleEl.innerHTML =
+    `${p.moderator ? '🛡' : '👤'} ${escapeHtml(p.name || 'Профиль')}` +
+    (p.username ? ` <span class="title-sub">${escapeHtml(p.username)}</span>` : '') +
+    (p.moderator ? ` <span class="title-sub">· модератор</span>` : '');
   document.getElementById('profileBody').innerHTML = `
     <div class="card">
-      <div class="dog-card-head">
-        <div class="avatar">${p.moderator ? '🛡' : '🐾'}</div>
-        <div>
-          <div class="list-title">${escapeHtml(p.name || '—')}</div>
-          <div class="list-sub">${escapeHtml(p.username || '')}${p.moderator ? ' · модератор' : ''}</div>
-        </div>
-      </div>
       <div class="info-row"><span>🏙 Город</span><b>${escapeHtml(p.city || '—')}</b></div>
       <div class="info-row"><span>📞 Телефон</span><b>${escapeHtml(p.tel || '—')}</b></div>
       <div class="info-row"><span>${t('pf_lang')}</span><b>${langNames[p.lang] || p.lang}</b></div>
@@ -2569,12 +2669,22 @@ function renderProfile() {
     <div class="sec-label">🐕 Мои собаки</div>
     <div id="profileMyDogs"><div class="empty" style="padding:16px">Загружаю…</div></div>
 
+    <div class="sec-label">🔔 Уведомления</div>
+    <div class="card tappable" onclick="openSubsSheet()">
+      <div class="list-title" style="font-size:14px">🔔 Что мне приходит</div>
+      <div class="list-sub">оповещения о пропаже · дайджест «ищут дом» · подписки на районы</div>
+    </div>
+
     <div class="sec-label">💚 Проект</div>
     <div class="card tappable" onclick="openSupportSheet()">
       <div class="list-title" style="font-size:14px">💚 Поддержать проект</div>
       <div class="list-sub">реквизиты, чат, обратная связь</div>
     </div>
-    ${resources ? `<div class="sec-label">📚 Полезные материалы</div>${resources}` : ''}
+    ${resources ? `<div class="sec-label">📚 Полезные материалы</div>
+      <div class="card tappable" onclick="openResourcesSheet()">
+        <div class="list-title" style="font-size:14px">📚 Полезные материалы</div>
+        <div class="list-sub">памятки, клиники, инструкции — ${(me.resources || []).length} шт.</div>
+      </div>` : ''}
     ${p.isAdmin ? `<div class="sec-label">📊 Аналитика</div>
       <div class="card tappable" onclick="openAdminDashboard()">
         <div class="list-title" style="font-size:14px">📊 Дашборд продукта</div>
@@ -2583,6 +2693,60 @@ function renderProfile() {
   `;
   renderProfileMyDogs(); // после вставки HTML — теперь #profileMyDogs существует
 }
+// Полезные материалы вынесены из общего полотна профиля в отдельный экран:
+// в ленте они выглядели как случайные карточки между настройками и поддержкой.
+function openResourcesSheet() {
+  const list = (me.resources || []);
+  openSheet(`
+    <h3>📚 Полезные материалы</h3>
+    ${list.length ? list.map(r => `
+      <div class="card tappable" onclick="${r.url ? `window.open('${escapeAttr(r.url)}','_blank')` : ''}">
+        <div class="list-title" style="font-size:14px">🔗 ${escapeHtml(r.title)}</div>
+        ${r.url ? `<div class="list-sub">${escapeHtml(r.url)}</div>` : ''}
+      </div>`).join('') : `<div class="empty">Пока пусто</div>`}
+    <button class="pop-btn secondary" style="margin-top:12px" onclick="closeSheet()">Закрыть</button>
+  `);
+}
+
+// Управление подписками. Тумблеры меняют профиль через тот же updateProfile, что и
+// остальные настройки; тонкие вещи (подписки на районы) редактируются в боте, потому
+// что там же они и появляются — при добавлении собаки или места.
+function openSubsSheet() {
+  const p = me.profile || {};
+  const on = p.lostAlerts !== false;
+  const dg = p.digest !== false;
+  openSheet(`
+    <h3>🔔 Что мне приходит</h3>
+    <div class="card">
+      <div class="info-row"><span>🚨 Оповещения о пропаже</span>
+        <b><label class="sw"><input type="checkbox" id="swAlerts" ${on ? 'checked' : ''}><span></span></label></b></div>
+      <div class="list-sub" style="margin-top:2px">Редко, но именно они возвращают собак домой: находит обычно случайный сосед.</div>
+    </div>
+    <div class="card">
+      <div class="info-row"><span>🏡 Дайджест «ищут новый дом»</span>
+        <b><label class="sw"><input type="checkbox" id="swDigest" ${dg ? 'checked' : ''}><span></span></label></b></div>
+      <div class="list-sub" style="margin-top:2px">Одно сообщение в неделю с одной собакой, которой ищут хозяев.</div>
+    </div>
+    <div class="card tappable" onclick="openBotDeepLink('subs')">
+      <div class="list-title" style="font-size:14px">🗺 Подписки на районы</div>
+      <div class="list-sub">Настраиваются в боте — там же, где появляются</div>
+    </div>
+    <button class="pop-btn" style="margin-top:12px" onclick="saveSubs()">Сохранить</button>
+    <button class="pop-btn secondary" onclick="closeSheet()">Отмена</button>
+  `);
+}
+async function saveSubs() {
+  const changes = {
+    lostAlerts: document.getElementById('swAlerts').checked,
+    digest: document.getElementById('swDigest').checked
+  };
+  const res = await callApi('updateProfile', { changes });
+  closeSheet();
+  if (res.ok) { haptic(); me.profile.lostAlerts = changes.lostAlerts; me.profile.digest = changes.digest;
+    renderProfile(); setStatus('✅ Сохранено', 1800); }
+  else alert(t('err_fail') + (res.error || ''));
+}
+
 // ================== ДАШБОРД ПРОДУКТА (только админ) ==================
 // Все цифры считает сервер (computeMetrics_), клиент только рисует. Права проверяются
 // на сервере по подписанному initData — открыть «в обход» через DevTools нельзя.
