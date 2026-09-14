@@ -257,6 +257,15 @@
   .card { background: var(--card); border-radius: var(--r-card); padding: 14px 15px; margin-bottom: 10px;
     border: 1px solid var(--line); box-shadow: var(--shadow-s); }
   .card.tappable { cursor: pointer; transition: transform .1s ease; }
+  /* Удаление комментария — служебное действие, а не тревожное: нейтральная кнопка
+     вместо красной. Красный в интерфейсе оставляем за потеряшками. */
+  .row-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .sub-ava { width: 40px; height: 40px; border-radius: 10px; flex: 0 0 40px; background: var(--card);
+             background-size: cover; background-position: center; display: flex; align-items: center;
+             justify-content: center; font-size: 18px; }
+  .cm-del { background: none; border: 0; padding: 2px 6px; font-size: 14px; line-height: 1;
+            color: var(--hint); opacity: .6; cursor: pointer; border-radius: 6px; }
+  .cm-del:active { opacity: 1; background: var(--card); }
   .card.tappable:active { transform: scale(.985); }
   .row-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .list-title { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
@@ -537,17 +546,30 @@
     <div id="profileBody"><div class="empty">Загружаю…</div></div>
   </div>
 
+  <!-- Материалы и поддержка — такие же экраны, как карта и профиль. Раньше они
+       открывались шторкой поверх текущего экрана: пункт нижней навигации, который
+       ведёт не на экран, а на всплывашку, читается как сбой, а не как раздел. -->
+  <div class="screen" id="screen-resources">
+    <h2>📚 Полезные материалы</h2>
+    <div id="resourcesBody"><div class="empty">Загружаю…</div></div>
+  </div>
+
+  <div class="screen" id="screen-support">
+    <h2>💚 Поддержать проект</h2>
+    <div id="supportBody"></div>
+  </div>
+
   <!-- ===== Нижняя навигация ===== -->
   <div id="tabbar">
     <div class="nav-item active" data-screen="map" data-i18n-title="tab_map_l"><span class="ico">🗺</span></div>
     <div class="nav-item" data-screen="dogs" data-i18n-title="tab_dogs_l"><span class="ico">🐾</span><span class="nav-dot" id="lostDot"></span></div>
     <div class="nav-item" data-screen="sitters" data-i18n-title="tab_sitters_l"><span class="ico">🧑</span></div>
-    <div class="nav-item" data-action="resources" title="Полезные материалы"><span class="ico">
+    <div class="nav-item" data-screen="resources" title="Полезные материалы"><span class="ico">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
         <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 15.5z"/>
         <path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5z"/>
       </svg></span></div>
-    <div class="nav-item" data-action="support" title="Поддержать проект"><span class="ico">
+    <div class="nav-item" data-screen="support" title="Поддержать проект"><span class="ico">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
         <path d="M12 20s-7-4.3-7-9.2A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.8C19 15.7 12 20 12 20z"/>
       </svg></span></div>
@@ -561,6 +583,17 @@
 <script>
 // URL рабочего деплоя Apps Script (Manage deployments → тот же URL, что и вебхук бота)
 const API_URL = "https://script.google.com/macros/s/AKfycbwuaKkog3Ebjowds_pE4SmxjS63UIlZseNE-NE48KQSYLmNas3gkAqCS1p7TM-0tv1r/exec";
+// База публичных ссылок на фото в Supabase Storage. Сервер присылает её полем
+// photoBase в любом ответе с собаками; держим её в localStorage, потому что слои
+// умеют подниматься из локального кэша вообще без обращения к серверу.
+let PHOTO_BASE = '';
+try { PHOTO_BASE = localStorage.getItem('photoBase') || ''; } catch (e) {}
+function notePhotoBase(base) {
+  if (!base || base === PHOTO_BASE) return;
+  PHOTO_BASE = base;
+  try { localStorage.setItem('photoBase', base); } catch (e) {}
+}
+function photoUrlFromKey(key) { return (PHOTO_BASE && key) ? (PHOTO_BASE + key) : ''; }
 let BOT_USERNAME = "ВАШ_БОТ_USERNAME"; // подхватится из getMe (botUsername)
 
 const tg = window.Telegram && window.Telegram.WebApp;
@@ -1266,6 +1299,7 @@ async function fetchLayer(kind) {
   const uid = (kind === 'dogs' && MY_UID) ? MY_UID : '';
   const res = await fetch(`${API_URL}?type=${kind}${uid ? '&uid=' + uid : ''}&${initDataQS()}`);
   const json = await res.json();
+  if (json && json.photoBase) notePhotoBase(json.photoBase);
   return json[kind] || [];
 }
 
@@ -1447,16 +1481,13 @@ function showScreen(name) {
   }
   if (name === 'sitters') loadSitters();
   if (name === 'profile') loadProfile();
+  if (name === 'resources') renderResourcesScreen();
+  if (name === 'support') renderSupportScreen();
   if (name === 'map') setTimeout(() => map.invalidateSize(), 60);
 }
-// Пункты меню бывают двух видов: экран (data-screen) и действие-шторка (data-action).
-// Раньше действия висели на inline-onclick и не срабатывали, потому что этот обработчик
-// назначался тем же элементам позже и затирал их.
-document.querySelectorAll('#tabbar .nav-item').forEach(n => n.onclick = () => {
-  if (n.dataset.action === 'resources') { openResourcesSheet(); return; }
-  if (n.dataset.action === 'support') { openSupportSheet(); return; }
-  showScreen(n.dataset.screen);
-});
+// Все пункты нижней навигации ведут на экран. Раньше два из них (материалы, поддержка)
+// открывали шторку — и выглядели сломанными на фоне остальных.
+document.querySelectorAll('#tabbar .nav-item').forEach(n => n.onclick = () => showScreen(n.dataset.screen));
 
 // ================== API ==================
 // Подписанный initData подставляем и в GET-запросы: сервер по нему понимает, кто
@@ -1464,9 +1495,22 @@ document.querySelectorAll('#tabbar .nav-item').forEach(n => n.onclick = () => {
 // без него данные не отдаёт вовсе.
 function initDataQS() { return 'initData=' + encodeURIComponent(tg ? (tg.initData || '') : ''); }
 
-// Фото приходят с сервера как data URI: раньше бэкенд отдавал прямую ссылку на
-// Telegram, а в ней содержится токен бота. Держим кэш промисов, чтобы одно и то же
-// фото не загружалось повторно при каждом открытии карточки.
+// Основной путь: сервер присылает ключ объекта в Storage, ссылка склеивается на
+// месте и картинку тянет сам браузер — параллельно, с обычным HTTP-кэшем, мимо
+// Apps Script. photoSrcRef принимает {fileId, key, thumbKey} и берёт прямую ссылку,
+// если она есть.
+function photoSrcRef(ref, wantThumb) {
+  if (!ref) return Promise.resolve('');
+  if (typeof ref === 'string') ref = { fileId: ref };
+  const key = wantThumb ? (ref.thumbKey || ref.key) : (ref.key || ref.thumbKey);
+  const direct = photoUrlFromKey(key);
+  if (direct) return Promise.resolve(direct);
+  return photoSrc(ref.fileId);
+}
+
+// Запасной путь для фото, которые ещё не залиты в Storage: сервер скачивает их из
+// Telegram и отдаёт data URI. Медленно и по одной за раз, поэтому держим кэш
+// промисов — иначе одно и то же фото качалось бы на каждое открытие карточки.
 const _photoCache = new Map();
 function photoSrc(fileId) {
   if (!fileId) return Promise.resolve('');
@@ -1535,7 +1579,7 @@ async function openBotDeepLink(payloadStr) {
       if (res && res.ok && res.botUsername) BOT_USERNAME = res.botUsername;
     } catch (e) {}
   }
-  if (!BOT_USERNAME || /[А-Яа-я]/.test(BOT_USERNAME)) { alert('Не получилось открыть бота — попробуй ещё раз через минуту.'); return; }
+  if (!BOT_USERNAME || /[А-Яа-я]/.test(BOT_USERNAME)) { uiAlert('Не получилось открыть бота — попробуй ещё раз через минуту.'); return; }
   const url = `https://t.me/${BOT_USERNAME}?start=${payloadStr}`;
   if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
 }
@@ -1551,7 +1595,7 @@ function contactOwner(dogId, dogName) {
 async function submitContactOwner(dogId) {
   const field = document.getElementById('contactText');
   const text = (field.value || '').trim();
-  if (!text) { alert(t('co_empty')); return; }
+  if (!text) { uiAlert(t('co_empty')); return; }
   const btn = document.getElementById('contactSendBtn');
   if (btn) { btn.disabled = true; btn.textContent = t('cm_sending'); }
   field.disabled = true;
@@ -1559,7 +1603,7 @@ async function submitContactOwner(dogId) {
     const res = await callApi('contactOwner', { dogId, text });
     if (res.ok) { haptic('success'); closeSheet(); setStatus(t('co_sent'), 2200); }
     else {
-      alert(res.error === 'no_owner' ? t('co_noowner') : (t('err_fail') + (res.error || '')));
+      uiAlert(res.error === 'no_owner' ? t('co_noowner') : (t('err_fail') + (res.error || '')));
       if (btn) { btn.disabled = false; btn.textContent = t('co_send'); }
       field.disabled = false;
     }
@@ -1568,6 +1612,28 @@ async function submitContactOwner(dogId) {
     field.disabled = false;
   }
 }
+// Диалоги через Telegram. window.confirm и window.alert в WebView Telegram на части
+// платформ не показываются вовсе: confirm молча возвращает undefined, и обработчик
+// выходит по первой же строке — кнопка выглядит нерабочей. Именно так «сломалась»
+// кнопка «больше не слежу». Нативные showConfirm/showAlert работают везде, где есть
+// поддержка (6.2+), а window.* остаётся фолбэком для браузера вне Telegram.
+function uiConfirm(text) {
+  return new Promise(resolve => {
+    if (tg && typeof tg.showConfirm === 'function' && tg.isVersionAtLeast && tg.isVersionAtLeast('6.2')) {
+      try { tg.showConfirm(text, ok => resolve(!!ok)); return; } catch (e) {}
+    }
+    resolve(window.confirm(text));
+  });
+}
+function uiAlert(text) {
+  return new Promise(resolve => {
+    if (tg && typeof tg.showAlert === 'function' && tg.isVersionAtLeast && tg.isVersionAtLeast('6.2')) {
+      try { tg.showAlert(text, () => resolve()); return; } catch (e) {}
+    }
+    window.alert(text); resolve();
+  });
+}
+
 function copyToClipboard(text, label) {
   const done = () => setStatus('📋 Скопировано: ' + (label || text), 1800);
   try {
@@ -1576,7 +1642,7 @@ function copyToClipboard(text, label) {
   } catch (e) { done(); }
   haptic('success');
 }
-function openSupportSheet() {
+function renderSupportScreen() {
   // Реквизиты копируются по тапу; ссылка на чат спрятана под текстом
   const row = (label, value) => `
     <div class="card tappable" style="margin-bottom:8px" onclick="copyToClipboard('${escapeAttr(value)}','${escapeAttr(label)}')">
@@ -1585,8 +1651,9 @@ function openSupportSheet() {
         <div style="font-size:18px">📋</div>
       </div>
     </div>`;
-  openSheet(`
-    <h3>💚 Поддержать проект</h3>
+  const box = document.getElementById('supportBody');
+  if (!box) return;
+  box.innerHTML = `
     <div class="geo-note" style="margin-bottom:12px">Этот бот — некоммерческий проект. Средства идут на оплату инфраструктуры и развитие нового функционала. Нажми на реквизит, чтобы скопировать. 🐾</div>
     ${row('BOG', 'GE21BG0000000538937088')}
     ${row('TBC', 'GE87TB7838545064400012')}
@@ -1595,8 +1662,7 @@ function openSupportSheet() {
     <div class="pop-actions vertical" style="margin-top:12px">
       <button class="pop-btn" onclick="openTgUser('brutsky')">✉️ Написать @brutsky</button>
       <button class="pop-btn secondary" onclick="openTgLink('https://t.me/+9W7Y065T78BhNTM6')">💬 Чат для обсуждения бота</button>
-    </div>
-  `);
+    </div>`;
 }
 function openTgLink(url) { if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank'); }
 async function shareDog(dogId, name) {
@@ -1804,27 +1870,34 @@ async function openDogCard(d) {
 
 // Счётчик фотографий поверх обложки: раньше о том, что снимков несколько, можно было
 // узнать только открыв галерею — а значит, почти никто и не открывал.
-// Фото: быстро показываем обложку, затем подгружаем список галереи для счётчика и
-// листания. Сервер отдаёт только идентификаторы файлов — сами картинки тянем по одной
-// через photoSrc(), чтобы не собирать многомегабайтный ответ на один запрос.
+// Обложка: в списке собак уже лежит ключ превью (photoKey), поэтому картинка ставится
+// сразу, без единого запроса. Галерея догружается следом — за счётчиком и листанием.
 async function loadDogMedia(d) {
   window._lbPhotos = [];
   const el = document.getElementById('dogPhoto');
-  if (d.photoId) {
-    try {
-      const src = await photoSrc(d.photoId);
-      if (src && el) { el.style.backgroundImage = `url("${src}")`; el.classList.add('loaded'); window._lbPhotos = [d.photoId]; }
-    } catch (e) {}
+  if (d.photoId || d.photoKey) {
+    const ref = { fileId: d.photoId, thumbKey: d.photoKey };
+    const direct = photoUrlFromKey(d.photoKey);
+    if (direct && el) {
+      el.style.backgroundImage = `url("${direct}")`; el.classList.add('loaded');
+      window._lbPhotos = [ref];
+    } else {
+      try {
+        const src = await photoSrcRef(ref, true);
+        if (src && el) { el.style.backgroundImage = `url("${src}")`; el.classList.add('loaded'); window._lbPhotos = [ref]; }
+      } catch (e) {}
+    }
   }
   try {
     const r = await fetch(`${API_URL}?type=dogGallery&dogId=${encodeURIComponent(d.id)}&${initDataQS()}`);
     const j = await r.json();
+    if (j && j.photoBase) notePhotoBase(j.photoBase);
     const photos = (j.ok ? j.photos : []) || [];
     if (photos.length) {
       photos.sort((a, b) => (b.isCover ? 1 : 0) - (a.isCover ? 1 : 0));
-      window._lbPhotos = photos.map(p => p.fileId).filter(Boolean);
+      window._lbPhotos = photos.filter(p => p.fileId || p.key);
       if (el && !el.classList.contains('loaded') && window._lbPhotos[0]) {
-        const src0 = await photoSrc(window._lbPhotos[0]);
+        const src0 = await photoSrcRef(window._lbPhotos[0], true);
         if (src0) { el.style.backgroundImage = `url("${src0}")`; el.classList.add('loaded'); }
       }
     }
@@ -1874,7 +1947,7 @@ async function lbShow() {
   const idx = window._lbIdx;
   if (img) {
     img.src = '';
-    const src = await photoSrc(photos[idx]);
+    const src = await photoSrcRef(photos[idx], false);   // в лайтбоксе — полный размер
     if (window._lbIdx === idx) img.src = src || '';   // пока грузили, могли пролистать дальше
   }
   const dots = document.getElementById('lbDots');
@@ -1898,10 +1971,13 @@ async function loadDogCommentsInline(dogId, dogName) {
     const items = res.ok ? (res.comments || []) : [];
     const canModerate = res.ok && res.canModerate;
     if (!items.length) { list.innerHTML = `<div class="empty">${t('cm_empty')}</div>`; return; }
+    // Удалить можно свой комментарий (всегда) и чужой — если ты админ или модератор
+    // города. Кнопка неприметная: красный цвет здесь читался как «пожаловаться» или
+    // «опасное действие», хотя это обычная уборка в своей же ленте.
     list.innerHTML = items.map(c => `
       <div class="review-item">
         <div class="row-between"><span class="who">${escapeHtml(c.author || t('cm_guest'))}</span>
-          ${canModerate ? `<button class="pop-btn danger small" style="padding:3px 9px" onclick="deleteComment('${c.id}','${dogId}','${escapeAttr(dogName)}')">🗑</button>` : ''}</div>
+          ${(c.mine || canModerate) ? `<button class="cm-del" title="Удалить комментарий" onclick="deleteComment('${c.id}','${dogId}','${escapeAttr(dogName)}')">🗑</button>` : ''}</div>
         <div class="txt">${escapeHtml(c.text)}</div>
         <div class="when">${escapeHtml(c.date || '')}</div>
       </div>`).join('');
@@ -1952,7 +2028,7 @@ async function submitDogEdit(id) {
   const breedSel = document.getElementById('edBreedSel').value;
   let breed = breedSel === '__manual__' ? document.getElementById('edBreedManual').value.trim() : breedSel;
   if (breedSel === '__manual__' && breed && !/^[A-Za-zА-Яа-яЁё\u10A0-\u10FF\s-]+$/.test(breed)) {
-    alert(t('fd_breed_err')); return;
+    uiAlert(t('fd_breed_err')); return;
   }
   const changes = {
     name: document.getElementById('edName').value,
@@ -1969,7 +2045,7 @@ async function submitDogEdit(id) {
   const res = await callApi('editDog', { dogId: id, changes });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('✅ Анкета обновлена', 2000); }
-  else alert(t('err_fail') + (res.error === 'bad breed' ? 'недопустимые символы в породе' : (res.error || '')));
+  else uiAlert(t('err_fail') + (res.error === 'bad breed' ? 'недопустимые символы в породе' : (res.error || '')));
 }
 
 function walkHereMine(dogId) {
@@ -1990,7 +2066,7 @@ async function walkApply(payload, okText) {
     haptic(); closeSheet(); map.closePopup();
     dataCache.dogs = null; await renderLayer(); renderDogsScreen();
     setStatus(okText, 2400);
-  } else { setStatus(null); alert(t('err_fail') + (res.error || '')); }
+  } else { setStatus(null); uiAlert(t('err_fail') + (res.error || '')); }
   return res.ok;
 }
 async function walkSetGeo(dogId) {
@@ -2006,7 +2082,7 @@ async function walkPickOnMap(dogId) {
   await walkApply({ dogId, ...choice }, '✅ Точка на карте обновлена');
 }
 async function walkClear(dogId) {
-  if (!confirm('Скрыть точное место этой собаки? Она останется на карте, но только по своему району.')) return;
+  if (!await uiConfirm('Скрыть точное место этой собаки? Она останется на карте, но только по своему району.')) return;
   await walkApply({ dogId, clear: true }, '🙅 Точка скрыта — собака видна по району');
 }
 async function setDogGeoFromCard(dogId) {
@@ -2015,8 +2091,8 @@ async function setDogGeoFromCard(dogId) {
   if (!choice) return;
   const res = await callApi('walkHere', { dogId, lat: choice.lat, lng: choice.lng });
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); setStatus('✅ Геопозиция обновлена', 2000); }
-  else if (res.error === 'seeking_locked') alert('🏡 Эта собака ищет новый дом — пока идёт пристройство, её анкету ведёт тот, кто её завёл.');
-  else alert(t('err_fail') + (res.error || ''));
+  else if (res.error === 'seeking_locked') uiAlert('🏡 Эта собака ищет новый дом — пока идёт пристройство, её анкету ведёт тот, кто её завёл.');
+  else uiAlert(t('err_fail') + (res.error || ''));
 }
 
 // Оповещение о пропаже ведём ТОЛЬКО через бота — одним путём с остальными.
@@ -2031,7 +2107,7 @@ async function markFound(dogId) {
   const res = await callApi('setFound', { dogId });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🎉 Ура! Снята метка «потерялась»', 2400); }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
 }
 // suggest=true — карточка чужая (или старая уличная без автора): удаление не мгновенное,
 // а через модерацию. Формулировки честно об этом говорят, чтобы человек не удивлялся,
@@ -2053,7 +2129,7 @@ async function submitDeleteDog(dogId) {
   _inFlight['deleteDog'] = true;
   try {
   const reason = document.getElementById('delReason').value.trim();
-  if (!reason) { alert('Напиши причину — так модераторам проще.'); return; }
+  if (!reason) { uiAlert('Напиши причину — так модераторам проще.'); return; }
   const res = await callApi('deleteDog', { dogId, reason });
   closeSheet();
   if (res.ok) {
@@ -2062,7 +2138,7 @@ async function submitDeleteDog(dogId) {
     else if (res.queued) setStatus('✅ Запрос ушёл модератору', 2600);
     else setStatus('Анкета удалена', 2000);
   }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
   } finally { delete _inFlight['deleteDog']; }
 }
 
@@ -2112,31 +2188,31 @@ async function submitDonor(dogId) {
   });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('🩸 Записали в доноры — спасибо!', 2400); }
-  else alert(t('err_fail') + (res.error === 'home only' ? 'донорство доступно только домашним собакам' : (res.error || '')));
+  else uiAlert(t('err_fail') + (res.error === 'home only' ? 'донорство доступно только домашним собакам' : (res.error || '')));
 }
 async function removeDonor(dogId) {
-  if (!confirm('Убрать собаку из списка доноров?')) return;
+  if (!await uiConfirm('Убрать собаку из списка доноров?')) return;
   const res = await callApi('setDonor', { dogId, enable: false });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('Убрали из доноров', 2000); }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
 }
 async function toggleSeeking(dogId, on) {
   const res = await callApi('setSeeking', { dogId, on });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(on ? '🏡 Отметили — пусть найдётся дом!' : 'Сняли метку «ищет дом»', 2200); }
-  else if (res.error === 'tagged_dog') alert('🏷 У этой собаки есть бирка — значит, она уже в муниципальной программе, и пристройство оформляется официально, через приют или организацию. Отметка «ищет дом» доступна только для собак без бирки.');
-  else alert(t('err_fail') + (res.error || ''));
+  else if (res.error === 'tagged_dog') uiAlert('🏷 У этой собаки есть бирка — значит, она уже в муниципальной программе, и пристройство оформляется официально, через приют или организацию. Отметка «ищет дом» доступна только для собак без бирки.');
+  else uiAlert(t('err_fail') + (res.error || ''));
 }
 // Опекунство (takeCare) убрано: в Грузии это юридическая процедура, и кнопка в
 // приложении создавала впечатление оформленного статуса. Осталась только возможность
 // снять себя как контакт по уличной собаке.
 async function giveUpCare(dogId, name) {
-  if (!confirm(`Убрать себя из контактов по «${name}»? Собака останется на карте, но связаться по ней будет не с кем, а отметка «ищет дом» снимется.`)) return;
+  if (!await uiConfirm(`Убрать себя из контактов по «${name}»? Собака останется на карте, но связаться по ней будет не с кем, а отметка «ищет дом» снимется.`)) return;
   const res = await callApi('giveUpCare', { dogId });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus('Готово, ты больше не контакт по этой собаке', 2200); }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
 }
 
 // ================== ДОБАВЛЕНИЕ СОБАКИ ==================
@@ -2247,17 +2323,17 @@ async function submitAddDog() {
   // и не переслать карточку. Уводим сразу, сохранив уже введённое в черновик.
   if (d.status === 'Уличная') {
     closeSheet();
-    if (confirm('📸 У уличной собаки нужно фото — без него её не опознают и не перешлют карточку.\n\nОткрыть бота и добавить там? Займёт минуту.')) openBotDeepLink('newdog');
+    if (await uiConfirm('📸 У уличной собаки нужно фото — без него её не опознают и не перешлют карточку.\n\nОткрыть бота и добавить там? Займёт минуту.')) openBotDeepLink('newdog');
     return;
   }
   if (!d.name || !d.name.trim()) {
-    alert('Как зовут собаку? Кличка — единственное обязательное поле, остальное можно дополнить потом 🐶');
+    uiAlert('Как зовут собаку? Кличка — единственное обязательное поле, остальное можно дополнить потом 🐶');
     const el = document.getElementById('adName'); if (el) el.focus();
     return;
   }
   let breed = d.breed === '__manual__' ? (d.breedManual || '').trim() : d.breed;
   if (d.breed === '__manual__' && breed && !/^[A-Za-zА-Яа-яЁё\u10A0-\u10FF\s-]+$/.test(breed)) {
-    alert('Порода — только буквы и дефис.'); return;
+    uiAlert('Порода — только буквы и дефис.'); return;
   }
   const payload = {
     status: d.status, name: d.name.trim(), breed, color: d.color, sex: d.sex, age: d.age,
@@ -2273,11 +2349,11 @@ async function submitAddDog() {
       haptic(); addDogDraft = null; closeSheet();
       dataCache.dogs = null; await renderLayer(); renderDogsScreen();
       setStatus('✅ Собака добавлена!', 2200);
-    } else if (res.error === 'limit') alert('Достигнут лимит анкет на одного человека.');
-    else if (res.error === 'duplicate') alert('Такая собака уже добавлена 🙂');
-    else if (res.error === 'geo_required') alert('📍 Для уличной собаки отметь точку на карте.');
-    else if (res.error === 'street_use_bot') alert('📸 Уличную собаку добавляй через бота — там можно приложить фото.');
-    else alert(t('err_fail') + (res.error || ''));
+    } else if (res.error === 'limit') uiAlert('Достигнут лимит анкет на одного человека.');
+    else if (res.error === 'duplicate') uiAlert('Такая собака уже добавлена 🙂');
+    else if (res.error === 'geo_required') uiAlert('📍 Для уличной собаки отметь точку на карте.');
+    else if (res.error === 'street_use_bot') uiAlert('📸 Уличную собаку добавляй через бота — там можно приложить фото.');
+    else uiAlert(t('err_fail') + (res.error || ''));
   } finally {
     addDogSubmitting = false;
     if (btn) { btn.disabled = false; btn.textContent = t('fd_save'); }
@@ -2508,29 +2584,29 @@ function openBecomeSitterSheet(isEdit) {
 async function submitBecomeSitter() {
   const nameEl = document.getElementById('sitName');
   const sitName = nameEl ? nameEl.value.trim() : '';
-  if (nameEl && !sitName) { alert('Имя обязательно — его увидят владельцы собак 🙂'); return; }
+  if (nameEl && !sitName) { uiAlert('Имя обязательно — его увидят владельцы собак 🙂'); return; }
   const bio = document.getElementById('sitBio').value.trim();
-  if (!bio) { alert('Расскажи немного о себе — это твоя визитка.'); return; }
+  if (!bio) { uiAlert('Расскажи немного о себе — это твоя визитка.'); return; }
   const services = {};
   Object.keys(SITTER_SERVICES).forEach(k => services[k] = document.getElementById('svc_' + k).checked);
   if (!services.justWalking && !services.ownPlace && !services.withLiving) {
-    alert('Выбери хотя бы один формат работы — так хозяевам понятнее.'); return;
+    uiAlert('Выбери хотя бы один формат работы — так хозяевам понятнее.'); return;
   }
   const res = await callApi('becomeSitter', Object.assign({
     bio, name: sitName, phone: document.getElementById('sitPhone').value.trim(),
     price: document.getElementById('sitPrice').value.trim()
   }, services));
-  if (!res.ok && res.error === 'name required') { alert('Укажи имя — его увидят владельцы собак.'); return; }
+  if (!res.ok && res.error === 'name required') { uiAlert('Укажи имя — его увидят владельцы собак.'); return; }
   if (res.ok) me = null; // имя могло обновиться — профиль перечитаем
   closeSheet();
   if (res.ok) { haptic(); sittersCache = null; loadSitters(true); setStatus('✅ Анкета опубликована!', 2200); }
-  else alert(t('err_fail') + (res.error === 'service required' ? 'выбери хотя бы один формат' : (res.error || '')));
+  else uiAlert(t('err_fail') + (res.error === 'service required' ? 'выбери хотя бы один формат' : (res.error || '')));
 }
 async function stopSitter() {
-  if (!confirm('Убрать себя из списка ситтеров? Данные сохранятся — вернуться можно в любой момент.')) return;
+  if (!await uiConfirm('Убрать себя из списка ситтеров? Данные сохранятся — вернуться можно в любой момент.')) return;
   const res = await callApi('stopSitter', {});
   if (res.ok) { haptic(); sittersCache = null; loadSitters(true); }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
 }
 
 // ================== ОТЗЫВЫ ==================
@@ -2555,7 +2631,7 @@ async function submitReview(id, itemType) {
   _inFlight['review'] = true;
   try {
   const rating = parseInt(document.getElementById('starsPick').dataset.rating || '0', 10);
-  if (!rating) { alert(t('rv_need')); return; }
+  if (!rating) { uiAlert(t('rv_need')); return; }
   const text = document.getElementById('reviewText').value;
   const res = await callApi('addReview', { type: itemType, id, rating, text });
   closeSheet();
@@ -2564,7 +2640,7 @@ async function submitReview(id, itemType) {
     if (itemType === 'DogSitter') { sittersCache = null; loadSitters(true); }
     else { dataCache.places = null; renderLayer(); }
     setStatus('✅ Спасибо за отзыв!', 2000);
-  } else alert(t('err_fail') + (res.error === 'self review' ? 'себя оценивать нельзя 🙂' : (res.error || '')));
+  } else uiAlert(t('err_fail') + (res.error === 'self review' ? 'себя оценивать нельзя 🙂' : (res.error || '')));
   } finally { delete _inFlight['review']; }
 }
 
@@ -2590,9 +2666,9 @@ async function confirmDogGeo(dogId, dogName) {
       const fresh = findDog(dogId);
       if (fresh) openDogCard(fresh);   // перерисовать карточку с новой датой
     } else if (res.error === 'seeking_locked') {
-      alert('🏡 Эта собака ищет новый дом — пока идёт пристройство, её анкету ведёт тот, кто её завёл.');
+      uiAlert('🏡 Эта собака ищет новый дом — пока идёт пристройство, её анкету ведёт тот, кто её завёл.');
     } else {
-      alert(t('err_fail') + (res.error || ''));
+      uiAlert(t('err_fail') + (res.error || ''));
     }
   } finally { geoConfirming = false; }
 }
@@ -2606,7 +2682,7 @@ async function toggleDogSub(id) {
     haptic();
     setStatus(res.subscribed ? t('a_sub') : t('a_unsub'), 1800);
   } else if (res && res.error === 'street_only') {
-    alert('Подписка доступна только для уличных собак.');
+    uiAlert('Подписка доступна только для уличных собак.');
   }
 }
 
@@ -2622,15 +2698,18 @@ async function showDogGallery(dogId, dogName, canEdit) {
     <h3>${t('gl_head')} — «${escapeHtml(dogName)}»</h3>
     ${photos.length ? `<div class="gallery-grid">${photos.map((p, i) => `
       <div class="gallery-item">
-        <img id="galimg-${stamp}-${i}" alt="">
+        <img id="galimg-${stamp}-${i}" alt="" loading="lazy" src="${photoUrlFromKey(p.thumbKey || p.key)}">
         ${p.isCover ? `<span class="gallery-cover-tag">${t('gl_cover')}</span>` : ''}
         ${(canEdit && !p.isCover) ? `<button class="gallery-del" onclick="deleteGalleryPhoto('${p.id}','${dogId}','${escapeAttr(dogName)}',${canEdit})">✕</button>` : ''}
       </div>`).join('')}</div>` : `<div class="empty">${t('gl_empty')}</div>`}
     ${canEdit ? `<button class="pop-btn secondary" style="margin-top:10px" onclick="openBotDeepLink('gallery_${dogId}')">${t('gl_add')}</button>` : ''}
   `);
-  // Картинки подтягиваем по одной: каждая — отдельный запрос к скрипту, параллельный
-  // залп на десяток фото упёрся бы в лимит одновременных выполнений Apps Script.
+  // Залитые в Storage уже проставлены в разметке и грузятся параллельно самим
+  // браузером. Остаются только незалитые: они всё ещё идут через Apps Script, и вот
+  // их по-прежнему берём по одной — параллельный залп упёрся бы в лимит
+  // одновременных выполнений. Этот цикл исчезнет вместе с последним старым фото.
   for (let i = 0; i < photos.length; i++) {
+    if (photoUrlFromKey(photos[i].thumbKey || photos[i].key)) continue;
     if (window._galStamp !== stamp) return;
     const src = await photoSrc(photos[i].fileId);
     const img = document.getElementById(`galimg-${stamp}-${i}`);
@@ -2640,7 +2719,7 @@ async function showDogGallery(dogId, dogName, canEdit) {
 async function deleteGalleryPhoto(photoId, dogId, dogName, canEdit) {
   const res = await callApi('deleteGalleryPhoto', { photoId, dogId });
   if (res.ok) { haptic(); showDogGallery(dogId, dogName, canEdit); }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
 }
 
 // ================== КОММЕНТАРИИ К СОБАКЕ (открытая лента) ==================
@@ -2669,7 +2748,7 @@ async function submitComment(dogId, dogName) {
   if (commentSubmitting) return; // повторный тап, пока запрос в полёте, — игнорируем
   const field = document.getElementById('commentText');
   const text = field.value.trim();
-  if (!text) { alert(t('cm_empty_text')); return; }
+  if (!text) { uiAlert(t('cm_empty_text')); return; }
   const btn = document.getElementById('commentSendBtn');
   commentSubmitting = true;
   // Блокируем кнопку и показываем прогресс прямо на ней: раньше окно с введённым
@@ -2699,7 +2778,7 @@ async function submitComment(dogId, dogName) {
       }
       field.value = '';
     } else {
-      alert(t('err_fail') + (res.error || ''));
+      uiAlert(t('err_fail') + (res.error || ''));
     }
   } finally {
     commentSubmitting = false;
@@ -2710,7 +2789,7 @@ async function submitComment(dogId, dogName) {
 async function deleteComment(commentId, dogId, dogName) {
   const res = await callApi('deleteComment', { commentId, dogId });
   if (res.ok) { haptic(); loadDogCommentsInline(dogId, dogName); }
-  else alert('Не получилось удалить: ' + (res.error || ''));
+  else uiAlert('Не получилось удалить: ' + (res.error || ''));
 }
 
 async function showReviews(itemType, id, name) {
@@ -2773,14 +2852,14 @@ async function submitSuggest(id) {
   pendingGeo = null;
   closeSheet();
   if (res.ok) { haptic(); setStatus('✅ Отправлено модератору', 2400); }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
 }
 async function submitDelete(id, name) {
-  if (!confirm(`Предложить удалить «${name}»? Место скроется после подтверждения модератором.`)) return;
+  if (!await uiConfirm(`Предложить удалить «${name}»? Место скроется после подтверждения модератором.`)) return;
   const res = await callApi('suggestEdit', { type: 'Places', id, changes: { _delete: true } });
   closeSheet();
   if (res.ok) { haptic(); setStatus('Запрос на удаление отправлен', 2400); }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
 }
 
 document.getElementById('fab').onclick = () => {
@@ -2834,7 +2913,7 @@ async function submitAddPlace() {
   _inFlight['addPlace'] = true;
   try {
   const name = document.getElementById('addName').value.trim();
-  if (!name) { alert('Укажи название'); return; }
+  if (!name) { uiAlert('Укажи название'); return; }
   const payload = {
     type: document.getElementById('addType').value, name,
     address: document.getElementById('addAddress').value,
@@ -2847,7 +2926,7 @@ async function submitAddPlace() {
   pendingGeo = null;
   closeSheet();
   if (res.ok) { haptic(); setStatus('✅ Появится на карте после проверки', 2600); }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
   } finally { delete _inFlight['addPlace']; }
 }
 
@@ -2868,7 +2947,7 @@ function renderProfile() {
   if (!me || !me.profile) {
     const box = document.getElementById('profileBody');
     if (box) box.innerHTML = `<div class="empty">Не получилось загрузить профиль.<br>
-      <button class="pop-btn secondary" style="margin-top:10px" onclick="initProfileScreen()">Повторить</button></div>`;
+      <button class="pop-btn secondary" style="margin-top:10px" onclick="loadProfile(true)">Повторить</button></div>`;
     return;
   }
   const p = me.profile;
@@ -2890,7 +2969,6 @@ function renderProfile() {
       <div class="info-row"><span>🏙 Город</span><b>${escapeHtml(p.city || '—')}</b></div>
       <div class="info-row"><span>📞 Телефон</span><b>${escapeHtml(p.tel || '—')}</b></div>
       <div class="info-row"><span>${t('pf_lang')}</span><b>${langNames[p.lang] || p.lang}</b></div>
-      <div class="info-row"><span>🔔 Оповещения о потеряшках</span><b>${p.lostAlerts === false ? 'выкл' : 'вкл'}</b></div>
       <div class="info-row"><span>👁 Юзернейм в «Кто рядом?»</span><b>${p.showTg === 'Показан' ? 'показан' : 'скрыт'}</b></div>
       <div class="info-row"><span>🐕 Моих собак</span><b>${me.myDogsCount || 0}</b></div>
       <button class="pop-btn" style="margin-top:12px" onclick="openProfileEdit()">✏️ Редактировать</button>
@@ -2902,7 +2980,7 @@ function renderProfile() {
     <div class="sec-label">🔔 Уведомления</div>
     <div class="card tappable" onclick="openSubsSheet()">
       <div class="list-title" style="font-size:14px">🔔 Что мне приходит</div>
-      <div class="list-sub">оповещения о пропаже · дайджест «ищут дом» · подписки на районы</div>
+      <div class="list-sub">оповещения о пропаже — ${p.lostAlerts === false ? 'выкл' : 'вкл'} · дайджест «ищут дом» · подписки на районы и собак</div>
     </div>
 
 
@@ -2916,17 +2994,18 @@ function renderProfile() {
 }
 // Полезные материалы вынесены из общего полотна профиля в отдельный экран:
 // в ленте они выглядели как случайные карточки между настройками и поддержкой.
-function openResourcesSheet() {
-  const list = (me.resources || []);
-  openSheet(`
-    <h3>📚 Полезные материалы</h3>
-    ${list.length ? list.map(r => `
-      <div class="card tappable" onclick="openResourceLink('${escapeAttr(r.url || '')}')">
-        <div class="list-title" style="font-size:14px">${resourceIcon(r.url)} ${escapeHtml(r.title)}</div>
-        ${r.url ? `<div class="list-sub">${escapeHtml(r.url)}</div>` : ''}
-      </div>`).join('') : `<div class="empty">Пока пусто</div>`}
-    <button class="pop-btn secondary" style="margin-top:12px" onclick="closeSheet()">Закрыть</button>
-  `);
+async function renderResourcesScreen() {
+  const box = document.getElementById('resourcesBody');
+  if (!box) return;
+  // Материалы приезжают вместе с профилем. Экран можно открыть первым действием,
+  // до getMe, — тогда ждём его, а не показываем «пока пусто».
+  if (!me) { box.innerHTML = `<div class="empty">Загружаю…</div>`; try { await loadProfile(); } catch (e) {} }
+  const list = (me && me.resources) || [];
+  box.innerHTML = list.length ? list.map(r => `
+    <div class="card tappable" onclick="openResourceLink('${escapeAttr(r.url || '')}')">
+      <div class="list-title" style="font-size:14px">${resourceIcon(r.url)} ${escapeHtml(r.title)}</div>
+      ${r.url ? `<div class="list-sub">${escapeHtml(r.url)}</div>` : ''}
+    </div>`).join('') : `<div class="empty">Пока пусто</div>`;
 }
 function resourceIcon(url) {
   const u = (url || '').trim();
@@ -2968,38 +3047,113 @@ function openSubsSheet() {
     </div>
     <div class="card tappable" onclick="openRegionSubs()">
       <div class="list-title" style="font-size:14px">🗺 Подписки на районы</div>
-      <div class="list-sub" id="subsCount">новые собаки и места в выбранных районах</div>
+      <div class="list-sub">новые собаки и места в выбранных районах</div>
+    </div>
+    <div class="card tappable" onclick="openDogSubs()">
+      <div class="list-title" style="font-size:14px">🐕 Подписки на собак</div>
+      <div class="list-sub">новости по уличным собакам, за которыми ты следишь</div>
     </div>
     <button class="pop-btn" style="margin-top:12px" onclick="saveSubs()">Сохранить</button>
     <button class="pop-btn secondary" onclick="closeSheet()">Отмена</button>
   `);
 }
+
 // Экран подписок на районы. Подписка приходит сама, когда добавляешь собаку или место,
 // но снять её раньше можно было только в боте.
+// Район отправляем ИНДЕКСОМ в справочнике, а не именем: имя проходило через
+// экранирование при отрисовке и возвращалось на сервер изменённым, где сверка со
+// справочником его не находила.
+let _regionSubsCache = null;
 async function openRegionSubs() {
+  openSheet(`<h3>🗺 Подписки на районы</h3><div class="empty">Загружаю…</div>`);
   const res = await callApi('getRegionSubs', {});
-  if (!res.ok) { alert(t('err_fail') + (res.error || '')); return; }
-  const subs = res.subs || [], regions = res.regions || [];
+  if (!res.ok) { openSheet(`<h3>🗺 Подписки на районы</h3><div class="empty">Не получилось: ${escapeHtml(res.error || '')}
+    <button class="pop-btn secondary" style="margin-top:12px" onclick="openSubsSheet()">⬅️ Назад</button></div>`); return; }
+  _regionSubsCache = { subs: res.subs || [], regions: res.regions || [] };
+  renderRegionSubs();
+}
+function renderRegionSubs() {
+  const { subs, regions } = _regionSubsCache || { subs: [], regions: [] };
   openSheet(`
     <h3>🗺 Подписки на районы</h3>
     <div class="list-sub" style="margin-bottom:10px">Приходят новые собаки и места в этих районах, а также сообщения «нашлась».</div>
-    ${regions.length ? regions.map(r => `
-      <div class="card tappable" onclick="toggleRegionSub('${escapeAttr(r)}', this)">
+    ${regions.length ? regions.map((r, i) => `
+      <div class="card tappable" onclick="toggleRegionSub(${i})">
         <div class="row-between">
           <div class="list-title" style="font-size:14px">${escapeHtml(r)}</div>
           <div style="font-size:18px">${subs.indexOf(r) !== -1 ? '🔔' : '🔕'}</div>
         </div>
-      </div>`).join('') : '<div class="empty">Справочник районов пуст</div>'}
+      </div>`).join('') : `<div class="empty">Справочник районов пуст — районы задаются в таблице (лист Lists, колонка 4)</div>`}
     <button class="pop-btn secondary" style="margin-top:12px" onclick="openSubsSheet()">⬅️ Назад</button>
   `);
 }
-async function toggleRegionSub(region, el) {
-  const res = await callApi('toggleRegionSub', { region });
-  if (!res.ok) { alert(t('err_fail') + (res.error || '')); return; }
+async function toggleRegionSub(idx) {
+  if (!_regionSubsCache) return;
+  const region = _regionSubsCache.regions[idx];
+  if (!region) return;
+  const res = await callApi('toggleRegionSub', { regionIndex: idx });
+  if (!res.ok) {
+    uiAlert(res.error === 'no_regions' ? 'Справочник районов пуст — заполни лист Lists.' : (t('err_fail') + (res.error || '')));
+    return;
+  }
   haptic();
-  const ico = el.querySelector('div[style*="font-size:18px"]');
-  if (ico) ico.textContent = res.subscribed ? '🔔' : '🔕';
+  // Состояние держим у себя и перерисовываем список целиком: раньше иконку искали в
+  // DOM по подстроке инлайн-стиля, и любая правка вёрстки тихо ломала отклик.
+  const at = _regionSubsCache.subs.indexOf(region);
+  if (res.subscribed && at === -1) _regionSubsCache.subs.push(region);
+  if (!res.subscribed && at !== -1) _regionSubsCache.subs.splice(at, 1);
+  renderRegionSubs();
   setStatus(res.subscribed ? `🔔 Подписка на ${region}` : `🔕 Отписка от ${region}`, 1800);
+}
+
+// Подписки на собак. Включаются сами — когда заводишь уличную, дополняешь её анкету,
+// уточняешь или подтверждаешь геопозицию, пишешь комментарий. Отписаться раньше можно
+// было только из карточки конкретной собаки, то есть сначала её надо было найти.
+let _dogSubsCache = null;
+async function openDogSubs() {
+  openSheet(`<h3>🐕 Подписки на собак</h3><div class="empty">Загружаю…</div>`);
+  const res = await callApi('getDogSubs', {});
+  if (!res.ok) { openSheet(`<h3>🐕 Подписки на собак</h3><div class="empty">Не получилось: ${escapeHtml(res.error || '')}
+    <button class="pop-btn secondary" style="margin-top:12px" onclick="openSubsSheet()">⬅️ Назад</button></div>`); return; }
+  if (res.photoBase) notePhotoBase(res.photoBase);
+  _dogSubsCache = res.dogs || [];
+  renderDogSubs();
+}
+function renderDogSubs() {
+  const dogs = _dogSubsCache || [];
+  openSheet(`
+    <h3>🐕 Подписки на собак</h3>
+    <div class="list-sub" style="margin-bottom:10px">Приходят новости: новое фото, уточнённое место, комментарии соседей.</div>
+    ${dogs.length ? dogs.map((d, i) => `
+      <div class="card">
+        <div class="row-between">
+          <div class="row-left" onclick="openDogFromSubs('${d.id}')" style="cursor:pointer">
+            <div class="sub-ava" style="${photoUrlFromKey(d.photoKey) ? `background-image:url('${photoUrlFromKey(d.photoKey)}')` : ''}">${photoUrlFromKey(d.photoKey) ? '' : '🐕'}</div>
+            <div>
+              <div class="list-title" style="font-size:14px">${escapeHtml(d.name || 'Без клички')}</div>
+              <div class="list-sub">${escapeHtml([d.breed, d.region || d.city].filter(Boolean).join(' · ') || '—')}</div>
+            </div>
+          </div>
+          <button class="pop-btn secondary small" style="padding:5px 10px;margin:0" onclick="unsubDogFromList(${i})">🔕 Отписаться</button>
+        </div>
+      </div>`).join('') : '<div class="empty">Ты пока ни за кем не следишь. Подписка включается сама, когда заводишь уличную собаку или дополняешь её анкету.</div>'}
+    <button class="pop-btn secondary" style="margin-top:12px" onclick="openSubsSheet()">⬅️ Назад</button>
+  `);
+}
+function openDogFromSubs(id) {
+  const d = findDog(id);
+  if (d) openDogCard(d); else setStatus('Карточка недоступна — возможно, собаку убрали с карты', 2400);
+}
+async function unsubDogFromList(i) {
+  const d = (_dogSubsCache || [])[i];
+  if (!d) return;
+  const res = await callApi('toggleDogSub', { dogId: d.id });
+  if (!res || !res.ok) { uiAlert(t('err_fail') + ((res && res.error) || '')); return; }
+  haptic();
+  const dog = findDog(d.id); if (dog) dog.subscribed = res.subscribed;   // карточка не должна разъезжаться со списком
+  if (!res.subscribed) _dogSubsCache.splice(i, 1);
+  renderDogSubs();
+  setStatus(`🔕 Отписка от «${d.name || 'собаки'}»`, 1800);
 }
 
 async function saveSubs() {
@@ -3014,7 +3168,7 @@ async function saveSubs() {
   closeSheet();
   if (res.ok) { haptic(); me.profile.lostAlerts = changes.lostAlerts; me.profile.digest = changes.digest;
     renderProfile(); setStatus('✅ Сохранено', 1800); }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
   } finally { delete _inFlight['subs']; }
 }
 
@@ -3115,10 +3269,6 @@ function openProfileEdit() {
       <input type="checkbox" id="prShowTg" ${p.showTg === 'Показан' ? 'checked' : ''}>
       <label style="margin:0">${t('pf_showtg')}</label>
     </div>
-    <div class="field field-row">
-      <input type="checkbox" id="prLostAlerts" ${p.lostAlerts === false ? '' : 'checked'}>
-      <label style="margin:0">${t('pf_lostalerts')}</label>
-    </div>
     <button class="pop-btn" onclick="submitProfileEdit()">${t('fd_save')}</button>
   `);
 }
@@ -3129,12 +3279,14 @@ async function submitProfileEdit() {
     tel: document.getElementById('prTel').value,
     city: cityEl ? cityEl.value : undefined,
     lang: document.getElementById('prLang').value,
-    showTg: document.getElementById('prShowTg').checked ? 'Показан' : 'Скрыт',
-    lostAlerts: document.getElementById('prLostAlerts').checked
+    showTg: document.getElementById('prShowTg').checked ? 'Показан' : 'Скрыт'
+    // lostAlerts здесь больше нет: подписка на потеряшек живёт в «Что мне приходит»
+    // вместе с дайджестом и подписками на районы. Две точки управления одной
+    // настройкой расходились — в профиле выключил, в подписках снова включено.
   }});
   closeSheet();
   if (res.ok) { haptic(); me = null; loadProfile(true); setStatus(t('pf_saved'), 2000); }
-  else alert(t('err_fail') + (res.error || ''));
+  else uiAlert(t('err_fail') + (res.error || ''));
 }
 
 // ================== СТАРТ ==================
