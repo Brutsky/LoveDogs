@@ -109,6 +109,15 @@
   .leaflet-control-zoom a:last-child { border-bottom: none !important; }
   .leaflet-control-zoom a:hover { background: var(--bg) !important; }
   .leaflet-control-attribution { border-radius: 10px 0 0 0; font-size: 9px; opacity: .65; }
+  .opt-mark { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: .01em; }
+  .hint { font-size: 12px; color: var(--muted); line-height: 1.4; margin-top: 5px; }
+  details.more { margin-top: 4px; border-top: 1px solid var(--line); padding-top: 10px; }
+  details.more > summary { list-style: none; cursor: pointer; font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px; padding: 6px 0; color: var(--text); }
+  details.more > summary::-webkit-details-marker { display: none; }
+  details.more > summary::after { content: '⌄'; margin-left: auto; font-size: 18px; color: var(--muted);
+    transition: transform .18s ease; }
+  details.more[open] > summary::after { transform: rotate(180deg); }
   .title-sub { font-size: 13px; font-weight: 500; color: var(--muted); }
   .sw { position: relative; display: inline-block; width: 44px; height: 26px; }
   .sw input { opacity: 0; width: 0; height: 0; }
@@ -1227,19 +1236,70 @@ function renderSubfilters() {
   document.getElementById('legendBtn').classList.toggle('show', activeScreen === 'map');
 }
 
+// ==========================================================
+// КЭШ СЛОЁВ КАРТЫ
+// Apps Script на холодную отвечает секундами, и всё это время человек смотрит на
+// пустую карту. Данные при этом почти не меняются между открытиями. Поэтому:
+// отрисовываем сразу из локального кэша, а свежие данные подтягиваем фоном и
+// перерисовываем, если они отличаются. Кэш живёт сутки, но «свежим» считается 5 минут —
+// после этого фоновое обновление идёт всегда.
+// ==========================================================
+const LAYER_CACHE_TTL = 24 * 60 * 60 * 1000;   // сколько вообще храним
+const LAYER_FRESH_MS = 5 * 60 * 1000;          // сколько считаем актуальным без обновления
+
+function layerCacheKey(kind) { return 'ld_layer_' + kind + '_' + (MY_UID || 'anon'); }
+function readLayerCache(kind) {
+  try {
+    const raw = localStorage.getItem(layerCacheKey(kind));
+    if (!raw) return null;
+    const box = JSON.parse(raw);
+    if (!box || !box.t || Date.now() - box.t > LAYER_CACHE_TTL) return null;
+    return box;
+  } catch (e) { return null; }   // приватный режим или переполнение — просто работаем без кэша
+}
+function writeLayerCache(kind, data) {
+  try { localStorage.setItem(layerCacheKey(kind), JSON.stringify({ t: Date.now(), d: data })); }
+  catch (e) { /* квота кончилась — не беда, это всего лишь ускорение */ }
+}
+
+async function fetchLayer(kind) {
+  const uid = (kind === 'dogs' && MY_UID) ? MY_UID : '';
+  const res = await fetch(`${API_URL}?type=${kind}${uid ? '&uid=' + uid : ''}&${initDataQS()}`);
+  const json = await res.json();
+  return json[kind] || [];
+}
+
 async function loadData(kind, force) {
   if (dataCache[kind] && !force) return dataCache[kind];
+
+  const cached = force ? null : readLayerCache(kind);
+  if (cached) {
+    dataCache[kind] = cached.d;
+    // Данные свежие — показываем и ничего не ждём.
+    if (Date.now() - cached.t < LAYER_FRESH_MS) return dataCache[kind];
+    // Данные постарше: отдаём их немедленно, а обновление идёт фоном — без «часиков»,
+    // потому что человеку уже есть на что смотреть.
+    fetchLayer(kind).then(fresh => {
+      if (!fresh || !fresh.length) return;
+      const changed = JSON.stringify(fresh) !== JSON.stringify(dataCache[kind]);
+      dataCache[kind] = fresh;
+      writeLayerCache(kind, fresh);
+      if (changed) { try { renderLayer(); } catch (e) {} }
+    }).catch(() => {});
+    return dataCache[kind];
+  }
+
   setStatus('Загружаю…');
   try {
-    const uid = (kind === 'dogs' && MY_UID) ? MY_UID : '';
     setBusy(true);
-    const res = await fetch(`${API_URL}?type=${kind}${uid ? '&uid=' + uid : ''}&${initDataQS()}`);
-    const json = await res.json();
-    dataCache[kind] = json[kind] || [];
+    dataCache[kind] = await fetchLayer(kind);
+    writeLayerCache(kind, dataCache[kind]);
     setStatus(null);
   } catch (err) {
-    dataCache[kind] = [];
-    setStatus('Не получилось загрузить данные 😔', 2500);
+    // Сеть отвалилась — лучше показать вчерашние данные, чем пустой экран.
+    const stale = readLayerCache(kind);
+    dataCache[kind] = stale ? stale.d : [];
+    setStatus(stale ? 'Нет связи — показываю сохранённое' : 'Не получилось загрузить данные 😔', 3000);
   } finally { setBusy(false); }
   return dataCache[kind];
 }
@@ -1427,7 +1487,13 @@ async function callApi(action, payload) {
   setBusy(true);
   try {
     const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action, initData, payload }) });
-    return await res.json();
+    const json = await res.json();
+    // Подпись Telegram живёт сутки. Держать приложение открытым дольше — обычное дело,
+    // и раньше человек в этом случае получал безликое «не получилось», думая, что сломался бот.
+    if (json && json.ok === false && json.error === 'auth') {
+      setStatus('Сессия устарела — закрой и открой приложение заново', 4000);
+    }
+    return json;
   } catch (e) { return { ok: false, error: 'network' }; }
   finally { setBusy(false); }
 }
@@ -1983,6 +2049,9 @@ function askDeleteDog(dogId, name, suggest) {
   `);
 }
 async function submitDeleteDog(dogId) {
+  if (_inFlight['deleteDog']) return;   // защита от повторного нажатия
+  _inFlight['deleteDog'] = true;
+  try {
   const reason = document.getElementById('delReason').value.trim();
   if (!reason) { alert('Напиши причину — так модераторам проще.'); return; }
   const res = await callApi('deleteDog', { dogId, reason });
@@ -1994,6 +2063,7 @@ async function submitDeleteDog(dogId) {
     else setStatus('Анкета удалена', 2000);
   }
   else alert(t('err_fail') + (res.error || ''));
+  } finally { delete _inFlight['deleteDog']; }
 }
 
 // Список собак пользователя прямо в профиле (все — списком, тап открывает карточку)
@@ -2075,54 +2145,86 @@ let addDogDraft = null;
 function openAddStreetDog() {
   openAddDogSheet({ status: 'Уличная' });
 }
+// Форма добавления собаки.
+// Была одна на оба случая: одиннадцать полей подряд, все выглядят одинаково важными,
+// а обязательные у уличной и домашней разные. Человек либо бросал на середине, либо
+// заполнял лишнее. Теперь форма следует за ответом на первый вопрос:
+//   • ДОМАШНЯЯ — нужна только кличка. Всё остальное спрятано за «Дополнить анкету»:
+//     это личная карточка, её можно заполнять постепенно.
+//   • УЛИЧНАЯ — нужны точка на карте и приметы, по которым пса узнают соседи:
+//     окрас и бирка вынесены наверх, кличка необязательна (её часто нет).
+// Необязательные поля не исчезают — они сворачиваются, чтобы не пугать длиной.
 function openAddDogSheet(draft) {
   addDogDraft = draft || addDogDraft || { status: 'У владельца' };
   const d = addDogDraft;
-  const statuses = [['У владельца',t('fd_home')], ['Уличная',t('fd_street')]];
+  const street = d.status === 'Уличная';
+  const statuses = [['У владельца', t('fd_home')], ['Уличная', t('fd_street')]];
+
+  const fName = `<div class="field"><label>${t('fd_name')}${street ? ' <span class="opt-mark">необязательно</span>' : ''}</label>
+      <input type="text" id="adName" value="${escapeAttr(d.name || '')}" placeholder="${street ? 'Например: Рыжик со двора' : t('fd_name_ph')}"></div>`;
+  const fColor = `<div class="field"><label>${t('fd_color')}</label><input type="text" id="adColor" value="${escapeAttr(d.color || '')}" placeholder="${t('fd_color_ph')}"></div>`;
+  const fTag = `<div class="field"><label>${t('fd_tag')}${street ? ' <span class="opt-mark">если видно</span>' : ''}</label>
+      <div class="field-row">
+        <input type="text" id="adTagNum" placeholder="${t('fd_tag_ph')}" value="${escapeAttr(d.tagNumber || '')}">
+        <input type="text" id="adTagColor" placeholder="Цвет" value="${escapeAttr(d.tagColor || '')}">
+      </div>
+      ${street ? `<div class="hint">Бирка означает, что собака уже в муниципальной программе. По её номеру пса опознают.</div>` : ''}</div>`;
+  const fBreed = `<div class="field"><label>${t('fd_breed')}</label>
+      <select id="adBreedSel" onchange="document.getElementById('adBreedManual').style.display = this.value==='__manual__' ? 'block':'none'">
+        ${selOpts(COMMON_BREEDS, d.breed, '—')}
+        <option value="__manual__">${t('fd_type_text')}</option>
+      </select>
+      <input type="text" id="adBreedManual" placeholder="${t('fd_breed_ph')}" style="display:none;margin-top:6px" value="${escapeAttr(d.breedManual || '')}"></div>`;
+  const fSex = `<div class="field"><label>${t('fd_sex')}</label><select id="adSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>`;
+  const fAge = `<div class="field"><label>${t('fd_age')}</label><select id="adAge">${ageOptsHtml(d.age, '—')}</select></div>`;
+  const fRegion = REGIONS_LIST.length ? `<div class="field"><label>${t('fd_region_tb')}</label><select id="adRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : '';
+  const fSter = `<div class="field"><label>${t('fd_ster')}</label><select id="adSter">${selOpts(TRISTATE, d.sterilized || t('fd_unknown'))}</select></div>`;
+  const fMemo = `<div class="field"><label>${t('fd_notes')}</label><textarea id="adMemo" maxlength="200" oninput="updCount(this,200)" placeholder="${street ? 'Характер, к кому подходит, чего боится…' : 'Характер, приметы, что важно знать…'}">${escapeHtml(d.memo || '')}</textarea></div>`;
+  const fGeo = `<button class="pop-btn ${street ? '' : 'secondary'}" onclick="addDogPickGeo()">${d.lat ? t('fd_pin_set') : t('fd_pin')}</button>
+    <div class="geo-note">${d.lat ? '✅ ' + Number(d.lat).toFixed(5) + ', ' + Number(d.lng).toFixed(5) : (street ? 'Обязательно: без точки пса не найдут на карте' : t('fd_pin_hint'))}</div>`;
+
+  // Что показываем сразу, а что прячем — зависит от типа собаки.
+  const primary = street ? [fColor, fTag, fName, fGeo].join('') : [fName, fGeo].join('');
+  const extra = street ? [fBreed, fSex, fAge, fRegion, fSter, fMemo].join('')
+                       : [fBreed, fColor, fSex, fAge, fRegion, fSter, fTag, fMemo].join('');
+
   openSheet(`
     <h3>${t('fd_new')}</h3>
     <div class="field"><label>${t('fd_who')}</label>
       <div class="seg-pick" id="adStatus">${statuses.map(([v, l]) =>
         `<div class="opt ${d.status === v ? 'active' : ''}" data-v="${v}">${l}</div>`).join('')}</div>
+      <div class="hint">${street
+        ? 'Пёс, который живёт в районе. Нужны приметы и точка на карте — по ним его узнают соседи.'
+        : 'Твоя собака. Достаточно клички — остальное можно дополнить позже.'}</div>
     </div>
-    <div class="field"><label>${t('fd_name')}</label><input type="text" id="adName" value="${escapeAttr(d.name || '')}" placeholder="${t('fd_name_ph')}"></div>
-    <div class="field"><label>${t('fd_breed')}</label>
-      <select id="adBreedSel" onchange="document.getElementById('adBreedManual').style.display = this.value==='__manual__' ? 'block':'none'">
-        ${selOpts(COMMON_BREEDS, d.breed, '—')}
-        <option value="__manual__">${t('fd_type_text')}</option>
-      </select>
-      <input type="text" id="adBreedManual" placeholder="${t('fd_breed_ph')}" style="display:none;margin-top:6px" value="${escapeAttr(d.breedManual || '')}">
-    </div>
-    <div class="field"><label>${t('fd_color')}</label><input type="text" id="adColor" value="${escapeAttr(d.color || '')}" placeholder="${t('fd_color_ph')}"></div>
-    <div class="field"><label>${t('fd_sex')}</label><select id="adSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>
-    <div class="field"><label>${t('fd_age')}</label><select id="adAge">${ageOptsHtml(d.age, '—')}</select></div>
-    ${REGIONS_LIST.length ? `<div class="field"><label>${t('fd_region_tb')}</label><select id="adRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : ''}
-    <div class="field"><label>${t('fd_ster')}</label><select id="adSter">${selOpts(TRISTATE, d.sterilized || t('fd_unknown'))}</select></div>
-    <div class="field"><label>${t('fd_tag')}</label>
-      <div class="field-row">
-        <input type="text" id="adTagNum" placeholder="${t('fd_tag_ph')}" value="${escapeAttr(d.tagNumber || '')}">
-        <input type="text" id="adTagColor" placeholder="Цвет" value="${escapeAttr(d.tagColor || '')}">
-      </div>
-    </div>
-    <div class="field"><label>${t('fd_notes')}</label><textarea id="adMemo" maxlength="200" oninput="updCount(this,200)" placeholder="Характер, приметы, что важно знать…">${escapeHtml(d.memo || '')}</textarea></div>
-    <button class="pop-btn secondary" onclick="addDogPickGeo()">${d.lat ? t('fd_pin_set') : t('fd_pin')}</button>
-    <div class="geo-note">${d.lat ? '✅ ' + d.lat + ', ' + d.lng : t('fd_pin_hint')}</div>
+    ${primary}
+    <details class="more" ${d._moreOpen ? 'open' : ''} ontoggle="addDogDraft._moreOpen = this.open">
+      <summary>Дополнить анкету <span class="opt-mark">необязательно</span></summary>
+      <div style="padding-top:10px">${extra}</div>
+    </details>
     <div style="height:8px"></div>
     <button class="pop-btn" id="addDogSaveBtn" onclick="submitAddDog()">${t('fd_save')}</button>
     <div class="geo-note" style="text-align:center;margin-top:8px">${t('fd_photo_hint')}</div>
   `);
+
   document.querySelectorAll('#adStatus .opt').forEach(o => o.onclick = () => {
-    document.querySelectorAll('#adStatus .opt').forEach(x => x.classList.remove('active'));
-    o.classList.add('active');
+    // Тип меняет состав формы, поэтому сохраняем введённое и перерисовываем.
+    collectAddDogDraft();
     addDogDraft.status = o.dataset.v;
+    openAddDogSheet(addDogDraft);
   });
 }
+
 function collectAddDogDraft() {
-  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
-  addDogDraft = Object.assign(addDogDraft || {}, {
-    name: g('adName'), breed: g('adBreedSel'), breedManual: g('adBreedManual'), color: g('adColor'),
-    sex: g('adSex'), age: g('adAge'), region: g('adRegion'),
-    sterilized: g('adSter'), tagNumber: g('adTagNum'), tagColor: g('adTagColor'), memo: g('adMemo')
+  // Читаем только те поля, что есть на экране. Раньше отсутствующее поле возвращало
+  // пустую строку и затирало уже введённое — при смене типа собаки данные пропадали.
+  const map = { name: 'adName', breed: 'adBreedSel', breedManual: 'adBreedManual', color: 'adColor',
+    sex: 'adSex', age: 'adAge', region: 'adRegion', sterilized: 'adSter',
+    tagNumber: 'adTagNum', tagColor: 'adTagColor', memo: 'adMemo' };
+  addDogDraft = addDogDraft || {};
+  Object.keys(map).forEach(k => {
+    const el = document.getElementById(map[k]);
+    if (el) addDogDraft[k] = el.value;
   });
 }
 async function addDogPickGeo() {
@@ -2133,14 +2235,24 @@ async function addDogPickGeo() {
 }
 let addDogSubmitting = false;
 async function submitAddDog() {
+  if (_inFlight['addDog']) return;   // защита от повторного нажатия
+  _inFlight['addDog'] = true;
+  try {
   // Сохранение идёт заметное время (запись в таблицу + уведомления), и без защиты
   // повторные тапы создавали ДУБЛИ анкет. Блокируем кнопку на время запроса.
   if (addDogSubmitting) return;
   collectAddDogDraft();
   const d = addDogDraft;
-  if (!d.name || !d.name.trim()) { alert('Кличка обязательна 🐶'); return; }
+  // Уличную заводим в боте: там можно приложить фото, без которого пса не опознать
+  // и не переслать карточку. Уводим сразу, сохранив уже введённое в черновик.
   if (d.status === 'Уличная') {
-    alert('📸 Уличную собаку добавляй через бота — нужно фото, без которого её не опознать. Открой бота → «Добавить собаку».');
+    closeSheet();
+    if (confirm('📸 У уличной собаки нужно фото — без него её не опознают и не перешлют карточку.\n\nОткрыть бота и добавить там? Займёт минуту.')) openBotDeepLink('newdog');
+    return;
+  }
+  if (!d.name || !d.name.trim()) {
+    alert('Как зовут собаку? Кличка — единственное обязательное поле, остальное можно дополнить потом 🐶');
+    const el = document.getElementById('adName'); if (el) el.focus();
     return;
   }
   let breed = d.breed === '__manual__' ? (d.breedManual || '').trim() : d.breed;
@@ -2170,6 +2282,7 @@ async function submitAddDog() {
     addDogSubmitting = false;
     if (btn) { btn.disabled = false; btn.textContent = t('fd_save'); }
   }
+  } finally { delete _inFlight['addDog']; }
 }
 
 // ================== ЭКРАН «СОБАКИ» ==================
@@ -2243,9 +2356,28 @@ function renderDogsScreen() {
   const addBtn = dogSegment === 'mine'
     ? `<button class="pop-btn" style="margin-bottom:12px" onclick="openAddDogSheet({status:'У владельца'})">➕ Добавить собаку</button>` : '';
   if (!filtered.length) {
-    const msgs = { mine: 'У тебя пока нет анкет — добавь первую! 🐶', lost: 'Потеряшек нет — и это отлично 🎉',
-      seeking: 'Сейчас никто не ищет новый дом', donors: 'По этим фильтрам никого — попробуй ослабить', all: 'Ничего не нашлось' };
-    box.innerHTML = addBtn + `<div class="empty"><div class="big">🐾</div>${q ? 'По запросу ничего не нашлось' : msgs[dogSegment]}</div>`;
+    // Пустой экран должен предлагать выход, а не сообщать о неудаче. Раньше здесь был
+    // тупик: «ничего не нашлось» — и всё, дальше человек либо гадает, либо уходит.
+    const act = (label, onclick) => `<button class="pop-btn" style="margin-top:12px" onclick="${onclick}">${label}</button>`;
+    const reset = act('Показать всех собак', "dogSegment='all';document.getElementById('dogSearch').value='';renderDogSegments();renderDogsScreen()");
+    const states = {
+      mine:    { ico: '🐶', text: 'У тебя пока нет анкет. Заведи первую — соседи будут узнавать твою собаку на прогулке.',
+                 btn: act('➕ Добавить собаку', "openAddDogSheet({status:'У владельца'})") },
+      lost:    { ico: '🎉', text: 'Сейчас никто не потерялся — и это лучшая новость на этом экране.', btn: reset },
+      seeking: { ico: '🏡', text: 'Сейчас никто не ищет новый дом. Если знаешь собаку, которой нужны хозяева, — добавь её на карту.',
+                 btn: act('➕ Добавить собаку', "openAddDogSheet({status:'Уличная'})") },
+      donors:  { ico: '🩸', text: 'По этим фильтрам доноров нет. Попробуй смягчить условия — например, убрать ограничение по весу.', btn: reset },
+      home:    { ico: '🏠', text: 'Домашних собак в этом районе пока не отмечали.', btn: reset },
+      street:  { ico: '🌳', text: 'Уличных собак тут ещё никто не отмечал. Встретишь пса — добавь, и район будет о нём знать.',
+                 btn: act('➕ Добавить уличного пса', "openAddDogSheet({status:'Уличная'})") },
+      all:     { ico: '🐾', text: 'Здесь пока пусто. Каждая собака на карте появляется благодаря кому-то из соседей.',
+                 btn: act('➕ Добавить собаку', "openAddDogSheet({status:'У владельца'})") }
+    };
+    const st = q
+      ? { ico: '🔍', text: `По запросу «${escapeHtml(q)}» ничего не нашлось. Попробуй часть клички или номер бирки.`,
+          btn: act('Сбросить поиск', "document.getElementById('dogSearch').value='';renderDogsScreen()") }
+      : (states[dogSegment] || states.all);
+    box.innerHTML = addBtn + `<div class="empty"><div class="big">${st.ico}</div>${st.text}${st.btn}</div>`;
     return;
   }
   const statusIco = s => s === 'У владельца' ? '🏠' : '🌳';
@@ -2419,6 +2551,9 @@ function pickStar(n) {
   haptic('success');
 }
 async function submitReview(id, itemType) {
+  if (_inFlight['review']) return;   // защита от повторного нажатия
+  _inFlight['review'] = true;
+  try {
   const rating = parseInt(document.getElementById('starsPick').dataset.rating || '0', 10);
   if (!rating) { alert(t('rv_need')); return; }
   const text = document.getElementById('reviewText').value;
@@ -2430,6 +2565,16 @@ async function submitReview(id, itemType) {
     else { dataCache.places = null; renderLayer(); }
     setStatus('✅ Спасибо за отзыв!', 2000);
   } else alert(t('err_fail') + (res.error === 'self review' ? 'себя оценивать нельзя 🙂' : (res.error || '')));
+  } finally { delete _inFlight['review']; }
+}
+
+// Общая защита от двойного нажатия: экран может «думать» секунды, и человек жмёт
+// второй раз — так появлялись дубли анкет и повторные заявки.
+const _inFlight = {};
+async function once(key, fn) {
+  if (_inFlight[key]) return;
+  _inFlight[key] = true;
+  try { return await fn(); } finally { delete _inFlight[key]; }
 }
 
 let geoConfirming = false;
@@ -2685,6 +2830,9 @@ async function addPlacePickGeo() {
   document.getElementById('fab').onclick();
 };
 async function submitAddPlace() {
+  if (_inFlight['addPlace']) return;   // защита от повторного нажатия
+  _inFlight['addPlace'] = true;
+  try {
   const name = document.getElementById('addName').value.trim();
   if (!name) { alert('Укажи название'); return; }
   const payload = {
@@ -2700,6 +2848,7 @@ async function submitAddPlace() {
   closeSheet();
   if (res.ok) { haptic(); setStatus('✅ Появится на карте после проверки', 2600); }
   else alert(t('err_fail') + (res.error || ''));
+  } finally { delete _inFlight['addPlace']; }
 }
 
 // ================== ПРОФИЛЬ ==================
@@ -2714,6 +2863,14 @@ async function loadProfile(force) {
   renderProfile();
 }
 function renderProfile() {
+  // getMe мог не ответить (сеть, холодный старт скрипта). Раньше здесь выпадало
+  // «Cannot read properties of null» и экран профиля оставался пустым навсегда.
+  if (!me || !me.profile) {
+    const box = document.getElementById('profileBody');
+    if (box) box.innerHTML = `<div class="empty">Не получилось загрузить профиль.<br>
+      <button class="pop-btn secondary" style="margin-top:10px" onclick="initProfileScreen()">Повторить</button></div>`;
+    return;
+  }
   const p = me.profile;
   const langNames = { RU: '🇷🇺 Русский', GE: '🇬🇪 ქართული', EN: '🇬🇧 English' };
   const resources = (me.resources || []).map(r => `
@@ -2809,15 +2966,46 @@ function openSubsSheet() {
         <b><label class="sw"><input type="checkbox" id="swDigest" ${dg ? 'checked' : ''}><span></span></label></b></div>
       <div class="list-sub" style="margin-top:2px">Одно сообщение в неделю с одной собакой, которой ищут хозяев.</div>
     </div>
-    <div class="card tappable" onclick="openBotDeepLink('subs')">
+    <div class="card tappable" onclick="openRegionSubs()">
       <div class="list-title" style="font-size:14px">🗺 Подписки на районы</div>
-      <div class="list-sub">Настраиваются в боте — там же, где появляются</div>
+      <div class="list-sub" id="subsCount">новые собаки и места в выбранных районах</div>
     </div>
     <button class="pop-btn" style="margin-top:12px" onclick="saveSubs()">Сохранить</button>
     <button class="pop-btn secondary" onclick="closeSheet()">Отмена</button>
   `);
 }
+// Экран подписок на районы. Подписка приходит сама, когда добавляешь собаку или место,
+// но снять её раньше можно было только в боте.
+async function openRegionSubs() {
+  const res = await callApi('getRegionSubs', {});
+  if (!res.ok) { alert(t('err_fail') + (res.error || '')); return; }
+  const subs = res.subs || [], regions = res.regions || [];
+  openSheet(`
+    <h3>🗺 Подписки на районы</h3>
+    <div class="list-sub" style="margin-bottom:10px">Приходят новые собаки и места в этих районах, а также сообщения «нашлась».</div>
+    ${regions.length ? regions.map(r => `
+      <div class="card tappable" onclick="toggleRegionSub('${escapeAttr(r)}', this)">
+        <div class="row-between">
+          <div class="list-title" style="font-size:14px">${escapeHtml(r)}</div>
+          <div style="font-size:18px">${subs.indexOf(r) !== -1 ? '🔔' : '🔕'}</div>
+        </div>
+      </div>`).join('') : '<div class="empty">Справочник районов пуст</div>'}
+    <button class="pop-btn secondary" style="margin-top:12px" onclick="openSubsSheet()">⬅️ Назад</button>
+  `);
+}
+async function toggleRegionSub(region, el) {
+  const res = await callApi('toggleRegionSub', { region });
+  if (!res.ok) { alert(t('err_fail') + (res.error || '')); return; }
+  haptic();
+  const ico = el.querySelector('div[style*="font-size:18px"]');
+  if (ico) ico.textContent = res.subscribed ? '🔔' : '🔕';
+  setStatus(res.subscribed ? `🔔 Подписка на ${region}` : `🔕 Отписка от ${region}`, 1800);
+}
+
 async function saveSubs() {
+  if (_inFlight['subs']) return;   // защита от повторного нажатия
+  _inFlight['subs'] = true;
+  try {
   const changes = {
     lostAlerts: document.getElementById('swAlerts').checked,
     digest: document.getElementById('swDigest').checked
@@ -2827,6 +3015,7 @@ async function saveSubs() {
   if (res.ok) { haptic(); me.profile.lostAlerts = changes.lostAlerts; me.profile.digest = changes.digest;
     renderProfile(); setStatus('✅ Сохранено', 1800); }
   else alert(t('err_fail') + (res.error || ''));
+  } finally { delete _inFlight['subs']; }
 }
 
 // ================== ДАШБОРД ПРОДУКТА (только админ) ==================
@@ -2909,6 +3098,7 @@ async function openAdminDashboard() {
 }
 
 function openProfileEdit() {
+  if (!me || !me.profile) { setStatus('Профиль ещё не загрузился', 2000); return; }
   const p = me.profile;
   const cities = me.cities || [];
   openSheet(`
@@ -2948,19 +3138,17 @@ async function submitProfileEdit() {
 }
 
 // ================== СТАРТ ==================
+// Справочники — ОДНИМ запросом. Было три последовательных: породы, районы, возрасты.
+// На холодном Apps Script каждый стоит несколько сотен миллисекунд, и все три
+// выполнялись до того, как человек мог что-то ввести.
 (async function loadRefData() {
   try {
-    const r = await fetch(`${API_URL}?type=breeds&${initDataQS()}`); const j = await r.json();
+    const r = await fetch(`${API_URL}?type=refs&${initDataQS()}`);
+    const j = await r.json();
     if (j.breeds && j.breeds.length) COMMON_BREEDS = j.breeds;
-  } catch (e) {}
-  try {
-    const r2 = await fetch(`${API_URL}?type=regions&${initDataQS()}`); const j2 = await r2.json();
-    if (j2.regions && j2.regions.length) REGIONS_LIST = j2.regions;
-  } catch (e) {}
-  try {
-    const r3 = await fetch(`${API_URL}?type=ages&${initDataQS()}`); const j3 = await r3.json();
-    if (j3.ages && j3.ages.length) AGE_OPTIONS = j3.ages;
-  } catch (e) {}
+    if (j.regions && j.regions.length) REGIONS_LIST = j.regions;
+    if (j.ages && j.ages.length) AGE_OPTIONS = j.ages;
+  } catch (e) { /* останутся значения по умолчанию — форма работает и без справочников */ }
 })();
 
 (function initFromQuery() {
