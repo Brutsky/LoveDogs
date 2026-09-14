@@ -128,9 +128,14 @@
   .sw input:checked + span::before { transform: translateX(18px); }
   .legend-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
   .legend-row { display: flex; gap: 12px; align-items: flex-start; }
-  .legend-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: flex;
-    align-items: center; justify-content: center; font-size: 17px;
-    background: var(--bg); border: 2px solid var(--line); box-shadow: var(--shadow-s); }
+  /* Слот фиксированной ширины под настоящий .marker-pin: легенда показывает ровно
+     тот значок, который человек видит на карте, включая кольца и пунктир. */
+  .legend-pin { flex: none; width: 46px; display: flex; align-items: center; justify-content: center;
+    min-height: 40px; }
+  .legend-pin .marker-pin { width: 34px; height: 34px; }
+  .legend-pin .marker-pin span { font-size: 16px; }
+  .legend-pin .marker-pin.lost { animation: none; }   /* в списке пульсация только отвлекает */
+  .legend-pin .pack-badge { transform: scale(.8); white-space: nowrap; }
   #legendBtn { position: absolute; bottom: calc(var(--tabbar-h) + 16px); left: 14px; z-index: 750;
     width: 38px; height: 38px; padding: 0; border-radius: 50%; display: none;
     align-items: center; justify-content: center;
@@ -259,6 +264,12 @@
   .card.tappable { cursor: pointer; transition: transform .1s ease; }
   /* Удаление комментария — служебное действие, а не тревожное: нейтральная кнопка
      вместо красной. Красный в интерфейсе оставляем за потеряшками. */
+  .star-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .star-btn { flex: 1 1 calc(33% - 8px); min-width: 84px; padding: 10px 6px; border: 0;
+    border-radius: var(--r-card); background: var(--surface); color: var(--fg);
+    font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: transform .1s ease; }
+  .star-btn:active { transform: scale(.96); }
   .row-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .sub-ava { width: 40px; height: 40px; border-radius: 10px; flex: 0 0 40px; background: var(--card);
              background-size: cover; background-position: center; display: flex; align-items: center;
@@ -361,19 +372,21 @@
     backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid var(--line); display: flex; padding-bottom: env(safe-area-inset-bottom); }
   /* Навигация без подписей: иконки самодостаточны, а подписи съедали высоту
-     и мешали на маленьких экранах. Активный пункт выделяем «таблеткой». */
+     и мешали на маленьких экранах. Активный пункт выделяем «таблеткой».
+     Таблетка — фон самой иконки, а не псевдоэлемент с z-index:-1: тот уезжал
+     ЗА полупрозрачный фон таббара и на части устройств не появлялся вовсе,
+     из-за чего активный пункт выглядел никак не выделенным. */
   .nav-item { flex: 1; display: flex; align-items: center; justify-content: center;
     color: var(--hint); cursor: pointer; user-select: none; position: relative;
-    height: 46px; transition: color .15s ease; }
-  .nav-item .ico { font-size: 23px; line-height: 1; transition: transform .18s ease;
-    display: flex; align-items: center; justify-content: center; }
-  .nav-item .ico svg { display: block; }
+    height: 100%; transition: color .15s ease; -webkit-tap-highlight-color: transparent; }
+  .nav-item .ico { font-size: 21px; line-height: 1; width: 48px; height: 34px;
+    border-radius: 999px; display: flex; align-items: center; justify-content: center;
+    background: transparent; transition: background .18s ease, transform .18s ease;
+    filter: saturate(.25) opacity(.7); }
   .nav-item.active { color: var(--paw-deep); }
-  .nav-item.active::before { content: ""; position: absolute; width: 52px; height: 34px;
-    border-radius: 999px; background: var(--surface); z-index: -1; }
-  .nav-item.active .ico { transform: translateY(-1px) scale(1.06); }
+  .nav-item.active .ico { background: var(--surface); filter: none; transform: scale(1.04); }
   .nav-item:active .ico { transform: scale(.92); }
-  .nav-dot { position: absolute; top: 8px; right: calc(50% - 16px); width: 8px; height: 8px;
+  .nav-dot { position: absolute; top: 12px; right: calc(50% - 16px); width: 8px; height: 8px;
     border-radius: 50%; background: var(--red); display: none; border: 1.5px solid var(--bg); }
   .nav-dot.show { display: block; }
 
@@ -564,15 +577,8 @@
     <div class="nav-item active" data-screen="map" data-i18n-title="tab_map_l"><span class="ico">🗺</span></div>
     <div class="nav-item" data-screen="dogs" data-i18n-title="tab_dogs_l"><span class="ico">🐾</span><span class="nav-dot" id="lostDot"></span></div>
     <div class="nav-item" data-screen="sitters" data-i18n-title="tab_sitters_l"><span class="ico">🧑</span></div>
-    <div class="nav-item" data-screen="resources" title="Полезные материалы"><span class="ico">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
-        <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 15.5z"/>
-        <path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5z"/>
-      </svg></span></div>
-    <div class="nav-item" data-screen="support" title="Поддержать проект"><span class="ico">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
-        <path d="M12 20s-7-4.3-7-9.2A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.8C19 15.7 12 20 12 20z"/>
-      </svg></span></div>
+    <div class="nav-item" data-screen="resources" title="Полезные материалы"><span class="ico">📚</span></div>
+    <div class="nav-item" data-screen="support" title="Поддержать проект"><span class="ico">💚</span></div>
     <div class="nav-item" data-screen="profile" data-i18n-title="tab_profile_l"><span class="ico">👤</span></div>
   </div>
 </div>
@@ -1145,6 +1151,21 @@ let subFilter = 'all';
 let activeScreen = 'map';
 let me = null;              // профиль (getMe)
 
+// Значки собак — один источник на фильтры карты, сегменты списка, маркеры и легенду.
+// Раньше каждый из четырёх экранов держал свой набор эмодзи, и они разъехались:
+// уличная была 🌳 в фильтре и 🐕 на карте, а 🌳 при этом означало ещё и площадку
+// для выгула на соседнем слое.
+const DOG_ICONS = {
+  home:    '🏠',
+  street:  '🐕',
+  lost:    '🚨',
+  seeking: '🏡',
+  mine:    '💛',   // бейдж в углу маркера + кольцо --paw-deep
+  donor:   '🩸',
+  pack:    '🐾',
+  stale:   '🕓'
+};
+
 const PLACE_TYPES = {
   Clinics: { label: 'Ветклиника', icon: '🏥' },
   Shops:   { label: 'Зоомагазин', icon: '🏪' },
@@ -1226,11 +1247,11 @@ function pinIcon(kind, item) {
     color = cssVar('--paw');
     if (item.mine) cls += ' mine';
     if (item.geoStale) cls += ' stale'; // >3 мес без подтверждения — визуально приглушаем
-    if (item.lost) { cls += ' lost'; color = cssVar('--red'); emoji = '🚨'; }
+    if (item.lost) { cls += ' lost'; color = cssVar('--red'); emoji = DOG_ICONS.lost; }
     // «Ищет дом» важнее статуса: это призыв к действию, а статус у таких собак всегда
     // уличный. Потеряшка всё равно перекрывает — там счёт идёт на часы.
-    else if (item.seekingHome) { cls += ' seeking'; color = cssVar('--green'); emoji = '🏡'; }
-    else emoji = item.status === 'У владельца' ? '🏠' : '🐕';
+    else if (item.seekingHome) { cls += ' seeking'; color = cssVar('--green'); emoji = DOG_ICONS.seeking; }
+    else emoji = item.status === 'У владельца' ? DOG_ICONS.home : DOG_ICONS.street;
   } else {
     color = ratingColor(item.rating);
     if (item.closed) cls += ' closed';
@@ -1250,8 +1271,8 @@ const SUBFILTERS = {
   // «Ищут новый дом» на карте намеренно нет: такие собаки обычно живут на передержке
   // у того, кто их пристраивает, и показывать их местоположение незачем — решение
   // принимают по анкете, а не по точке. Фильтр остался в списке собак.
-  dogs: [['all','sf_all'], ['home','🏠 Домашние'], ['street','🌳 Уличные'],
-         ['lost','🚨 Потеряшки'], ['mine','💛 Мои']],
+  dogs: [['all','sf_all'], ['home',`${DOG_ICONS.home} Домашние`], ['street',`${DOG_ICONS.street} Уличные`],
+         ['lost',`${DOG_ICONS.lost} Потеряшки`], ['mine',`${DOG_ICONS.mine} Мои`]],
   places: [['all','sf_all'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Groom','✂️'], ['Kennel','🐶'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
 };
 function renderSubfilters() {
@@ -1412,7 +1433,7 @@ async function renderLayer() {
     packs.forEach(group => {
       const lat = group.reduce((s, d) => s + d.lat, 0) / group.length;
       const lng = group.reduce((s, d) => s + d.lng, 0) / group.length;
-      const icon = L.divIcon({ className: 'pack-marker', html: `<div class="pack-badge">🐾 Стая (${group.length})</div>`, iconSize: [90, 30], iconAnchor: [45, 30] });
+      const icon = L.divIcon({ className: 'pack-marker', html: `<div class="pack-badge">${DOG_ICONS.pack} Стая (${group.length})</div>`, iconSize: [90, 30], iconAnchor: [45, 30] });
       const marker = L.marker([lat, lng], { icon });
       marker.on('click', () => openPackSheet(group));
       currentLayer.addLayer(marker);
@@ -1544,27 +1565,40 @@ async function callApi(action, payload) {
 // Легенда: значков на карте много (статусы собак, категории мест, устаревшие данные),
 // и догадываться об их значении человек не обязан.
 function openLegend() {
-  // Легенда по контексту: на слое собак незачем объяснять иконки клиник, и наоборот.
+  // Легенда рисует НАСТОЯЩИЙ маркер — те же классы .marker-pin, что и карта, и те же
+  // значки из DOG_ICONS / PLACE_TYPES. Раньше это была отдельная вёрстка с собственными
+  // эмодзи, и она разъезжалась с картой при каждой правке: 🏡 «ищет дом», 🍽 ресторан,
+  // 📍 другое и значок стаи на карте были, а в легенде их не было вовсе.
+  const pin = (emoji, cls, colorVar) =>
+    `<span class="legend-pin"><span class="marker-pin ${cls || ''}" style="background:${cssVar(colorVar || '--paw')}"><span>${emoji}</span></span></span>`;
+  const row = (icoHtml, title, sub) =>
+    `<div class="legend-row">${icoHtml}<div><b>${title}</b>${sub ? `<br><span class="list-sub">${sub}</span>` : ''}</div></div>`;
+
   const dogs = `
     <h3>Значки на карте собак</h3>
     <div class="legend-grid">
-      <div class="legend-row"><span class="legend-ico">🏠</span><div><b>Домашняя</b><br><span class="list-sub">Живёт с хозяином, отмечена на прогулке</span></div></div>
-      <div class="legend-row"><span class="legend-ico">🐕</span><div><b>Уличная</b><br><span class="list-sub">Живёт в районе, её ведёт кто-то из соседей</span></div></div>
-      <div class="legend-row"><span class="legend-ico" style="border-color:var(--red)">🚨</span><div><b>Потерялась</b><br><span class="list-sub">Ищут прямо сейчас — посмотри по сторонам</span></div></div>
-      <div class="legend-row"><span class="legend-ico" style="opacity:.5;border-style:dashed">🐕</span><div><b>Данные устарели</b><br><span class="list-sub">Не видели больше трёх месяцев. Встретишь — подтверди в карточке</span></div></div>
-      <div class="legend-row"><span class="legend-ico" style="border-color:var(--brand)">🐕</span><div><b>Твоя собака</b><br><span class="list-sub">Та, что заведена в твоём профиле</span></div></div>
+      ${row(pin(DOG_ICONS.home, ''), 'Домашняя', 'Живёт с хозяином, отмечена на прогулке')}
+      ${row(pin(DOG_ICONS.street, ''), 'Уличная', 'Живёт в районе, её ведёт кто-то из соседей')}
+      ${row(pin(DOG_ICONS.lost, '', '--red'), 'Потерялась', 'Ищут прямо сейчас — посмотри по сторонам')}
+      ${row(pin(DOG_ICONS.seeking, 'seeking', '--green'), 'Ищет новый дом', 'Собаку пристраивают — подробности в карточке')}
+      ${row(pin(DOG_ICONS.street, 'stale'), 'Данные устарели', 'Не видели больше трёх месяцев. Встретишь — подтверди в карточке')}
+      ${row(pin(DOG_ICONS.street, 'mine'), 'Твоя собака', 'Кольцо и сердечко — та, что заведена в твоём профиле')}
+      ${row(`<span class="legend-pin"><span class="pack-badge">${DOG_ICONS.pack} Стая (3)</span></span>`, 'Стая', 'Три и более уличных собак рядом — тапни, чтобы разложить')}
     </div>`;
+
+  // Места: строки собираются из того же словаря, которым рисуются маркеры, — новый
+  // тип места попадает в легенду сам, без ручной синхронизации.
+  const placeRows = Object.keys(PLACE_TYPES).map(k =>
+    row(pin(PLACE_TYPES[k].icon, '', '--grey'), PLACE_TYPES[k].label)).join('');
   const places = `
     <h3>Значки на карте мест</h3>
     <div class="legend-grid">
-      <div class="legend-row"><span class="legend-ico">🏥</span><div><b>Ветклиника</b></div></div>
-      <div class="legend-row"><span class="legend-ico">🏪</span><div><b>Зоомагазин</b></div></div>
-      <div class="legend-row"><span class="legend-ico">🌳</span><div><b>Площадка для выгула</b></div></div>
-      <div class="legend-row"><span class="legend-ico">✂️</span><div><b>Груминг</b></div></div>
-      <div class="legend-row"><span class="legend-ico">🐶</span><div><b>Питомник</b></div></div>
-      <div class="legend-row"><span class="legend-ico">☕</span><div><b>Dog-friendly</b><br><span class="list-sub">Кафе и рестораны, куда пускают с собакой</span></div></div>
-      <div class="legend-row"><span class="legend-ico" style="opacity:.6">⏳</span><div><b>На проверке</b><br><span class="list-sub">Место добавили, модератор ещё не подтвердил</span></div></div>
-    </div>`;
+      ${placeRows}
+      ${row(pin(PLACE_TYPES.Clinics.icon, 'moderation', '--grey'), 'На проверке', 'Место добавили, модератор ещё не подтвердил — кольцо пунктиром')}
+      ${row(pin(PLACE_TYPES.Clinics.icon, 'closed', '--grey'), 'Закрыто', 'Место больше не работает')}
+    </div>
+    <div class="list-sub" style="margin-top:8px">Цвет кружка — оценка посетителей: зелёный хорошая, жёлтый средняя, красный низкая, серый — оценок пока нет.</div>`;
+
   openSheet((activeTab === 'places' ? places : dogs) +
     `<button class="pop-btn secondary" style="margin-top:12px" onclick="closeSheet()">Понятно</button>`);
 }
@@ -1653,8 +1687,18 @@ function renderSupportScreen() {
     </div>`;
   const box = document.getElementById('supportBody');
   if (!box) return;
+  // Звёзды — самый короткий путь: оплата открывается поверх мини-аппа, без выхода
+  // в переписку и без переводов. В боте это было давно, а здесь человек упирался
+  // в банковские реквизиты.
+  const stars = [50, 100, 250, 500, 1000];
   box.innerHTML = `
-    <div class="geo-note" style="margin-bottom:12px">Этот бот — некоммерческий проект. Средства идут на оплату инфраструктуры и развитие нового функционала. Нажми на реквизит, чтобы скопировать. 🐾</div>
+    <div class="geo-note" style="margin-bottom:12px">Этот бот — некоммерческий проект. Средства идут на оплату инфраструктуры и развитие нового функционала. 🐾</div>
+    <div class="sec-label">⭐ Звёздами Telegram</div>
+    <div class="card">
+      <div class="list-sub" style="margin-bottom:10px">Оплата в пару тапов, прямо здесь — ничего копировать не нужно.</div>
+      <div class="star-row">${stars.map(n => `<button class="star-btn" onclick="donateStars(${n})">${n} ⭐</button>`).join('')}</div>
+    </div>
+    <div class="sec-label">🏦 Переводом</div>
     ${row('BOG', 'GE21BG0000000538937088')}
     ${row('TBC', 'GE87TB7838545064400012')}
     ${row('Получатель', 'Kirill Riabkov')}
@@ -1665,6 +1709,26 @@ function renderSupportScreen() {
     </div>`;
 }
 function openTgLink(url) { if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank'); }
+
+// Донат звёздами. Сервер отдаёт ссылку на инвойс (createInvoiceLink), клиент
+// раскрывает её через openInvoice — оплата идёт поверх мини-аппа. На клиентах
+// старше 6.1 openInvoice нет: там честно отправляем в бота, где инвойс приходит
+// сообщением, вместо тихого отказа.
+async function donateStars(n) {
+  const res = await callApi('createStarsInvoice', { stars: n });
+  if (!res || !res.ok || !res.link) {
+    uiAlert('Не получилось открыть оплату звёздами' + ((res && res.error) ? `: ${res.error}` : '') + '.\nПоддержать можно переводом — реквизиты ниже.');
+    return;
+  }
+  if (tg && typeof tg.openInvoice === 'function' && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) {
+    tg.openInvoice(res.link, (status) => {
+      if (status === 'paid') { haptic('success'); setStatus('🙏 Спасибо за поддержку!', 3000); }
+      else if (status === 'failed') uiAlert('Оплата не прошла. Можно попробовать ещё раз или поддержать переводом.');
+    });
+    return;
+  }
+  openTgLink(res.link);
+}
 async function shareDog(dogId, name) {
   // Bot API 8.0: делимся ГОТОВЫМ сообщением с фото собаки и кнопкой, а не голой ссылкой
   // (по ссылке t.me/bot Telegram рисует превью бота, а не собаку — выглядело ущербно).
@@ -2365,8 +2429,9 @@ async function submitAddDog() {
 let dogSegment = 'all'; // по умолчанию — все собаки города (без фильтров)
 // Порядок повторяет фильтры на карте: список — это то же самое, только другим
 // представлением, и переключаться между ними не должно быть как между разными приложениями.
-const DOG_SEGMENTS = [['all','Все'], ['home','🏠 Домашние'], ['street','🌳 Уличные'],
-  ['lost','🚨 Потеряшки'], ['seeking','🏡 Ищут дом'], ['donors','🩸 Доноры'], ['mine','💛 Мои']];
+const DOG_SEGMENTS = [['all','Все'], ['home',`${DOG_ICONS.home} Домашние`], ['street',`${DOG_ICONS.street} Уличные`],
+  ['lost',`${DOG_ICONS.lost} Потеряшки`], ['seeking',`${DOG_ICONS.seeking} Ищут дом`],
+  ['donors',`${DOG_ICONS.donor} Доноры`], ['mine',`${DOG_ICONS.mine} Мои`]];
 async function initDogsScreen() {
   await loadData('dogs');
   if (dogSegment === null) dogSegment = 'all';
