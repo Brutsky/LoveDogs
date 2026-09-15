@@ -270,6 +270,26 @@
     font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
     transition: transform .1s ease; }
   .star-btn:active { transform: scale(.96); }
+  /* Заставка первого запуска. Apps Script на холодную отвечает секундами, и всё это
+     время человек смотрел на серый прямоугольник и не понимал, сломалось ли что-то.
+     Показываем, что происходит, и заодно рассказываем, зачем сюда возвращаться. */
+  #splash { position: fixed; inset: 0; z-index: 2000; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 28px 24px; text-align: center; transition: opacity .35s ease; }
+  #splash.hide { opacity: 0; pointer-events: none; }
+  #splash .paw { font-size: 44px; animation: splashPaw 1.4s ease-in-out infinite; }
+  @keyframes splashPaw { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-8px) rotate(6deg); } }
+  #splash .sp-title { font-family: var(--font-disp); font-size: 19px; font-weight: 600;
+    margin: 14px 0 22px; letter-spacing: -.01em; }
+  #splash .sp-tip { min-height: 92px; max-width: 320px; display: flex; flex-direction: column;
+    justify-content: center; gap: 8px; }
+  #splash .sp-tip .ic { font-size: 26px; }
+  #splash .sp-tip .tx { font-size: 14px; line-height: 1.5; color: var(--hint); }
+  #splash .sp-tip.swap { animation: tipIn .4s ease; }
+  @keyframes tipIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  #splash .sp-dots { display: flex; gap: 6px; margin-top: 24px; }
+  #splash .sp-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); transition: background .3s; }
+  #splash .sp-dots i.on { background: var(--paw-deep); }
   .row-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .sub-ava { width: 40px; height: 40px; border-radius: 10px; flex: 0 0 40px; background: var(--card);
              background-size: cover; background-position: center; display: flex; align-items: center;
@@ -562,6 +582,13 @@
   <!-- Материалы и поддержка — такие же экраны, как карта и профиль. Раньше они
        открывались шторкой поверх текущего экрана: пункт нижней навигации, который
        ведёт не на экран, а на всплывашку, читается как сбой, а не как раздел. -->
+  <div id="splash">
+    <div class="paw">🐾</div>
+    <div class="sp-title">Собираю карту района…</div>
+    <div class="sp-tip" id="splashTip"><div class="ic">🐕</div><div class="tx">Минутку</div></div>
+    <div class="sp-dots" id="splashDots"></div>
+  </div>
+
   <div class="screen" id="screen-resources">
     <h2>📚 Полезные материалы</h2>
     <div id="resourcesBody"><div class="empty">Загружаю…</div></div>
@@ -2559,13 +2586,55 @@ function openTgUser(username) {
   const url = 'https://t.me/' + username;
   if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
 }
+// Ситтеры грузились каждый раз заново, POST-запросом к холодному Apps Script: девять
+// человек в списке, а ожидание такое же, как у карты. Теперь тот же приём, что и со
+// слоями карты: показываем сохранённое сразу, свежее подтягиваем фоном.
+function sittersCacheKey() { return 'ld_sitters_' + (MY_UID || 'anon'); }
+function readSittersCache() {
+  try {
+    const box = JSON.parse(localStorage.getItem(sittersCacheKey()) || 'null');
+    if (!box || !box.t || Date.now() - box.t > LAYER_CACHE_TTL) return null;
+    return box;
+  } catch (e) { return null; }
+}
+async function fetchSitters() {
+  const res = await callApi('getSitters', {});
+  if (!res.ok) throw new Error(res.error || 'ошибка');
+  const box = { t: Date.now(), sitters: res.sitters || [], mine: res.mine || null, city: res.city || '' };
+  try { localStorage.setItem(sittersCacheKey(), JSON.stringify(box)); } catch (e) {}
+  return box;
+}
+function applySittersBox(box) {
+  sittersCache = box.sitters || [];
+  mySitterProfile = box.mine || null;
+  const cityEl = document.getElementById('sitterCity');
+  if (cityEl) cityEl.textContent = box.city ? '· ' + box.city : '';
+}
 async function loadSitters(force) {
   if (sittersCache && !force) { renderSitters(); return; }
-  const res = await callApi('getSitters', {});
-  sittersCache = res.ok ? res.sitters : [];
-  mySitterProfile = res.ok ? res.mine : null;
-  document.getElementById('sitterCity').textContent = res.ok && res.city ? '· ' + res.city : '';
-  renderSitters(res.ok ? null : (res.error || 'ошибка'));
+
+  const cached = force ? null : readSittersCache();
+  if (cached) {
+    applySittersBox(cached);
+    renderSitters();
+    if (Date.now() - cached.t < LAYER_FRESH_MS) return;
+    // Данные постарше — обновляем молча, человеку уже есть что читать.
+    fetchSitters().then(box => {
+      const changed = JSON.stringify(box.sitters) !== JSON.stringify(cached.sitters);
+      applySittersBox(box);
+      if (changed && activeScreen === 'sitters') renderSitters();
+    }).catch(() => {});
+    return;
+  }
+
+  try {
+    const box = await fetchSitters();
+    applySittersBox(box);
+    renderSitters();
+  } catch (err) {
+    sittersCache = sittersCache || [];
+    renderSitters(String(err.message || err));
+  }
 }
 function renderSitterFilters() {
   const box = document.getElementById('sitterFilters');
@@ -3354,6 +3423,47 @@ async function submitProfileEdit() {
   else uiAlert(t('err_fail') + (res.error || ''));
 }
 
+// ================== ЗАСТАВКА ==================
+// Ожидание всё равно есть — значит, оно должно работать на пользу. Показываем, зачем
+// сюда возвращаться: половина функций мини-аппа людям просто неизвестна.
+const SPLASH_TIPS = [
+  ['🏷', 'Увидел бирку на ухе — пришли номер боту прямо текстом. Он найдёт пса и покажет, кто за ним смотрит.'],
+  ['📍', '«Гуляем тут» ставит точку на карте. Соседи видят, что вы гуляете рядом, и знакомятся.'],
+  ['🚨', 'Если собака потерялась — отметь её. Оповещение уйдёт всем соседям по району за минуту.'],
+  ['📷', 'Пришли боту фото — он заведёт нового пса за пару шагов или добавит снимок в галерею.'],
+  ['🔔', 'Подпишись на уличную собаку — узнаешь, если её видели, покормили или взяли под опеку.'],
+  ['🩸', 'Собака может стать донором крови. В экстренной ситуации это спасает чью-то жизнь.'],
+  ['🏡', 'Отметка «ищет дом» попадает в еженедельный дайджест по городу — так находят хозяев.'],
+  ['🧑', 'Догситтеры на районе: выгул, передержка, проживание. С отзывами соседей.']
+];
+
+(function runSplash() {
+  const box = document.getElementById('splashTip');
+  const dots = document.getElementById('splashDots');
+  if (!box || !dots) return;
+  // Порядок случайный: при каждом запуске человек видит другую подсказку первой,
+  // иначе после третьего открытия заставка перестаёт нести что-либо новое.
+  const tips = SPLASH_TIPS.slice().sort(() => Math.random() - 0.5);
+  dots.innerHTML = tips.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('');
+  let i = 0;
+  const show = () => {
+    const [ic, tx] = tips[i];
+    box.innerHTML = `<div class="ic">${ic}</div><div class="tx">${tx}</div>`;
+    box.classList.remove('swap'); void box.offsetWidth; box.classList.add('swap');
+    Array.from(dots.children).forEach((d, k) => d.classList.toggle('on', k === i));
+  };
+  show();
+  window._splashTimer = setInterval(() => { i = (i + 1) % tips.length; show(); }, 3200);
+})();
+
+function hideSplash() {
+  const el = document.getElementById('splash');
+  if (!el || el.classList.contains('hide')) return;
+  clearInterval(window._splashTimer);
+  el.classList.add('hide');
+  setTimeout(() => { try { el.remove(); } catch (e) {} }, 400);
+}
+
 // ================== СТАРТ ==================
 // Справочники — ОДНИМ запросом. Было три последовательных: породы, районы, возрасты.
 // На холодном Apps Script каждый стоит несколько сотен миллисекунд, и все три
@@ -3392,7 +3502,21 @@ Promise.all([
     }
   }).catch(() => {}),
   loadData('dogs').catch(() => {})
-]).finally(() => { renderSubfilters(); renderLayer(); });
+]).finally(() => {
+  renderSubfilters();
+  renderLayer();
+  hideSplash();
+  // Пока человек смотрит на карту, тихо подтягиваем остальные слои. Переход на
+  // «Места» и «Ситтеры» после этого открывается мгновенно, из локального кэша.
+  setTimeout(() => {
+    loadData('places').catch(() => {});
+    loadSitters().catch(() => {});
+  }, 800);
+});
+
+// Страховка: если сеть висит совсем долго, заставку всё равно убираем — пустая карта
+// честнее бесконечной крутилки, да и данные могут подняться из кэша слоёв.
+setTimeout(hideSplash, 15000);
 </script>
 </body>
 </html>
