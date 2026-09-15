@@ -470,15 +470,27 @@
     border-bottom: 2px dashed color-mix(in srgb, var(--paw-deep) 55%, transparent); }
   .dog-card-head h3 { margin: 0; color: var(--on-brand); font-family: var(--font-disp); font-size: 17px; }
   .dog-card-head.hero h3 { font-size: 19px; text-align: center; }
-  /* Фото — главный элемент карточки: крупное, во всю ширину. Раньше это был кружок
-     64px сбоку от клички, из-за чего самая ценная часть анкеты почти не читалась. */
-  .dog-photo { width: 100%; max-width: 300px; aspect-ratio: 1; border-radius: var(--r-ctl, 14px);
+  /* Фото — главный элемент карточки. Квадрат во всю ширину съедал почти весь экран,
+     и до анкеты приходилось листать. Формат 4:3 и рамка в 1px вместо 3px отдают место
+     содержанию; кличка переехала плашкой на само фото и больше не занимает строку. */
+  .dog-photo { width: 100%; aspect-ratio: 4 / 3; max-height: 46vh; border-radius: var(--r-ctl, 14px);
     background: var(--surface) center/cover no-repeat;
-    border: 3px solid var(--stroke); box-shadow: 0 3px 10px rgba(0,0,0,.2);
-    display: flex; align-items: center; justify-content: center; font-size: 72px; flex: 0 0 auto;
-    cursor: pointer; position: relative; }
+    border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,.14);
+    display: flex; align-items: center; justify-content: center; font-size: 60px; flex: 0 0 auto;
+    cursor: pointer; position: relative; overflow: hidden; }
   .dog-photo.loaded { font-size: 0; }
-  .photo-count { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.62); color: #fff;
+  /* Пока картинка едет — мягкое мерцание вместо затемнения всего экрана. */
+  .dog-photo.loading::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.14) 50%, transparent 80%);
+    animation: photoShine 1.1s linear infinite; }
+  .dog-photo.loaded.loading::after { display: none; }
+  @keyframes photoShine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+  /* Кличка поверх фото: градиент снизу, чтобы текст читался на любом снимке. */
+  .dog-photo .name-plate { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 12px 10px;
+    font-family: var(--font-disp); font-size: 19px; font-weight: 600; color: #fff; text-align: left;
+    letter-spacing: -.01em; text-shadow: 0 1px 4px rgba(0,0,0,.6); pointer-events: none;
+    background: linear-gradient(transparent, rgba(0,0,0,.55)); }
+  .photo-count { position: absolute; right: 8px; top: 8px; background: rgba(0,0,0,.62); color: #fff;
     font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 12px; pointer-events: none; }
   .more-toggle { background: none; border: none; color: var(--vet, #1f5b4b); font-weight: 700; font-size: 13px; padding: 7px 0; cursor: pointer; }
   .comments-block { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
@@ -1574,9 +1586,12 @@ function photoSrc(fileId) {
   return p;
 }
 
-async function callApi(action, payload) {
+// quiet=true — запрос идёт молча, без индикатора занятости. Нужен для фоновых
+// догрузок: карта уже на экране, и затемнять её ради данных, которых человек ещё не
+// просил, — значит показывать «загрузку» второй раз подряд сразу после заставки.
+async function callApi(action, payload, quiet) {
   const initData = tg ? tg.initData : '';
-  setBusy(true);
+  if (!quiet) setBusy(true);
   try {
     const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action, initData, payload }) });
     const json = await res.json();
@@ -1587,7 +1602,7 @@ async function callApi(action, payload) {
     }
     return json;
   } catch (e) { return { ok: false, error: 'network' }; }
-  finally { setBusy(false); }
+  finally { if (!quiet) setBusy(false); }
 }
 // Легенда: значков на карте много (статусы собак, категории мест, устаревшие данные),
 // и догадываться об их значении человек не обязан.
@@ -1936,8 +1951,7 @@ async function openDogCard(d) {
 
   openSheet(`
     <div class="dog-card-head hero">
-      <div id="dogPhoto" class="dog-photo" onclick="openDogLightbox()">🐕<span id="dogPhotoCount" class="photo-count" style="display:none"></span></div>
-      <h3>${escapeHtml(d.name || 'Собака')}</h3>
+      <div id="dogPhoto" class="dog-photo" onclick="openDogLightbox()">🐕<span class="name-plate">${escapeHtml(d.name || 'Собака')}</span><span id="dogPhotoCount" class="photo-count" style="display:none"></span></div>
     </div>
     <div class="badges">${badges}</div>
     <div class="dog-info">${infoHtml(impRows)}</div>
@@ -1966,6 +1980,7 @@ async function openDogCard(d) {
 async function loadDogMedia(d) {
   window._lbPhotos = [];
   const el = document.getElementById('dogPhoto');
+  if (el) el.classList.add('loading');   // мерцание только на месте фото, не на всём экране
   if (d.photoId || d.photoKey) {
     const ref = { fileId: d.photoId, thumbKey: d.photoKey };
     const direct = photoUrlFromKey(d.photoKey);
@@ -1999,6 +2014,9 @@ async function loadDogMedia(d) {
       cnt.classList.add('has-more');
     }
   } catch (e) {}
+  // Мерцание снимаем в любом случае: и когда фото приехало, и когда его нет вовсе —
+  // иначе пустая рамка мерцала бы вечно.
+  if (el) el.classList.remove('loading');
 }
 
 function toggleDogExtra() {
@@ -2597,8 +2615,8 @@ function readSittersCache() {
     return box;
   } catch (e) { return null; }
 }
-async function fetchSitters() {
-  const res = await callApi('getSitters', {});
+async function fetchSitters(quiet) {
+  const res = await callApi('getSitters', {}, quiet);
   if (!res.ok) throw new Error(res.error || 'ошибка');
   const box = { t: Date.now(), sitters: res.sitters || [], mine: res.mine || null, city: res.city || '' };
   try { localStorage.setItem(sittersCacheKey(), JSON.stringify(box)); } catch (e) {}
@@ -2619,7 +2637,7 @@ async function loadSitters(force) {
     renderSitters();
     if (Date.now() - cached.t < LAYER_FRESH_MS) return;
     // Данные постарше — обновляем молча, человеку уже есть что читать.
-    fetchSitters().then(box => {
+    fetchSitters(true).then(box => {
       const changed = JSON.stringify(box.sitters) !== JSON.stringify(cached.sitters);
       applySittersBox(box);
       if (changed && activeScreen === 'sitters') renderSitters();
@@ -3453,7 +3471,9 @@ const SPLASH_TIPS = [
     Array.from(dots.children).forEach((d, k) => d.classList.toggle('on', k === i));
   };
   show();
-  window._splashTimer = setInterval(() => { i = (i + 1) % tips.length; show(); }, 3200);
+  // 6 секунд: три секунды — это ровно на одно прочтение по диагонали, а подсказка
+  // должна успеть дочитаться до конца.
+  window._splashTimer = setInterval(() => { i = (i + 1) % tips.length; show(); }, 6000);
 })();
 
 function hideSplash() {
@@ -3509,10 +3529,27 @@ Promise.all([
   // Пока человек смотрит на карту, тихо подтягиваем остальные слои. Переход на
   // «Места» и «Ситтеры» после этого открывается мгновенно, из локального кэша.
   setTimeout(() => {
-    loadData('places').catch(() => {});
-    loadSitters().catch(() => {});
-  }, 800);
+    prefetchLayersQuietly();
+  }, 900);
 });
+
+// Догрузка «про запас»: тянем слои, которых человек ещё не открывал, чтобы переход
+// на вкладку был мгновенным. Молча — никаких индикаторов поверх карты.
+async function prefetchLayersQuietly() {
+  try {
+    if (!dataCache.places) {
+      const r = await fetch(`${API_URL}?type=places&${initDataQS()}`);
+      const j = await r.json();
+      if (j && j.places) { dataCache.places = j.places; writeLayerCache('places', j.places); }
+    }
+  } catch (e) {}
+  try {
+    if (!sittersCache && !readSittersCache()) {
+      const box = await fetchSitters(true);
+      applySittersBox(box);
+    }
+  } catch (e) {}
+}
 
 // Страховка: если сеть висит совсем долго, заставку всё равно убираем — пустая карта
 // честнее бесконечной крутилки, да и данные могут подняться из кэша слоёв.
