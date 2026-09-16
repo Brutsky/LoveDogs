@@ -290,6 +290,17 @@
   #splash .sp-dots { display: flex; gap: 6px; margin-top: 24px; }
   #splash .sp-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); transition: background .3s; }
   #splash .sp-dots i.on { background: var(--paw-deep); }
+  /* Поле выбора снимка: сразу показывает, что выбрано, — иначе непонятно, случилось
+     ли что-нибудь после возни с системным выбором файла. */
+  .photo-pick { width: 100%; aspect-ratio: 4 / 3; max-height: 200px; border-radius: var(--r-ctl, 14px);
+    border: 1px dashed var(--line); background: var(--surface) center/cover no-repeat;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; cursor: pointer; position: relative; overflow: hidden; }
+  .photo-pick .ic { font-size: 30px; }
+  .photo-pick .tx { font-size: 13px; color: var(--hint); }
+  .photo-pick.has { border-style: solid; }
+  .photo-pick .rep { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.62);
+    color: #fff; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; }
   .row-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .sub-ava { width: 40px; height: 40px; border-radius: 10px; flex: 0 0 40px; background: var(--card);
              background-size: cover; background-position: center; display: flex; align-items: center;
@@ -1902,6 +1913,11 @@ async function openDogCard(d) {
   actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">${t('a_share')}</button>`;
   if (canEditGallery) actions += `<button class="pop-btn secondary" onclick="openBotDeepLink('gallery_${d.id}')">${t('a_addphoto')}</button>`;
   if (isStreet) actions += `<button class="pop-btn secondary" id="subBtn-${d.id}" onclick="toggleDogSub('${d.id}')">${d.subscribed ? t('a_unsub') : t('a_sub')}</button>`;
+  // Фото может добавить владелец своей собаке и кто угодно — уличной. Это тот же
+  // принцип, что у комментариев и геопозиции: уличный пёс — общая забота района.
+  if (d.mine || isStreet) {
+    actions += `<button class="pop-btn secondary" onclick="addPhotoFromCard('${d.id}')">📷 Добавить фото</button>`;
+  }
   if (d.mine) {
     actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">${t('a_edit')}</button>`;
     if (isHomeMine) {
@@ -2388,8 +2404,18 @@ function openAddDogSheet(draft) {
       <div style="padding-top:10px">${extra}</div>
     </details>
     <div style="height:8px"></div>
+    <div class="field">
+      <label>📷 Фото</label>
+      <div id="adPhotoBox" class="photo-pick ${d._photoKey ? 'has' : ''}"
+           onclick="pickDogPhotoForForm()"
+           style="${d._photoKey ? `background-image:url('${photoUrlFromKey(d._photoKey)}')` : ''}">
+        ${d._photoKey ? '<span class="rep">Заменить</span>' : '<span class="ic">📷</span><span class="tx">Выбрать снимок</span>'}
+      </div>
+      <div class="hint">${street
+        ? 'Без фото уличного пса не опознают и не перешлют карточку — это самое важное поле.'
+        : 'Можно добавить позже, в карточке собаки.'}</div>
+    </div>
     <button class="pop-btn" id="addDogSaveBtn" onclick="submitAddDog()">${t('fd_save')}</button>
-    <div class="geo-note" style="text-align:center;margin-top:8px">${t('fd_photo_hint')}</div>
   `);
 
   document.querySelectorAll('#adStatus .opt').forEach(o => o.onclick = () => {
@@ -2428,14 +2454,14 @@ async function submitAddDog() {
   if (addDogSubmitting) return;
   collectAddDogDraft();
   const d = addDogDraft;
-  // Уличную заводим в боте: там можно приложить фото, без которого пса не опознать
-  // и не переслать карточку. Уводим сразу, сохранив уже введённое в черновик.
-  if (d.status === 'Уличная') {
-    closeSheet();
-    if (await uiConfirm('📸 У уличной собаки нужно фото — без него её не опознают и не перешлют карточку.\n\nОткрыть бота и добавить там? Займёт минуту.')) openBotDeepLink('newdog');
+  // Уличную раньше приходилось заводить в боте — только там можно было приложить
+  // фото. Теперь снимок грузится прямо здесь, и выгонять человека некуда. Но без
+  // фото уличного пса действительно не опознают, поэтому оно обязательно.
+  if (d.status === 'Уличная' && !d._photoKey) {
+    uiAlert('📸 У уличной собаки нужно фото — без него её не опознают и не перешлют карточку. Выбери снимок в форме.');
     return;
   }
-  if (!d.name || !d.name.trim()) {
+  if (d.status !== 'Уличная' && (!d.name || !d.name.trim())) {
     uiAlert('Как зовут собаку? Кличка — единственное обязательное поле, остальное можно дополнить потом 🐶');
     const el = document.getElementById('adName'); if (el) el.focus();
     return;
@@ -2455,6 +2481,12 @@ async function submitAddDog() {
   try {
     const res = await callApi('addDog', payload);
     if (res.ok) {
+      // Снимок уже лежит в хранилище — привязываем его обложкой к только что
+      // созданной анкете. Раньше id собаки не существовало, поэтому порядок такой.
+      if (d._photoKey && res.id) {   // addDog отдаёт id новой анкеты полем id
+        const at = await callApi('attachPhoto', { dogId: res.id, key: d._photoKey, asCover: true });
+        if (!at || !at.ok) setStatus('Собака добавлена, но фото не прикрепилось — попробуй из карточки', 3500);
+      }
       haptic(); addDogDraft = null; closeSheet();
       dataCache.dogs = null; await renderLayer(); renderDogsScreen();
       setStatus('✅ Собака добавлена!', 2200);
@@ -3439,6 +3471,107 @@ async function submitProfileEdit() {
   closeSheet();
   if (res.ok) { haptic(); me = null; loadProfile(true); setStatus(t('pf_saved'), 2000); }
   else uiAlert(t('err_fail') + (res.error || ''));
+}
+
+// ================== ЗАГРУЗКА ФОТО ==================
+// Снимок уходит в Supabase Storage напрямую из браузера по подписанной ссылке —
+// мимо Apps Script. Через скрипт гонять байты нельзя: это и медленно, и упирается в
+// предел размера запроса. Перед отправкой уменьшаем: с телефона приходят снимки на
+// 4–8 МБ, а в карточке они показываются шириной в экран.
+const UPLOAD_MAX_SIDE = 1600;
+const UPLOAD_QUALITY = 0.82;
+
+function pickImageFile() {
+  return new Promise(resolve => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/*';
+    inp.onchange = () => resolve(inp.files && inp.files[0] ? inp.files[0] : null);
+    // Отмена выбора события не даёт вовсе — поэтому промис просто останется висеть,
+    // а ссылка на input умрёт вместе с ним. Утечки нет, зависшего интерфейса тоже.
+    inp.click();
+  });
+}
+
+// Уменьшение через canvas. EXIF-поворот браузеры применяют сами при отрисовке
+// через createImageBitmap, поэтому отдельная возня с ориентацией не нужна.
+async function shrinkImage(file) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, UPLOAD_MAX_SIDE / Math.max(bmp.width, bmp.height));
+  const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+  try { bmp.close(); } catch (e) {}
+  return await new Promise(res => canvas.toBlob(res, 'image/jpeg', UPLOAD_QUALITY));
+}
+
+// Выбрать → сжать → залить. Возвращает ключ объекта в хранилище либо null.
+// Собаке снимок ещё не принадлежит: привязка отдельным шагом, потому что при
+// заведении анкеты id собаки появляется уже после выбора фото.
+async function pickAndUploadPhoto(statusText) {
+  const file = await pickImageFile();
+  if (!file) return null;
+  if (!/^image\//.test(file.type)) { uiAlert('Это не похоже на картинку 🙂'); return null; }
+  setStatus(statusText || 'Готовлю фото…');
+  try {
+    setBusy(true);
+    const blob = await shrinkImage(file);
+    const ticket = await callApi('photoUploadTicket', {}, true);
+    if (!ticket || !ticket.ok || !ticket.uploadUrl) {
+      uiAlert('Не получилось начать загрузку' + ((ticket && ticket.error) ? `: ${ticket.error}` : ''));
+      return null;
+    }
+    setStatus('Загружаю фото…');
+    const put = await fetch(ticket.uploadUrl, {
+      method: 'PUT',
+      headers: { 'content-type': 'image/jpeg' },
+      body: blob
+    });
+    if (!put.ok) { uiAlert('Фото не загрузилось — попробуй ещё раз.'); return null; }
+    return ticket.key;
+  } catch (e) {
+    uiAlert('Не получилось обработать фото: ' + (e.message || e));
+    return null;
+  } finally { setBusy(false); setStatus(null); }
+}
+
+// Загрузить и сразу привязать к существующей собаке.
+async function addPhotoToDog(dogId, asCover) {
+  const key = await pickAndUploadPhoto();
+  if (!key) return false;
+  setBusy(true);
+  try {
+    const res = await callApi('attachPhoto', { dogId, key, asCover: !!asCover });
+    if (!res || !res.ok) {
+      uiAlert('Фото загрузилось, но не прикрепилось' + ((res && res.error) ? `: ${res.error}` : '') + '.');
+      return false;
+    }
+    haptic('success');
+    setStatus('📷 Фото добавлено', 2200);
+    return true;
+  } finally { setBusy(false); }
+}
+
+// Выбор фото в форме заведения: грузим сразу, показываем превью. К собаке снимок
+// привяжется после сохранения анкеты — id появляется только там.
+async function pickDogPhotoForForm() {
+  collectAddDogDraft();
+  const key = await pickAndUploadPhoto('Готовлю снимок…');
+  if (!key) return;
+  addDogDraft._photoKey = key;
+  haptic();
+  openAddDogSheet(addDogDraft);
+}
+
+// Кнопка в карточке собаки.
+async function addPhotoFromCard(dogId) {
+  const ok = await addPhotoToDog(dogId, false);
+  if (!ok) return;
+  dataCache.dogs = null;
+  await renderLayer();
+  const fresh = findDog(dogId);
+  if (fresh) openDogCard(fresh); else closeSheet();
 }
 
 // ================== ЗАСТАВКА ==================
