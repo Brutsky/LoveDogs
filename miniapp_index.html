@@ -138,6 +138,23 @@
     background: #fff; border-radius: 50%; transition: .2s; box-shadow: var(--shadow-s); }
   .sw input:checked + span { background: var(--vet); }
   .sw input:checked + span::before { transform: translateX(18px); }
+  /* Строка профиля, которую можно править на месте. Поле выглядит как обычный текст,
+     пока его не тронули: отдельное окно редактирования ради четырёх полей — лишний
+     шаг, и человек не видит, что вообще можно менять. */
+  .edit-row { display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .edit-row:last-child { border-bottom: 0; }
+  .edit-row > span { color: var(--hint); font-size: 14px; flex: 0 0 auto; }
+  .edit-row .val { flex: 1 1 auto; min-width: 0; text-align: right; }
+  .edit-row input[type=text], .edit-row input[type=tel], .edit-row select {
+    width: 100%; text-align: right; font-family: inherit; font-size: 15px; font-weight: 600;
+    color: var(--fg); background: transparent; border: 1px solid transparent;
+    border-radius: 9px; padding: 6px 8px; appearance: none; cursor: pointer; }
+  .edit-row select { text-align-last: right; }
+  .edit-row input:focus, .edit-row select:focus { outline: none;
+    border-color: var(--paw); background: var(--bg); cursor: text; }
+  .edit-row input::placeholder { color: var(--hint); font-weight: 400; }
+  .edit-hint { font-size: 12px; color: var(--hint); margin-top: 8px; }
   .legend-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
   .legend-row { display: flex; gap: 12px; align-items: flex-start; }
   /* Слот фиксированной ширины под настоящий .marker-pin: легенда показывает ровно
@@ -2358,10 +2375,15 @@ async function renderProfileMyDogs() {
   if (!dogs) { try { dogs = await loadData('dogs'); } catch (e) { dogs = []; } }
   const mine = (dogs || []).filter(d => d.mine);
   if (!mine.length) {
-    box.innerHTML = `<div class="card"><div class="list-sub">${t('pf_nodogs')}</div></div>`;
+    // Пустой список без кнопки — тупик: человек видит, что собак нет, и не знает,
+    // что с этим делать. Заводить собаку начинают отсюда чаще всего.
+    box.innerHTML = `<div class="card">
+      <div class="list-sub" style="margin-bottom:10px">${t('pf_nodogs')}</div>
+      <button class="pop-btn" onclick="openAddDogSheet()">➕ Добавить собаку</button>
+    </div>`;
     return;
   }
-  const statusIco = s => s === 'У владельца' ? '🏠' : '🌳';
+  const statusIco = st => st === 'У владельца' ? DOG_ICONS.home : DOG_ICONS.street;
   box.innerHTML = mine.map(d => `
     <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
       <div class="row-between">
@@ -3231,24 +3253,36 @@ function renderProfile() {
     `${p.moderator ? '🛡' : '👤'} ${escapeHtml(p.name || 'Профиль')}` +
     (p.username ? ` <span class="title-sub">${escapeHtml(p.username)}</span>` : '') +
     (p.moderator ? ` <span class="title-sub">· модератор</span>` : '');
+  const cities = me.cities || [];
   document.getElementById('profileBody').innerHTML = `
     <div class="card">
-      <div class="info-row"><span>🏙 Город</span><b>${escapeHtml(p.city || '—')}</b></div>
-      <div class="info-row"><span>📞 Телефон</span><b>${escapeHtml(p.tel || '—')}</b></div>
-      <div class="info-row"><span>${t('pf_lang')}</span><b>${langNames[p.lang] || p.lang}</b></div>
-      <div class="info-row"><span>👁 Юзернейм в «Кто рядом?»</span><b>${p.showTg === 'Показан' ? 'показан' : 'скрыт'}</b></div>
-      <div class="info-row"><span>🐕 Моих собак</span><b>${me.myDogsCount || 0}</b></div>
-      <button class="pop-btn" style="margin-top:12px" onclick="openProfileEdit()">✏️ Редактировать</button>
+      <div class="edit-row"><span>${t('fd_name2')}</span><div class="val">
+        <input type="text" id="pfName" value="${escapeAttr(p.name || '')}" placeholder="Имя"
+               onblur="saveProfileField('name', this.value)"
+               onkeydown="if(event.key==='Enter')this.blur()"></div></div>
+      <div class="edit-row"><span>🏙 Город</span><div class="val">
+        ${cities.length
+          ? `<select id="pfCity" onchange="saveProfileField('city', this.value)">${selOpts(cities, p.city)}</select>`
+          : `<b>${escapeHtml(p.city || '—')}</b>`}</div></div>
+      <div class="edit-row"><span>📞 Телефон</span><div class="val">
+        <input type="tel" id="pfTel" value="${escapeAttr(p.tel === 'Не указан' ? '' : (p.tel || ''))}" placeholder="+995…"
+               onblur="saveProfileField('tel', this.value)"
+               onkeydown="if(event.key==='Enter')this.blur()"></div></div>
+      <div class="edit-row"><span>${t('pf_lang')}</span><div class="val">
+        <select id="pfLang" onchange="saveProfileField('lang', this.value)">
+          <option value="RU" ${p.lang === 'RU' ? 'selected' : ''}>🇷🇺 Русский</option>
+          <option value="GE" ${p.lang === 'GE' ? 'selected' : ''}>🇬🇪 ქართული</option>
+          <option value="EN" ${p.lang === 'EN' ? 'selected' : ''}>🇬🇧 English</option>
+        </select></div></div>
+      <div class="edit-row"><span>👁 Юзернейм в «Кто рядом?»</span>
+        <label class="sw"><input type="checkbox" ${p.showTg === 'Показан' ? 'checked' : ''}
+          onchange="saveProfileField('showTg', this.checked ? 'Показан' : 'Скрыт')"><span></span></label></div>
+      <div class="edit-hint">Нажми на значение, чтобы изменить — сохраняется само.</div>
     </div>
 
-    <div class="sec-label">🐕 Мои собаки</div>
     <div id="profileMyDogs"><div class="empty" style="padding:16px">Загружаю…</div></div>
 
-    <div class="sec-label">🔔 Уведомления</div>
-    <div class="card tappable" onclick="openSubsSheet()">
-      <div class="list-title" style="font-size:14px">🔔 Что мне приходит</div>
-      <div class="list-sub">оповещения о пропаже — ${p.lostAlerts === false ? 'выкл' : 'вкл'} · дайджест «ищут дом» · подписки на районы и собак</div>
-    </div>
+    <button class="pop-btn secondary" onclick="openSubsSheet()">🔔 Настройка уведомлений</button>
 
 
     ${p.isAdmin ? `<div class="sec-label">📊 Аналитика</div>
@@ -3344,13 +3378,12 @@ function renderRegionSubs() {
   openSheet(`
     <h3>🗺 Подписки на районы</h3>
     <div class="list-sub" style="margin-bottom:10px">Приходят новые собаки и места в этих районах, а также сообщения «нашлась».</div>
-    ${regions.length ? regions.map((r, i) => `
-      <div class="card tappable" onclick="toggleRegionSub(${i})">
-        <div class="row-between">
-          <div class="list-title" style="font-size:14px">${escapeHtml(r)}</div>
-          <div style="font-size:18px">${subs.indexOf(r) !== -1 ? '🔔' : '🔕'}</div>
-        </div>
-      </div>`).join('') : `<div class="empty">Справочник районов пуст — районы задаются в таблице (лист Lists, колонка 4)</div>`}
+    ${regions.length ? `<div class="card">${regions.map((r, i) => `
+      <div class="edit-row">
+        <span style="color:var(--fg);font-size:15px">${escapeHtml(r)}</span>
+        <label class="sw"><input type="checkbox" ${subs.indexOf(r) !== -1 ? 'checked' : ''}
+          onchange="toggleRegionSub(${i})"><span></span></label>
+      </div>`).join('')}</div>` : `<div class="empty">Справочник районов пуст — районы задаются в таблице (лист Lists, колонка 4)</div>`}
     <button class="pop-btn secondary" style="margin-top:12px" onclick="openSubsSheet()">⬅️ Назад</button>
   `);
 }
@@ -3391,19 +3424,17 @@ function renderDogSubs() {
   openSheet(`
     <h3>🐕 Подписки на собак</h3>
     <div class="list-sub" style="margin-bottom:10px">Приходят новости: новое фото, уточнённое место, комментарии соседей.</div>
-    ${dogs.length ? dogs.map((d, i) => `
-      <div class="card">
-        <div class="row-between">
-          <div class="row-left" onclick="openDogFromSubs('${d.id}')" style="cursor:pointer">
-            <div class="sub-ava" style="${photoUrlFromKey(d.photoKey) ? `background-image:url('${photoUrlFromKey(d.photoKey)}')` : ''}">${photoUrlFromKey(d.photoKey) ? '' : '🐕'}</div>
-            <div>
-              <div class="list-title" style="font-size:14px">${escapeHtml(d.name || 'Без клички')}</div>
-              <div class="list-sub">${escapeHtml([d.breed, d.region || d.city].filter(Boolean).join(' · ') || '—')}</div>
-            </div>
+    ${dogs.length ? `<div class="card">${dogs.map((d, i) => `
+      <div class="edit-row">
+        <div class="row-left" onclick="openDogFromSubs('${d.id}')" style="cursor:pointer">
+          <div class="sub-ava" style="${photoUrlFromKey(d.photoKey) ? `background-image:url('${photoUrlFromKey(d.photoKey)}')` : ''}">${photoUrlFromKey(d.photoKey) ? '' : DOG_ICONS.street}</div>
+          <div>
+            <div class="list-title" style="font-size:14px">${escapeHtml(d.name || 'Без клички')}</div>
+            <div class="list-sub">${escapeHtml([d.breed, d.region || d.city].filter(Boolean).join(' · ') || '—')}</div>
           </div>
-          <button class="pop-btn secondary small" style="padding:5px 10px;margin:0" onclick="unsubDogFromList(${i})">🔕 Отписаться</button>
         </div>
-      </div>`).join('') : '<div class="empty">Ты пока ни за кем не следишь. Подписка включается сама, когда заводишь уличную собаку или дополняешь её анкету.</div>'}
+        <label class="sw"><input type="checkbox" checked onchange="unsubDogFromList(${i})"><span></span></label>
+      </div>`).join('')}</div>` : '<div class="empty">Ты пока ни за кем не следишь. Подписка включается сама, когда заводишь уличную собаку или дополняешь её анкету.</div>'}
     <button class="pop-btn secondary" style="margin-top:12px" onclick="openSubsSheet()">⬅️ Назад</button>
   `);
 }
@@ -3518,43 +3549,30 @@ async function openAdminDashboard() {
   `);
 }
 
-function openProfileEdit() {
-  if (!me || !me.profile) { setStatus('Профиль ещё не загрузился', 2000); return; }
-  const p = me.profile;
-  const cities = me.cities || [];
-  openSheet(`
-    <h3>${t('pf_edit')}</h3>
-    <div class="field"><label>${t('fd_name2')}</label><input type="text" id="prName" value="${escapeAttr(p.name || '')}"></div>
-    <div class="field"><label>${t('pf_phone')}</label><input type="tel" id="prTel" value="${escapeAttr(p.tel === 'Не указан' ? '' : (p.tel || ''))}" placeholder="+995…"></div>
-    ${cities.length ? `<div class="field"><label>${t('pf_city')}</label><select id="prCity">${selOpts(cities, p.city)}</select></div>` : ''}
-    <div class="field"><label>${t('pf_lang')}</label><select id="prLang">
-      <option value="RU" ${p.lang === 'RU' ? 'selected' : ''}>🇷🇺 Русский</option>
-      <option value="GE" ${p.lang === 'GE' ? 'selected' : ''}>🇬🇪 ქართული</option>
-      <option value="EN" ${p.lang === 'EN' ? 'selected' : ''}>🇬🇧 English</option>
-    </select></div>
-    <div class="field field-row">
-      <input type="checkbox" id="prShowTg" ${p.showTg === 'Показан' ? 'checked' : ''}>
-      <label style="margin:0">${t('pf_showtg')}</label>
-    </div>
-    <button class="pop-btn" onclick="submitProfileEdit()">${t('fd_save')}</button>
-  `);
+// Сохранение одного поля профиля. Без перезагрузки всего экрана: полный reload
+// сбрасывал бы фокус и прокрутку прямо во время правки следующего поля.
+async function saveProfileField(field, value) {
+  if (!me || !me.profile) return;
+  const before = me.profile[field];
+  if (String(before || '') === String(value || '')) return;   // ничего не поменялось
+  const res = await callApi('updateProfile', { changes: { [field]: value } }, true);
+  if (!res || !res.ok) {
+    uiAlert(t('err_fail') + ((res && res.error) || ''));
+    renderProfile();   // вернуть прежнее значение на экран
+    return;
+  }
+  me.profile[field] = value;
+  haptic();
+  setStatus(t('pf_saved'), 1600);
+  // Язык и город меняют не только эту строку: язык — все надписи, город — центр карты.
+  if (field === 'lang') { syncLangFromProfile(me.profile); applyStaticI18n(); renderProfile(); }
+  if (field === 'city') { centerMapByCity(value); dataCache.dogs = null; renderLayer(); }
+  if (field === 'name') {
+    const titleEl = document.getElementById('profileTitle');
+    if (titleEl) renderProfile();
+  }
 }
-async function submitProfileEdit() {
-  const cityEl = document.getElementById('prCity');
-  const res = await callApi('updateProfile', { changes: {
-    name: document.getElementById('prName').value,
-    tel: document.getElementById('prTel').value,
-    city: cityEl ? cityEl.value : undefined,
-    lang: document.getElementById('prLang').value,
-    showTg: document.getElementById('prShowTg').checked ? 'Показан' : 'Скрыт'
-    // lostAlerts здесь больше нет: подписка на потеряшек живёт в «Что мне приходит»
-    // вместе с дайджестом и подписками на районы. Две точки управления одной
-    // настройкой расходились — в профиле выключил, в подписках снова включено.
-  }});
-  closeSheet();
-  if (res.ok) { haptic(); me = null; loadProfile(true); setStatus(t('pf_saved'), 2000); }
-  else uiAlert(t('err_fail') + (res.error || ''));
-}
+
 
 // ================== ЗАГРУЗКА ФОТО ==================
 // Снимок уходит в Supabase Storage напрямую из браузера по подписанной ссылке —
