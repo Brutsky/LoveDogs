@@ -30,6 +30,7 @@
     --text:  var(--tg-theme-text-color, #272219);
     --hint:  var(--tg-theme-hint-color, #877e6e);
     --card:  var(--tg-theme-secondary-bg-color, #ffffff);
+    color-scheme: light dark;
     --btnbg: var(--paw);
     --btntx: #2b2008;
     --line:  color-mix(in srgb, var(--text) 12%, transparent);
@@ -54,6 +55,13 @@
      чуть приглушаем янтарь и делаем тени глубже — на тёмном фоне светлые тени не видны. */
   @media (prefers-color-scheme: dark) {
     :root {
+      /* Запасные значения тоже должны быть тёмными. Telegram присылает themeParams не
+         всегда и не сразу; пока их нет, работали светлые подстановки — отсюда белая
+         вспышка заставки перед тёмным интерфейсом. */
+      --bg:    var(--tg-theme-bg-color, #17181a);
+      --text:  var(--tg-theme-text-color, #ececec);
+      --hint:  var(--tg-theme-hint-color, #8d9096);
+      --card:  var(--tg-theme-secondary-bg-color, #232427);
       --paw:      #d9973a;
       --paw-deep: #f0b968;   /* на тёмном «глубокий» оттенок должен быть СВЕТЛЕЕ базового */
       --shadow-s: 0 1px 2px rgba(0,0,0,.36), 0 4px 14px rgba(0,0,0,.30);
@@ -62,6 +70,10 @@
   }
   /* Telegram может явно сообщить тёмную схему — учитываем и это (класс ставится из JS). */
   body.tg-dark {
+    --bg:    var(--tg-theme-bg-color, #17181a);
+    --text:  var(--tg-theme-text-color, #ececec);
+    --hint:  var(--tg-theme-hint-color, #8d9096);
+    --card:  var(--tg-theme-secondary-bg-color, #232427);
     --paw:      #d9973a;
     --paw-deep: #f0b968;
     --shadow-s: 0 1px 2px rgba(0,0,0,.36), 0 4px 14px rgba(0,0,0,.30);
@@ -150,7 +162,13 @@
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     color: var(--hint); cursor: pointer; user-select: none; border: 1px solid var(--line);
     transition: background .15s ease, color .15s ease; }
-  .chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  /* «Выбрано» во всём приложении — фирменный акцент, а не чёрный. Раньше вкладка
+     сверху подсвечивалась охрой, а фильтр под ней — чёрным: два разных цвета для
+     одного и того же смысла. Оттенок наследуется от активного слоя (собаки — охра,
+     места — хвоя), так что цвет заодно говорит, на что смотришь. */
+  .chip.active { background: var(--accent, var(--paw)); color: #fff; border-color: transparent; }
+  body[data-layer="dogs"] .chip.active { background: var(--paw); color: var(--btntx); }
+  body[data-layer="places"] .chip.active { background: var(--vet); color: #fff; }
   #status { position: absolute; top: 108px; left: 50%; transform: translateX(-50%); z-index: 750;
     background: var(--text); color: var(--bg); font-size: 12.5px; font-weight: 600; padding: 8px 16px;
     border-radius: 999px; box-shadow: var(--shadow-m); pointer-events: none; opacity: 0;
@@ -167,7 +185,9 @@
      за элемент карты. Теперь — подпись, ощутимый размер и мягкое «дыхание» первые
      секунды после загрузки, чтобы её заметили, но она не мельтешила постоянно. */
   #fab { position: absolute; bottom: calc(var(--tabbar-h) + 16px); right: 14px; z-index: 750;
-    height: 52px; padding: 0 20px 0 16px; border-radius: 26px; background: var(--vet); color: #fff;
+    /* Главное действие экрана красим акцентом, а не вторым зелёным: раньше кнопка,
+       кластеры и маркеры мест были тремя разными цветами и спорили за внимание. */
+    height: 52px; padding: 0 20px 0 16px; border-radius: 26px; background: var(--paw); color: var(--btntx);
     border: none; font-size: 15px; font-weight: 700; letter-spacing: .01em;
     box-shadow: 0 6px 20px rgba(0,0,0,.22); cursor: pointer; display: none;
     align-items: center; gap: 8px; transition: transform .12s ease, box-shadow .2s ease; }
@@ -332,7 +352,7 @@
   .seg-scroll { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; margin-bottom: 6px; }
   .seg-scroll::-webkit-scrollbar { display: none; }
   .seg-scroll .chip { background: var(--card); backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .seg-scroll .chip.active { background: var(--text); color: var(--bg); }
+  .seg-scroll .chip.active { background: var(--paw); color: var(--btntx); }
 
   .pop-title { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
   .pop-row { color: var(--hint); font-size: 13px; }
@@ -366,7 +386,10 @@
   /* Значок кластера маркеров (число слипшихся меток) */
   .cluster-marker { background: transparent; }
   .cluster-badge { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-    background: var(--paw); color: var(--btntx, #2b2008); font-weight: 800; font-size: 13px;
+    /* Кластер — не действие, а служебная разметка карты: сколько точек скрыто под одной.
+       Нейтральный тон, чтобы не конкурировать с кнопкой и с самими маркерами. */
+    background: color-mix(in srgb, var(--text) 78%, var(--bg)); color: var(--bg);
+    font-weight: 800; font-size: 13px;
     border-radius: 50%; border: 2px solid var(--stroke); box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 
   /* донорские фильтры */
@@ -1179,10 +1202,44 @@ function centerMapByCity(city) {
   const c = (me && me.cityCenter) || CITY_CENTERS[city];
   if (c) { map.setView(c, 12); mapCentered = true; }
 }
-// Стандартная подложка Google Maps (lyrs=m — «карта»; h=гибрид, s=спутник при желании)
-L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=ru&x={x}&y={y}&z={z}', {
-  maxZoom: 20, subdomains: ['0', '1', '2', '3']
-}).addTo(map);
+// ---- Подложка карты ----
+// Сейчас используется внутренний тайловый адрес Google (mt0..3.google.com/vt). Он
+// отдаёт подписи по-русски, что для Тбилиси важно, но обращаться к нему напрямую,
+// без Maps Tiles API и ключа, условиями Google не разрешено. Это не косметика:
+// адрес могут закрыть в любой момент, и карта просто исчезнет.
+//
+// Переключатель ниже — чтобы смена источника была решением на одну строку.
+// 'google'  — как сейчас: русские подписи, но вне условий использования.
+// 'carto'   — CARTO поверх OpenStreetMap: легально (нужна атрибуция), приглушённая
+//             подложка, сама подстраивается под тему. Подписи — грузинские/латиница.
+const MAP_TILES = 'google';
+
+const TILE_SOURCES = {
+  google: {
+    url: 'https://mt{s}.google.com/vt/lyrs=m&hl=ru&x={x}&y={y}&z={z}',
+    opts: { maxZoom: 20, subdomains: ['0', '1', '2', '3'] }
+  },
+  carto: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/{style}/{z}/{x}/{y}{r}.png',
+    opts: {
+      maxZoom: 20, subdomains: 'abcd',
+      attribution: '© OpenStreetMap · © CARTO'
+    }
+  }
+};
+
+(function addBaseTiles() {
+  const src = TILE_SOURCES[MAP_TILES] || TILE_SOURCES.google;
+  let url = src.url;
+  if (MAP_TILES === 'carto') {
+    // Подложка следует за темой Telegram: светлая карта под тёмным интерфейсом
+    // выглядит как чужая вставка.
+    const dark = document.body.classList.contains('tg-dark') ||
+                 window.matchMedia('(prefers-color-scheme: dark)').matches;
+    url = url.replace('{style}', dark ? 'dark_all' : 'light_all');
+  }
+  L.tileLayer(url, src.opts).addTo(map);
+})();
 // (зум добавляется один раз выше, слева сверху — второй контрол давал две пары кнопок)
 
 // Кластеризация: близкие маркеры (наплыв >50% при текущем зуме) объединяются в значок
@@ -1336,6 +1393,9 @@ const SUBFILTERS = {
   places: [['all','sf_all'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Groom','✂️'], ['Kennel','🐶'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
 };
 function renderSubfilters() {
+  // Активный слой пишем на <body>: от него CSS берёт цвет выделения фильтров, чтобы
+  // «выбрано» на собаках и на местах красилось в цвет своего слоя, а не в чёрный.
+  try { document.body.dataset.layer = activeTab; } catch (e) {}
   const box = document.getElementById('subfilters');
   box.innerHTML = '';
   SUBFILTERS[activeTab].forEach(([k, label]) => {
