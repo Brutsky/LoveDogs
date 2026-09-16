@@ -505,10 +505,20 @@
     font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 12px; pointer-events: none; }
   .more-toggle { background: none; border: none; color: var(--vet, #1f5b4b); font-weight: 700; font-size: 13px; padding: 7px 0; cursor: pointer; }
   .comments-block { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
-  .comments-title { font-weight: 800; font-size: 14px; margin-bottom: 8px; }
+  .comments-title { font-family: var(--font-disp); font-weight: 600; font-size: 16px;
+    letter-spacing: -.01em; margin-bottom: 10px; }
   .comments-inline .review-item { margin-bottom: 8px; }
-  .comment-compose { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-  .comment-compose textarea { width: 100%; }
+  /* Поле для комментария выглядело как служебная подпись: мелкий шрифт, бледная
+     рамка, ничем не выделенный блок. Люди его просто не замечали. Теперь это
+     заметная карточка с приглашением написать. */
+  .comment-compose { display: flex; flex-direction: column; gap: 10px; margin-top: 14px;
+    background: var(--card); border-radius: var(--r-card); padding: 12px; }
+  .comment-compose textarea { width: 100%; min-height: 76px; font-size: 15px; line-height: 1.45;
+    padding: 11px 12px; border-radius: var(--r-ctl, 12px); border: 1.5px solid var(--line);
+    background: var(--bg); color: var(--fg); font-family: inherit; resize: vertical; }
+  .comment-compose textarea:focus { outline: none; border-color: var(--paw-deep); }
+  .comment-compose textarea::placeholder { color: var(--hint); font-size: 14px; }
+  .comment-compose .cm-invite { font-size: 13px; color: var(--hint); line-height: 1.4; }
   .hint-p { color: var(--hint); font-size: 13px; margin: 0 0 10px; }
   .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.93); z-index: 9999; display: none; align-items: center; justify-content: center; }
   .lightbox.show { display: flex; }
@@ -807,7 +817,7 @@ const I18N = {
     a_unsub:'🔕 Отписаться',
     a_gallery:'🖼 Галерея',
     a_walks:'📍 Гуляет тут',
-    a_updgeo:'📍 Уточнить геопозицию',
+    a_updgeo:'📍 Уточнить геопозицию', a_newpin:'📍 Новая точка',
     a_showmap:'🗺 Показать на карте',
     p_onmod:'⏳ на проверке',
     p_closed:'⛔ не работает',
@@ -955,7 +965,7 @@ const I18N = {
     a_unsub:'🔕 გამოწერის გაუქმება',
     a_gallery:'🖼 გალერეა',
     a_walks:'📍 აქ სეირნობს',
-    a_updgeo:'📍 გეოლოკაციის დაზუსტება',
+    a_updgeo:'📍 გეოლოკაციის დაზუსტება', a_newpin:'📍 ახალი წერტილი',
     a_showmap:'🗺 რუკაზე ჩვენება',
     p_onmod:'⏳ შემოწმებაზეა',
     p_closed:'⛔ არ მუშაობს',
@@ -1103,7 +1113,7 @@ const I18N = {
     a_unsub:'🔕 Unfollow',
     a_gallery:'🖼 Gallery',
     a_walks:'📍 Walks here',
-    a_updgeo:'📍 Update location',
+    a_updgeo:'📍 Update location', a_newpin:'📍 New pin',
     a_showmap:'🗺 Show on map',
     p_onmod:'⏳ pending review',
     p_closed:'⛔ closed',
@@ -1907,17 +1917,22 @@ async function openDogCard(d) {
   if (isStreet && !d.lost && !seekLocked) {
     actions += `<button class="pop-btn" onclick="confirmDogGeo('${d.id}','${escapeAttr(d.name || '')}')">${t('a_here')}</button>`;
   }
+  // Сразу под подтверждением — отправка новой точки. Две эти кнопки читаются вместе:
+  // «пёс там же» или «пёс переехал». Раньше вторая уезжала вниз списка, в разные
+  // ветки для своих и чужих, и выглядела как отдельная непонятная функция.
+  // «Гуляет тут» здесь нет намеренно: это про домашнюю собаку на прогулке, у уличной
+  // такого понятия нет — она живёт в районе, а не выходит гулять.
+  if (isStreet && !seekLocked) {
+    actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">${t('a_newpin')}</button>`;
+  }
   // Кнопка «показать на карте» бессмысленна, когда карточку и открыли с карты —
   // человек уже смотрит на эту точку.
   if (d.lat && activeScreen !== 'map') actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">${t('a_showmap')}</button>`;
   actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">${t('a_share')}</button>`;
-  if (canEditGallery) actions += `<button class="pop-btn secondary" onclick="openBotDeepLink('gallery_${d.id}')">${t('a_addphoto')}</button>`;
+  // Фото грузится прямо здесь. Прежняя кнопка уводила в бота — она больше не нужна
+  // и дублировала эту; права те же самые (canEditGallery).
+  if (canEditGallery) actions += `<button class="pop-btn secondary" onclick="addPhotoFromCard('${d.id}')">${t('a_addphoto')}</button>`;
   if (isStreet) actions += `<button class="pop-btn secondary" id="subBtn-${d.id}" onclick="toggleDogSub('${d.id}')">${d.subscribed ? t('a_unsub') : t('a_sub')}</button>`;
-  // Фото может добавить владелец своей собаке и кто угодно — уличной. Это тот же
-  // принцип, что у комментариев и геопозиции: уличный пёс — общая забота района.
-  if (d.mine || isStreet) {
-    actions += `<button class="pop-btn secondary" onclick="addPhotoFromCard('${d.id}')">📷 Добавить фото</button>`;
-  }
   if (d.mine) {
     actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">${t('a_edit')}</button>`;
     if (isHomeMine) {
@@ -1925,8 +1940,6 @@ async function openDogCard(d) {
       actions += d.isDonor
         ? `<button class="pop-btn secondary" onclick="removeDonor('${d.id}')">🚫 Убрать из доноров</button>`
         : `<button class="pop-btn secondary" onclick="openDonorSheet('${d.id}','${escapeAttr(d.name || '')}')">🩸 Стать донором крови</button>`;
-    } else {
-      actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">${t('a_updgeo')}</button>`;
     }
     if (isStreetMine) {
       // Собаку с биркой пристраивают официально, через приют или организацию, —
@@ -1959,7 +1972,6 @@ async function openDogCard(d) {
     if (seekLocked) {
       actions += `<div class="list-sub" style="margin-top:8px">🏡 Анкету ведёт тот, кто ищет собаке дом. Когда отметка «ищет новый дом» будет снята, её снова сможет дополнять кто угодно.</div>`;
     }
-    if (isStreet && !seekLocked) actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">${t('a_updgeo')}</button>`;
     // Дубли и анкеты собак, которых давно нет во дворе, иначе вычистить некому.
     // Запрос уходит модератору — сам пользователь чужую анкету не сносит.
     if (isStreet && !seekLocked) actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}', true)">🗑 Предложить удалить</button>`;
@@ -1979,6 +1991,9 @@ async function openDogCard(d) {
       <div class="comments-title">${t('cm_head')}</div>
       <div id="commentsList" class="comments-inline"><div class="empty">…</div></div>
       <div class="comment-compose">
+        <div class="cm-invite">${isStreet
+          ? '💬 Видел этого пса? Напиши, где и в каком состоянии — соседям это важно.'
+          : '💬 Напиши пару слов — хозяин прочитает.'}</div>
         <textarea id="commentText" placeholder="${t('cm_ph')}" maxlength="500" oninput="updCount(this,500)"></textarea>
         <button class="pop-btn" id="commentSendBtn" onclick="submitComment('${d.id}','${escapeAttr(d.name || '')}')">${t('cm_send')}</button>
       </div>
@@ -2092,7 +2107,9 @@ async function loadDogCommentsInline(dogId, dogName) {
   const list = document.getElementById('commentsList');
   if (!list) return;
   try {
-    const res = await callApi('getComments', { dogId });
+    // quiet: карточка уже на экране, и затемнять её ради ленты комментариев —
+    // это ровно та «загрузка всей карточки», которая выглядит как подвисание.
+    const res = await callApi('getComments', { dogId }, true);
     const items = res.ok ? (res.comments || []) : [];
     const canModerate = res.ok && res.canModerate;
     if (!items.length) { list.innerHTML = `<div class="empty">${t('cm_empty')}</div>`; return; }
@@ -2145,9 +2162,15 @@ function openDogEditSheet(d) {
     <button class="pop-btn" onclick="submitDogEdit('${d.id}')">${t('fd_save')}</button>
   `);
 }
-function updateDogPhoto(dogId) {
-  // Фото можно прислать только через чат бота — открываем его на нужном шаге
-  openBotDeepLink('photo_' + dogId);
+// Обложка из формы редактирования. Раньше отправляла в бота — теперь снимок
+// выбирается здесь же и сразу становится обложкой анкеты.
+async function updateDogPhoto(dogId) {
+  const ok = await addPhotoToDog(dogId, true);
+  if (!ok) return;
+  dataCache.dogs = null;
+  await renderLayer();
+  const fresh = findDog(dogId);
+  if (fresh) openDogEditSheet(fresh);
 }
 async function submitDogEdit(id) {
   const breedSel = document.getElementById('edBreedSel').value;
