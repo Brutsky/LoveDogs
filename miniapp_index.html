@@ -2011,7 +2011,7 @@ function renderSubfilters() {
 // после этого фоновое обновление идёт всегда.
 // ==========================================================
 const LAYER_CACHE_TTL = 24 * 60 * 60 * 1000;   // сколько вообще храним
-const LAYER_FRESH_MS = 5 * 60 * 1000;          // сколько считаем актуальным без обновления
+const LAYER_FRESH_MS = 15 * 60 * 1000;         // сколько считаем актуальным без обновления
 
 function layerCacheKey(kind) { return 'ld_layer_' + kind + '_' + (MY_UID || 'anon'); }
 function readLayerCache(kind) {
@@ -2033,6 +2033,11 @@ async function fetchLayer(kind) {
   const res = await fetch(`${API_URL}?type=${kind}${uid ? '&uid=' + uid : ''}&${initDataQS()}`);
   const json = await res.json();
   if (json && json.photoBase) notePhotoBase(json.photoBase);
+  // Профиль приложен к слою собак — берём его здесь, чтобы не ходить за ним отдельно.
+  // Карта присылает только город и язык смотрящего — этого достаточно, чтобы
+  // отрисовать слой и центрировать вид. Профиль целиком приезжает следом, фоном.
+  if (json && json.viewerCity) viewerCity = json.viewerCity;
+  if (json && json.viewerLang && !me) syncLangFromProfile({ lang: json.viewerLang });
   return json[kind] || [];
 }
 
@@ -2046,13 +2051,18 @@ async function loadData(kind, force) {
     if (Date.now() - cached.t < LAYER_FRESH_MS) return dataCache[kind];
     // Данные постарше: отдаём их немедленно, а обновление идёт фоном — без «часиков»,
     // потому что человеку уже есть на что смотреть.
-    fetchLayer(kind).then(fresh => {
-      if (!fresh || !fresh.length) return;
-      const changed = JSON.stringify(fresh) !== JSON.stringify(dataCache[kind]);
-      dataCache[kind] = fresh;
-      writeLayerCache(kind, fresh);
-      if (changed) { try { renderLayer(); } catch (e) {} }
-    }).catch(() => {});
+    // Обновление откладываем: сразу после старта карта только что отрисовалась, и
+    // вторая перерисовка через секунду читается как «грузится ещё раз». Данные
+    // максимум пятиминутной давности — подождать три секунды им нечем повредить.
+    setTimeout(() => {
+      fetchLayer(kind).then(fresh => {
+        if (!fresh || !fresh.length) return;
+        const changed = JSON.stringify(fresh) !== JSON.stringify(dataCache[kind]);
+        dataCache[kind] = fresh;
+        writeLayerCache(kind, fresh);
+        if (changed) { try { renderLayer(); } catch (e) {} }
+      }).catch(() => {});
+    }, 3000);
     return dataCache[kind];
   }
 
@@ -2072,7 +2082,7 @@ async function loadData(kind, force) {
 }
 
 function filterDogsMap(list) {
-  const myCity = me && me.profile ? me.profile.city : null;
+  const myCity = (me && me.profile ? me.profile.city : null) || viewerCity;
   if (myCity) list = list.filter(d => !d.city || d.city === myCity); // только мой город
   if (subFilter === 'mine') return list.filter(d => d.mine);
   if (subFilter === 'home') return list.filter(d => d.status === 'У владельца');
@@ -4312,26 +4322,61 @@ renderSubfilters();
 // Сначала узнаём город пользователя, ТОЛЬКО потом рисуем карту — иначе первый рендер
 // проходит с me=null и показывает собак всех городов.
 // Профиль и слой карты грузим ПАРАЛЛЕЛЬНО — раньше карта ждала getMe и старт был долгим.
-Promise.all([
-  callApi('getMe', {}).then(res => {
-    if (res.ok) {
-      me = res;
-      if (me.botUsername) BOT_USERNAME = me.botUsername;
-      // Язык, выбранный в боте, важнее языка Telegram — применяем его к статике.
-      if (me.profile) syncLangFromProfile(me.profile);
-      if (me.profile) centerMapByCity(me.profile.city);
-    }
-  }).catch(() => {}),
-  loadData('dogs').catch(() => {})
-]).finally(() => {
+// Профиль теперь приезжает вместе со слоем собак, одним запросом. Раньше их было
+// два — getMe и слой, — и каждый будил Apps Script со своим холодным стартом:
+// человек ждал две загрузки подряд там, где хватает одной.
+// Отдельный getMe остаётся запасным путём: если сервер ещё старой версии или слой
+// поднялся из локального кэша, профиль надо всё равно откуда-то взять.
+// Город смотрящего до загрузки профиля. Раньше фильтр по городу зависел от me,
+// и первая отрисовка шла со всеми городами сразу — карта моргала.
+let viewerCity = null;
+
+async function loadProfileQuietly() {
+  try {
+    const res = await callApi('getMe', {}, true);
+    if (!applyMePayload(res)) return;
+    renderSubfilters();
+    renderLayer();
+    if (activeScreen === 'profile') renderProfile();
+  } catch (e) {}
+}
+
+function applyMePayload(res) {
+  if (!res || !res.ok) return false;
+  me = res;
+  if (me.botUsername) BOT_USERNAME = me.botUsername;
+  // Язык, выбранный в боте, важнее языка Telegram — применяем его к статике.
+  if (me.profile) {
+    syncLangFromProfile(me.profile);
+    // Центрируем повторно, только если город в профиле отличается от того, по
+    // которому карту уже показали: иначе вид дёргается на ровном месте.
+    if (me.profile.city && me.profile.city !== viewerCity) centerMapByCity(me.profile.city);
+    viewerCity = me.profile.city || viewerCity;
+  }
+  applyStaticI18n();
+  return true;
+}
+
+// Старт: сначала карта и ничего больше. Профиль грузится следом, фоном — он нужен
+// профилю, ситтерам и формам, но не нужен, чтобы показать собак твоего города.
+// Раньше карта ждала его, а он лезет в таблицу за справочниками и счётчиками.
+(async function boot() {
+  try { await loadData('dogs'); } catch (e) {}
+})().finally(() => {
   renderSubfilters();
   renderLayer();
   hideSplash();
-  // Пока человек смотрит на карту, тихо подтягиваем остальные слои. Переход на
-  // «Места» и «Ситтеры» после этого открывается мгновенно, из локального кэша.
+  centerMapByCity(viewerCity);
+
+  // Профиль — молча и следом. Когда приедет, перерисуем слой: фильтр «мои» и метки
+  // подписок до этого момента показывались без них.
+  loadProfileQuietly();
+  // Предзагрузка соседних слоёв — через пять секунд и только если человек всё ещё
+  // на карте. Через секунду после старта она конкурировала за сеть с фотографиями
+  // карточек и выглядела второй загрузкой подряд.
   setTimeout(() => {
-    prefetchLayersQuietly();
-  }, 900);
+    if (activeScreen === 'map') prefetchLayersQuietly();
+  }, 5000);
 });
 
 // Догрузка «про запас»: тянем слои, которых человек ещё не открывал, чтобы переход
