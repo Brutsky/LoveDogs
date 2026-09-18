@@ -748,6 +748,53 @@ const I18N = {
     pf_city:'Город',
     pf_phone:'Телефон',
     pf_lang:'Язык бота',
+    ui_refresh:'Обновить',
+    ui_streetdog:'Уличный пёс',
+    ui_sendreq:'🗑 Отправить',
+    ui_delete:'🗑 Удалить',
+    nt_tag:'🏷 У этой собаки есть бирка — значит, она уже в муниципальной программе, и пристройство оформляется через неё.',
+    sfm_walk_s:'Выгул',
+    sfm_walk_l:'Приходящий выгул',
+    sfm_walk_h:'Ситтер приходит в установленное время: погулять с собакой и насыпать корм',
+    sfm_own_s:'У ситтера',
+    sfm_own_l:'Передержка у ситтера',
+    sfm_own_h:'Собака живёт у ситтера дома',
+    sfm_live_s:'С проживанием',
+    sfm_live_l:'Ситтер с проживанием',
+    sfm_live_h:'Ситтер живёт на территории собаки, пока вас нет',
+    age_pup:'Щенок (до 1 года)',
+    age_young:'Молодая (1–3 года)',
+    age_adult:'Взрослая (4–10 лет)',
+    age_old:'Пожилая (10+ лет)',
+    ls_showall:'Показать всех собак',
+    ls_nobreed:'порода не указана',
+    ls_nogeo:'🗺 нет на карте — без координат',
+    ls_donor:'🩸 донор',
+    ls_rate:'⭐ Оценить',
+    ls_reviews:'💬 Отзывы',
+    er_nonet:'Нет связи — показываю сохранённое',
+    er_load:'Не получилось загрузить данные 😔',
+    er_session:'Сессия устарела — закрой и открой приложение заново',
+    er_bot:'Не получилось открыть бота — попробуй ещё раз через минуту.',
+    er_del:'Не получилось удалить: ',
+    er_share:'Не удалось подготовить: ',
+    er_noregions:'Справочник районов пуст — заполни лист Lists.',
+    er_subsonly:'Подписка доступна только для уличных собак.',
+    er_donoronly:'донорство доступно только домашним собакам',
+    er_selfrate:'себя оценивать нельзя 🙂',
+    er_needfmt:'выбери хотя бы один формат',
+    er_breedch:'недопустимые символы в породе',
+    er_cardgone:'Карточка недоступна — возможно, собаку убрали с карты',
+    ok_confirm:'✅ Спасибо! Отметил, что «',
+    ok_onplace:'» на месте',
+    ok_copied:'📋 Скопировано: ',
+    sp_recip:'Получатель',
+    sp_tbank:'Тбанк (по номеру)',
+    sp_starerr:'Не получилось открыть оплату звёздами',
+    sp_startail:'.\nПоддержать можно переводом — реквизиты ниже.',
+    sp_thanks:'🙏 Спасибо за поддержку!',
+    sp_payfail:'Оплата не прошла. Можно попробовать ещё раз или поддержать переводом.',
+    nt_seek:'🏡 Эта собака ищет новый дом — пока идёт пристройство, её анкету ведёт тот, кто её завёл.',
     ms_locating:'📍 Определяю местоположение…',
     ms_updpin:'Обновляю точку…',
     ms_pinok:'✅ Точка на карте обновлена',
@@ -1040,6 +1087,53 @@ const I18N = {
     pf_city:'ქალაქი',
     pf_phone:'ტელეფონი',
     pf_lang:'ბოტის ენა',
+    ui_refresh:'განახლება',
+    ui_streetdog:'ქუჩის ძაღლი',
+    ui_sendreq:'🗑 გაგზავნა',
+    ui_delete:'🗑 წაშლა',
+    nt_tag:'🏷 ამ ძაღლს ბირკა აქვს — ესე იგი ის უკვე მუნიციპალურ პროგრამაშია, და პატრონის მოძებნა მისი გავლით ფორმდება.',
+    sfm_walk_s:'გასეირნება',
+    sfm_walk_l:'მისვლითი გასეირნება',
+    sfm_walk_h:'მომვლელი მოდის დათქმულ დროს: ძაღლის გასეირნება და საკვების ჩაყრა',
+    sfm_own_s:'მომვლელთან',
+    sfm_own_l:'დროებითი მოვლა მომვლელთან',
+    sfm_own_h:'ძაღლი ცხოვრობს მომვლელის სახლში',
+    sfm_live_s:'ცხოვრებით',
+    sfm_live_l:'მომვლელი ცხოვრებით',
+    sfm_live_h:'მომვლელი ცხოვრობს ძაღლის ტერიტორიაზე, სანამ თქვენ არ ხართ',
+    age_pup:'ლეკვი (1 წლამდე)',
+    age_young:'ახალგაზრდა (1–3 წელი)',
+    age_adult:'ზრდასრული (4–10 წელი)',
+    age_old:'ხანდაზმული (10+ წელი)',
+    ls_showall:'ყველა ძაღლის ჩვენება',
+    ls_nobreed:'ჯიში მითითებული არ არის',
+    ls_nogeo:'🗺 რუკაზე არ არის — კოორდინატების გარეშე',
+    ls_donor:'🩸 დონორი',
+    ls_rate:'⭐ შეფასება',
+    ls_reviews:'💬 შეფასებები',
+    er_nonet:'კავშირი არ არის — ვაჩვენებ შენახულს',
+    er_load:'მონაცემების ჩატვირთვა ვერ მოხერხდა 😔',
+    er_session:'სესია მოძველდა — დახურე და ხელახლა გახსენი აპი',
+    er_bot:'ბოტის გახსნა ვერ მოხერხდა — სცადე წუთში.',
+    er_del:'წაშლა ვერ მოხერხდა: ',
+    er_share:'მომზადება ვერ მოხერხდა: ',
+    er_noregions:'უბნების ცნობარი ცარიელია — შეავსე ფურცელი Lists.',
+    er_subsonly:'გამოწერა მხოლოდ ქუჩის ძაღლებზეა შესაძლებელი.',
+    er_donoronly:'დონორობა მხოლოდ შინაურ ძაღლებს შეუძლიათ',
+    er_selfrate:'საკუთარი თავის შეფასება არ შეიძლება 🙂',
+    er_needfmt:'აირჩიე ერთი ფორმატი მაინც',
+    er_breedch:'დაუშვებელი სიმბოლოები ჯიშში',
+    er_cardgone:'პროფილი მიუწვდომელია — შესაძლოა ძაღლი რუკიდან მოხსნეს',
+    ok_confirm:'✅ გმადლობთ! აღვნიშნე, რომ „',
+    ok_onplace:'“ ადგილზეა',
+    ok_copied:'📋 დაკოპირდა: ',
+    sp_recip:'მიმღები',
+    sp_tbank:'Tbank (ნომრით)',
+    sp_starerr:'ვარსკვლავებით გადახდის გახსნა ვერ მოხერხდა',
+    sp_startail:'.\nმხარდაჭერა გადარიცხვითაც შეიძლება — რეკვიზიტები ქვემოთ.',
+    sp_thanks:'🙏 გმადლობთ მხარდაჭერისთვის!',
+    sp_payfail:'გადახდა ვერ შესრულდა. სცადე ხელახლა ან მხარი დაუჭირე გადარიცხვით.',
+    nt_seek:'🏡 ეს ძაღლი ეძებს ახალ სახლს — სანამ პატრონს ეძებენ, პროფილს ის უვლის, ვინც დაამატა.',
     ms_locating:'📍 ვადგენ მდებარეობას…',
     ms_updpin:'ვაახლებ წერტილს…',
     ms_pinok:'✅ წერტილი რუკაზე განახლდა',
@@ -1332,6 +1426,53 @@ const I18N = {
     pf_city:'City',
     pf_phone:'Phone',
     pf_lang:'Bot language',
+    ui_refresh:'Refresh',
+    ui_streetdog:'Street dog',
+    ui_sendreq:'🗑 Send',
+    ui_delete:'🗑 Delete',
+    nt_tag:'🏷 This dog has a tag — it is already in the municipal programme, and rehoming goes through it.',
+    sfm_walk_s:'Walking',
+    sfm_walk_l:'Drop-in walking',
+    sfm_walk_h:'The sitter comes at an agreed time to walk the dog and put out food',
+    sfm_own_s:'At the sitter’s',
+    sfm_own_l:'Boarding at the sitter’s',
+    sfm_own_h:'The dog stays at the sitter’s home',
+    sfm_live_s:'Live-in',
+    sfm_live_l:'Live-in sitter',
+    sfm_live_h:'The sitter stays at the dog’s home while you are away',
+    age_pup:'Puppy (under 1)',
+    age_young:'Young (1–3)',
+    age_adult:'Adult (4–10)',
+    age_old:'Senior (10+)',
+    ls_showall:'Show all dogs',
+    ls_nobreed:'breed not specified',
+    ls_nogeo:'🗺 not on the map — no coordinates',
+    ls_donor:'🩸 donor',
+    ls_rate:'⭐ Rate',
+    ls_reviews:'💬 Reviews',
+    er_nonet:'No connection — showing saved data',
+    er_load:'Could not load the data 😔',
+    er_session:'Session expired — close and reopen the app',
+    er_bot:'Could not open the bot — try again in a minute.',
+    er_del:'Could not delete: ',
+    er_share:'Could not prepare: ',
+    er_noregions:'The district list is empty — fill the Lists sheet.',
+    er_subsonly:'Subscriptions work for street dogs only.',
+    er_donoronly:'only pet dogs can be donors',
+    er_selfrate:'you cannot rate yourself 🙂',
+    er_needfmt:'pick at least one service type',
+    er_breedch:'invalid characters in the breed',
+    er_cardgone:'Profile unavailable — the dog may have been removed',
+    ok_confirm:'✅ Thanks! Marked that “',
+    ok_onplace:'” is in place',
+    ok_copied:'📋 Copied: ',
+    sp_recip:'Recipient',
+    sp_tbank:'Tbank (by phone)',
+    sp_starerr:'Could not open the Stars payment',
+    sp_startail:'.\nYou can also support by bank transfer — details below.',
+    sp_thanks:'🙏 Thank you for the support!',
+    sp_payfail:'The payment failed. Try again or support by transfer.',
+    nt_seek:'🏡 This dog is looking for a home — while that lasts, its profile is kept by whoever added it.',
     ms_locating:'📍 Finding your location…',
     ms_updpin:'Updating the pin…',
     ms_pinok:'✅ Pin updated',
@@ -1748,8 +1889,10 @@ const PLACE_TYPES = {
 let AGE_OPTIONS = ['Щенок', 'Молодая', 'Взрослая', 'Пожилая'];
 // Подписи с диапазонами лет. Для значения, которого здесь нет (справочник могли
 // расширить), показываем его как есть — список не должен молча терять варианты.
-const AGE_LABELS = { 'Щенок': 'Щенок (до 1 года)', 'Молодая': 'Молодая (1–3 года)', 'Взрослая': 'Взрослая (4–10 лет)', 'Пожилая': 'Пожилая (10+ лет)' };
-function ageLabel(a) { return AGE_LABELS[a] || a; }
+// Значение возраста хранится по-русски (так его сверяет сервер), а показывается
+// через словарь — отсюда функция, а не таблица строк.
+const AGE_KEYS = { 'Щенок': 'age_pup', 'Молодая': 'age_young', 'Взрослая': 'age_adult', 'Пожилая': 'age_old' };
+function ageLabel(a) { return AGE_KEYS[a] ? t(AGE_KEYS[a]) : a; }
 function ageOptsHtml(sel, placeholder) {
   const list = AGE_OPTIONS.slice();
   // Уже сохранённое значение показываем, даже если его убрали из справочника, —
@@ -1923,7 +2066,7 @@ async function loadData(kind, force) {
     // Сеть отвалилась — лучше показать вчерашние данные, чем пустой экран.
     const stale = readLayerCache(kind);
     dataCache[kind] = stale ? stale.d : [];
-    setStatus(stale ? 'Нет связи — показываю сохранённое' : 'Не получилось загрузить данные 😔', 3000);
+    setStatus(stale ? t('er_nonet') : t('er_load'), 3000);
   } finally { setBusy(false); }
   return dataCache[kind];
 }
@@ -2030,7 +2173,7 @@ async function renderLayer() {
 function openPackSheet(group) {
   const items = group.map(d => `
     <div class="card tappable" onclick="closeSheet(); openDogCard(findDog('${d.id}'))">
-      <div class="list-title">${d.lost ? '🚨 ' : '🌳 '}${escapeHtml(d.name || 'Уличный пёс')}</div>
+      <div class="list-title">${d.lost ? '🚨 ' : '🌳 '}${escapeHtml(d.name || t('ui_streetdog'))}</div>
       ${d.breed ? `<div class="list-sub">${escapeHtml(d.breed)}</div>` : ''}
     </div>`).join('');
   openSheet(`<h3>🐾 Стая — ${group.length} собак рядом</h3>
@@ -2128,7 +2271,7 @@ async function callApi(action, payload, quiet) {
     // Подпись Telegram живёт сутки. Держать приложение открытым дольше — обычное дело,
     // и раньше человек в этом случае получал безликое «не получилось», думая, что сломался бот.
     if (json && json.ok === false && json.error === 'auth') {
-      setStatus('Сессия устарела — закрой и открой приложение заново', 4000);
+      setStatus(t('er_session'), 4000);
     }
     return json;
   } catch (e) { return { ok: false, error: 'network' }; }
@@ -2185,7 +2328,7 @@ async function openBotDeepLink(payloadStr) {
       if (res && res.ok && res.botUsername) BOT_USERNAME = res.botUsername;
     } catch (e) {}
   }
-  if (!BOT_USERNAME || /[А-Яа-я]/.test(BOT_USERNAME)) { uiAlert('Не получилось открыть бота — попробуй ещё раз через минуту.'); return; }
+  if (!BOT_USERNAME || /[А-Яа-я]/.test(BOT_USERNAME)) { uiAlert(t('er_bot')); return; }
   const url = `https://t.me/${BOT_USERNAME}?start=${payloadStr}`;
   if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
 }
@@ -2241,7 +2384,7 @@ function uiAlert(text) {
 }
 
 function copyToClipboard(text, label) {
-  const done = () => setStatus('📋 Скопировано: ' + (label || text), 1800);
+  const done = () => setStatus(t('ok_copied') + (label || text), 1800);
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
     else { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); done(); }
@@ -2273,8 +2416,8 @@ function renderSupportScreen() {
     <div class="sec-label">🏦 Переводом</div>
     ${row('BOG', 'GE21BG0000000538937088')}
     ${row('TBC', 'GE87TB7838545064400012')}
-    ${row('Получатель', 'Kirill Riabkov')}
-    ${row('Тбанк (по номеру)', '+79055817402')}
+    ${row(t('sp_recip'), 'Kirill Riabkov')}
+    ${row(t('sp_tbank'), '+79055817402')}
     <div class="pop-actions vertical" style="margin-top:12px">
       <button class="pop-btn" onclick="openTgUser('brutsky')">✉️ Написать @brutsky</button>
       <button class="pop-btn secondary" onclick="openTgLink('https://t.me/+9W7Y065T78BhNTM6')">💬 Чат для обсуждения бота</button>
@@ -2289,13 +2432,13 @@ function openTgLink(url) { if (tg && tg.openTelegramLink) tg.openTelegramLink(ur
 async function donateStars(n) {
   const res = await callApi('createStarsInvoice', { stars: n });
   if (!res || !res.ok || !res.link) {
-    uiAlert('Не получилось открыть оплату звёздами' + ((res && res.error) ? `: ${res.error}` : '') + '.\nПоддержать можно переводом — реквизиты ниже.');
+    uiAlert(t('sp_starerr') + ((res && res.error) ? `: ${res.error}` : '') + t('sp_startail'));
     return;
   }
   if (tg && typeof tg.openInvoice === 'function' && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) {
     tg.openInvoice(res.link, (status) => {
-      if (status === 'paid') { haptic('success'); setStatus('🙏 Спасибо за поддержку!', 3000); }
-      else if (status === 'failed') uiAlert('Оплата не прошла. Можно попробовать ещё раз или поддержать переводом.');
+      if (status === 'paid') { haptic('success'); setStatus(t('sp_thanks'), 3000); }
+      else if (status === 'failed') uiAlert(t('sp_payfail'));
     });
     return;
   }
@@ -2311,7 +2454,7 @@ async function shareDog(dogId, name) {
         tg.shareMessage(res.prepared_id, (ok) => { if (ok) haptic('success'); });
         return;
       }
-      if (res && res.error) setStatus('Не удалось подготовить: ' + res.error, 2500);
+      if (res && res.error) setStatus(t('er_share') + res.error, 2500);
     } catch (e) {}
   }
   // Фолбэк для старых клиентов Telegram: ссылка + текст.
@@ -2666,7 +2809,7 @@ function openDogEditSheet(d) {
     <div class="field"><label>${t('fd_weight')}</label><input type="number" step="0.1" id="edWeight" value="${escapeAttr(d.weightKg || '')}"></div>
     <div class="field"><label>${t('fd_vacc')}</label><select id="edVacc">${selOpts(TRISTATE, d.vaccinated, '—')}</select></div>
     <div class="field"><label>${t('fd_notes')}</label><textarea id="edMemo" maxlength="200" oninput="updCount(this,200)">${escapeHtml(d.memo || '')}</textarea></div>
-    <button class="pop-btn secondary" style="margin-bottom:8px" onclick="updateDogPhoto('${d.id}')">📷 ${d.photoId ? 'Обновить' : t('fd_add')} фото</button>
+    <button class="pop-btn secondary" style="margin-bottom:8px" onclick="updateDogPhoto('${d.id}')">📷 ${d.photoId ? t('ui_refresh') : t('fd_add')} фото</button>
     <button class="pop-btn" onclick="submitDogEdit('${d.id}')">${t('fd_save')}</button>
   `);
 }
@@ -2701,7 +2844,7 @@ async function submitDogEdit(id) {
   const res = await callApi('editDog', { dogId: id, changes });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(t('ms_cardupd'), 2000); }
-  else uiAlert(t('err_fail') + (res.error === 'bad breed' ? 'недопустимые символы в породе' : (res.error || '')));
+  else uiAlert(t('err_fail') + (res.error === 'bad breed' ? t('er_breedch') : (res.error || '')));
 }
 
 function walkHereMine(dogId) {
@@ -2776,7 +2919,7 @@ function askDeleteDog(dogId, name, suggest) {
       <textarea id="delReason" maxlength="200" oninput="updCount(this,200)" placeholder="Например: дубль, собаки давно нет во дворе…"></textarea></div>
     <div class="btn-row">
       <button class="pop-btn secondary" onclick="closeSheet()">Отмена</button>
-      <button class="pop-btn danger" onclick="submitDeleteDog('${dogId}')">${suggest ? '🗑 Отправить' : '🗑 Удалить'}</button>
+      <button class="pop-btn danger" onclick="submitDeleteDog('${dogId}')">${suggest ? t('ui_sendreq') : t('ui_delete')}</button>
     </div>
   `);
 }
@@ -2849,7 +2992,7 @@ async function submitDonor(dogId) {
   });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(t('ms_donorok'), 2400); }
-  else uiAlert(t('err_fail') + (res.error === 'home only' ? 'донорство доступно только домашним собакам' : (res.error || '')));
+  else uiAlert(t('err_fail') + (res.error === 'home only' ? t('er_donoronly') : (res.error || '')));
 }
 async function removeDonor(dogId) {
   if (!await uiConfirm(t('ms_donorrm_q'))) return;
@@ -2862,7 +3005,7 @@ async function toggleSeeking(dogId, on) {
   const res = await callApi('setSeeking', { dogId, on });
   closeSheet();
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(on ? t('ms_seekon') : t('ms_seekoff'), 2200); }
-  else if (res.error === 'tagged_dog') uiAlert('🏷 У этой собаки есть бирка — значит, она уже в муниципальной программе, и пристройство оформляется официально, через приют или организацию. Отметка «ищет дом» доступна только для собак без бирки.');
+  else if (res.error === 'tagged_dog') uiAlert(t('nt_tag'));
   else uiAlert(t('err_fail') + (res.error || ''));
 }
 // Опекунство (takeCare) убрано: в Грузии это юридическая процедура, и кнопка в
@@ -3113,7 +3256,7 @@ function renderDogsScreen() {
     // Пустой экран должен предлагать выход, а не сообщать о неудаче. Раньше здесь был
     // тупик: «ничего не нашлось» — и всё, дальше человек либо гадает, либо уходит.
     const act = (label, onclick) => `<button class="pop-btn" style="margin-top:12px" onclick="${onclick}">${label}</button>`;
-    const reset = act('Показать всех собак', "dogSegment='all';document.getElementById('dogSearch').value='';renderDogSegments();renderDogsScreen()");
+    const reset = act(t('ls_showall'), "dogSegment='all';document.getElementById('dogSearch').value='';renderDogSegments();renderDogsScreen()");
     const states = {
       mine:    { ico: '🐶', text: t('es_mine'),
                  btn: act(t('pf_adddog'), "openAddDogSheet({status:'У владельца'})") },
@@ -3140,16 +3283,16 @@ function renderDogsScreen() {
       <div class="row-between">
         <div>
           <div class="list-title">${d.lost ? '🚨 ' : ''}${escapeHtml(d.name || t('pf_noname'))}</div>
-          <div class="list-sub">${statusIco(d.status)} ${escapeHtml(d.status)} · ${escapeHtml(d.breed || 'порода не указана')}${d.region ? ' · ' + escapeHtml(d.region) : (d.city && d.city !== 'Тбилиси' ? ' · ' + escapeHtml(d.city) : '')}</div>
+          <div class="list-sub">${statusIco(d.status)} ${escapeHtml(d.status)} · ${escapeHtml(d.breed || t('ls_nobreed'))}${d.region ? ' · ' + escapeHtml(d.region) : (d.city && d.city !== 'Тбилиси' ? ' · ' + escapeHtml(d.city) : '')}</div>
         </div>
         <div style="font-size:22px">${d.mine ? '💛' : '🐕'}</div>
       </div>
       <div class="badges">
         ${d.seekingHome ? `<span class="badge ok">${t('b_seeking')}</span>` : ''}
-        ${d.isDonor ? '<span class="badge">🩸 донор ' + (d.weightKg ? d.weightKg + t('d_kg') : '') + '</span>' : ''}
+        ${d.isDonor ? `<span class="badge">${t('ls_donor')} ${d.weightKg ? d.weightKg + t('d_kg') : ''}</span>` : ''}
         ${d.lost ? `<span class="badge warn">потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + t('d_days') : ''}</span>` : ''}
         ${d.tagNumber ? '<span class="badge">🔖 ' + escapeHtml(d.tagNumber) + '</span>' : ''}
-        ${!d.lat ? '<span class="badge">🗺 нет на карте — без координат</span>' : ''}
+        ${!d.lat ? `<span class="badge">${t('ls_nogeo')}</span>` : ''}
       </div>
     </div>`).join('');
 }
@@ -3157,12 +3300,11 @@ function renderDogsScreen() {
 // ================== ЭКРАН «СИТТЕРЫ» ==================
 // Форматы услуг: ключ ↔ столбцы I/J/K листа DogSitter
 const SITTER_SERVICES = {
-  justWalking: { icon: '🚶', short: 'Выгул', label: 'Приходящий выгул',
-    hint: 'Ситтер приходит в установленное время: погулять с собакой и насыпать корм' },
-  ownPlace:    { icon: '🏠', short: 'У ситтера', label: 'Передержка у ситтера',
-    hint: 'Собака живёт у ситтера дома' },
-  withLiving:  { icon: '🛋', short: 'С проживанием', label: 'Ситтер с проживанием',
-    hint: 'Ситтер живёт на территории собаки, пока вас нет' }
+  // Подписи берутся из словаря функциями: значения в объекте вычислились бы один раз
+  // при загрузке, до того как станет известен язык профиля.
+  justWalking: { icon: '🚶', short: () => t('sfm_walk_s'), label: () => t('sfm_walk_l'), hint: () => t('sfm_walk_h') },
+  ownPlace:    { icon: '🏠', short: () => t('sfm_own_s'),  label: () => t('sfm_own_l'),  hint: () => t('sfm_own_h') },
+  withLiving:  { icon: '🛋', short: () => t('sfm_live_s'), label: () => t('sfm_live_l'), hint: () => t('sfm_live_h') }
 };
 let sittersCache = null;   // список активных ситтеров моего города
 let mySitterProfile = null; // моя анкета (даже неактивная) — для формы редактирования
@@ -3225,7 +3367,7 @@ async function loadSitters(force) {
 function renderSitterFilters() {
   const box = document.getElementById('sitterFilters');
   box.innerHTML = '';
-  const opts = [['all', 'Все']].concat(Object.keys(SITTER_SERVICES).map(k => [k, SITTER_SERVICES[k].icon + ' ' + SITTER_SERVICES[k].short]));
+  const opts = [['all', t('sf_all')]].concat(Object.keys(SITTER_SERVICES).map(k => [k, SITTER_SERVICES[k].icon + ' ' + SITTER_SERVICES[k].short()]));
   opts.forEach(([k, label]) => {
     const chip = document.createElement('div');
     chip.className = 'chip' + (sitterFilter === k ? ' active' : '');
@@ -3237,7 +3379,7 @@ function renderSitterFilters() {
 function sitterServiceBadges(s) {
   return Object.keys(SITTER_SERVICES)
     .filter(k => s[k])
-    .map(k => `<span class="badge brand">${SITTER_SERVICES[k].icon} ${SITTER_SERVICES[k].label}</span>`)
+    .map(k => `<span class="badge brand">${SITTER_SERVICES[k].icon} ${SITTER_SERVICES[k].label()}</span>`)
     .join('');
 }
 function renderSitters(err) {
@@ -3271,8 +3413,8 @@ function renderSitters(err) {
       <div class="btn-row" style="margin-top:10px">
         ${s.tg && !s.self ? `<button class="pop-btn" onclick="openTgUser('${escapeAttr(s.tg)}')">${t('si_write')}</button>` : ''}
         ${s.phone ? `<a class="pop-btn secondary" style="text-align:center;text-decoration:none;line-height:1.3" href="tel:${escapeAttr(s.phone)}">${t('si_call')}</a>` : ''}
-        ${!s.self ? `<button class="pop-btn secondary" onclick="openReviewSheet('${s.id}','${escapeAttr(s.name || t('si_word'))}','DogSitter')">⭐ Оценить</button>` : ''}
-        ${s.ratingCount ? `<button class="pop-btn secondary small" onclick="showReviews('DogSitter','${s.id}','${escapeAttr(s.name || '')}')">💬 Отзывы</button>` : ''}
+        ${!s.self ? `<button class="pop-btn secondary" onclick="openReviewSheet('${s.id}','${escapeAttr(s.name || t('si_word'))}','DogSitter')">${t('ls_rate')}</button>` : ''}
+        ${s.ratingCount ? `<button class="pop-btn secondary small" onclick="showReviews('DogSitter','${s.id}','${escapeAttr(s.name || '')}')">${t('ls_reviews')}</button>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -3282,8 +3424,8 @@ function openBecomeSitterSheet(isEdit) {
   const svcToggles = Object.keys(SITTER_SERVICES).map(k => `
     <div class="fline" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:7px 0">
       <div>
-        <div style="font-size:13.5px;font-weight:600">${SITTER_SERVICES[k].icon} ${SITTER_SERVICES[k].label}</div>
-        <div style="font-size:11.5px;color:var(--hint)">${SITTER_SERVICES[k].hint}</div>
+        <div style="font-size:13.5px;font-weight:600">${SITTER_SERVICES[k].icon} ${SITTER_SERVICES[k].label()}</div>
+        <div style="font-size:11.5px;color:var(--hint)">${SITTER_SERVICES[k].hint()}</div>
       </div>
       <label class="switch" style="flex:0 0 auto;margin-top:4px"><input type="checkbox" id="svc_${k}" ${cur[k] ? 'checked' : ''}><span class="slider-t"></span></label>
     </div>`).join('');
@@ -3316,11 +3458,11 @@ async function submitBecomeSitter() {
     bio, name: sitName, phone: document.getElementById('sitPhone').value.trim(),
     price: document.getElementById('sitPrice').value.trim()
   }, services));
-  if (!res.ok && res.error === 'name required') { uiAlert('Укажи имя — его увидят владельцы собак.'); return; }
+  if (!res.ok && res.error === 'name required') { uiAlert(t('sf_err_name')); return; }
   if (res.ok) me = null; // имя могло обновиться — профиль перечитаем
   closeSheet();
   if (res.ok) { haptic(); sittersCache = null; loadSitters(true); setStatus(t('ms_pubok'), 2200); }
-  else uiAlert(t('err_fail') + (res.error === 'service required' ? 'выбери хотя бы один формат' : (res.error || '')));
+  else uiAlert(t('err_fail') + (res.error === 'service required' ? t('er_needfmt') : (res.error || '')));
 }
 async function stopSitter() {
   if (!await uiConfirm(t('sf_stop_q'))) return;
@@ -3360,7 +3502,7 @@ async function submitReview(id, itemType) {
     if (itemType === 'DogSitter') { sittersCache = null; loadSitters(true); }
     else { dataCache.places = null; renderLayer(); }
     setStatus(t('ms_reviewok'), 2000);
-  } else uiAlert(t('err_fail') + (res.error === 'self review' ? 'себя оценивать нельзя 🙂' : (res.error || '')));
+  } else uiAlert(t('err_fail') + (res.error === 'self review' ? t('er_selfrate') : (res.error || '')));
   } finally { delete _inFlight['review']; }
 }
 
@@ -3381,7 +3523,7 @@ async function confirmDogGeo(dogId, dogName) {
     const res = await callApi('confirmDogGeo', { dogId });
     if (res.ok) {
       haptic();
-      setStatus('✅ Спасибо! Отметил, что «' + dogName + '» на месте', 2600);
+      setStatus(t('ok_confirm') + dogName + t('ok_onplace'), 2600);
       await loadData('dogs', true);    // перечитать слой собак, минуя кэш
       const fresh = findDog(dogId);
       if (fresh) openDogCard(fresh);   // перерисовать карточку с новой датой
@@ -3402,7 +3544,7 @@ async function toggleDogSub(id) {
     haptic();
     setStatus(res.subscribed ? t('a_sub') : t('a_unsub'), 1800);
   } else if (res && res.error === 'street_only') {
-    uiAlert('Подписка доступна только для уличных собак.');
+    uiAlert(t('er_subsonly'));
   }
 }
 
@@ -3509,7 +3651,7 @@ async function submitComment(dogId, dogName) {
 async function deleteComment(commentId, dogId, dogName) {
   const res = await callApi('deleteComment', { commentId, dogId });
   if (res.ok) { haptic(); loadDogCommentsInline(dogId, dogName); }
-  else uiAlert('Не получилось удалить: ' + (res.error || ''));
+  else uiAlert(t('er_del') + (res.error || ''));
 }
 
 async function showReviews(itemType, id, name) {
@@ -3824,7 +3966,7 @@ async function toggleRegionSub(idx) {
   if (!region) return;
   const res = await callApi('toggleRegionSub', { regionIndex: idx });
   if (!res.ok) {
-    uiAlert(res.error === 'no_regions' ? 'Справочник районов пуст — заполни лист Lists.' : (t('err_fail') + (res.error || '')));
+    uiAlert(res.error === 'no_regions' ? t('er_noregions') : (t('err_fail') + (res.error || '')));
     return;
   }
   haptic();
@@ -3860,7 +4002,7 @@ function renderDogSubs() {
         <div class="row-left" onclick="openDogFromSubs('${d.id}')" style="cursor:pointer">
           <div class="sub-ava" style="${photoUrlFromKey(d.photoKey) ? `background-image:url('${photoUrlFromKey(d.photoKey)}')` : ''}">${photoUrlFromKey(d.photoKey) ? '' : DOG_ICONS.street}</div>
           <div>
-            <div class="list-title" style="font-size:14px">${escapeHtml(d.name || 'Без клички')}</div>
+            <div class="list-title" style="font-size:14px">${escapeHtml(d.name || t('pf_noname'))}</div>
             <div class="list-sub">${escapeHtml([d.breed, d.region || d.city].filter(Boolean).join(' · ') || '—')}</div>
           </div>
         </div>
@@ -3871,7 +4013,7 @@ function renderDogSubs() {
 }
 function openDogFromSubs(id) {
   const d = findDog(id);
-  if (d) openDogCard(d); else setStatus('Карточка недоступна — возможно, собаку убрали с карты', 2400);
+  if (d) openDogCard(d); else setStatus(t('er_cardgone'), 2400);
 }
 async function unsubDogFromList(i) {
   const d = (_dogSubsCache || [])[i];
