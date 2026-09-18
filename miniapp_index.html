@@ -28,7 +28,7 @@
 
     --bg:    var(--tg-theme-bg-color, #f8f4ec);
     --text:  var(--tg-theme-text-color, #272219);
-    --hint:  var(--tg-theme-hint-color, #877e6e);
+    --hint:  var(--tg-theme-hint-color, #7c7263);
     --card:  var(--tg-theme-secondary-bg-color, #ffffff);
     color-scheme: light dark;
     --btnbg: var(--paw);
@@ -99,7 +99,7 @@
   #tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px;
     background: rgba(248,244,236,.85);
     background: color-mix(in srgb, var(--bg) 82%, transparent);
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
     box-shadow: var(--shadow-s); border: 1px solid var(--line); }
   .tab { flex: 1; text-align: center; padding: 9px 4px; border-radius: 999px; font-size: 13px; font-weight: 700;
     color: var(--hint); transition: background .18s ease, color .18s ease;
@@ -115,7 +115,7 @@
     border-radius: 14px !important; overflow: hidden; margin-top: 116px !important; margin-left: 14px !important; }
   .leaflet-control-zoom a { width: 38px !important; height: 38px !important; line-height: 38px !important;
     background: color-mix(in srgb, var(--bg) 92%, transparent) !important;
-    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
     color: var(--text) !important; border: none !important;
     border-bottom: 1px solid var(--line) !important; font-size: 19px !important; font-weight: 600; }
   .leaflet-control-zoom a:last-child { border-bottom: none !important; }
@@ -169,14 +169,14 @@
     width: 38px; height: 38px; padding: 0; border-radius: 50%; display: none;
     align-items: center; justify-content: center;
     background: color-mix(in srgb, var(--bg) 92%, transparent);
-    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
     border: 1px solid var(--line); color: var(--text); font-size: 13px; font-weight: 600;
     box-shadow: var(--shadow-s); cursor: pointer; }
   #legendBtn.show { display: flex; }
   .chip { white-space: nowrap; font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: 999px;
     background: rgba(248,244,236,.88);
     background: color-mix(in srgb, var(--bg) 86%, transparent);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px) saturate(1.4); -webkit-backdrop-filter: blur(10px) saturate(1.4);
     color: var(--hint); cursor: pointer; user-select: none; border: 1px solid var(--line);
     transition: background .15s ease, color .15s ease; }
   /* «Выбрано» во всём приложении — фирменный акцент, а не чёрный. Раньше вкладка
@@ -194,8 +194,8 @@
   #count-badge { position: absolute; bottom: calc(var(--tabbar-h) + 16px); left: 60px; z-index: 750;
     cursor: pointer;
     background: rgba(248,244,236,.9);
-    background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px); color: var(--text); font-size: 12px; font-weight: 700;
+    background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px) saturate(1.4);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4); color: var(--text); font-size: 12px; font-weight: 700;
     letter-spacing: .01em; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--line);
     box-shadow: var(--shadow-s); }
   /* Кнопка добавления: раньше это был безымянный «+» в углу, который легко принять
@@ -206,7 +206,7 @@
        кластеры и маркеры мест были тремя разными цветами и спорили за внимание. */
     height: 52px; padding: 0 20px 0 16px; border-radius: 26px; background: var(--paw); color: var(--btntx);
     border: none; font-size: 15px; font-weight: 700; letter-spacing: .01em;
-    box-shadow: 0 6px 20px rgba(0,0,0,.22); cursor: pointer; display: none;
+    box-shadow: 0 6px 20px rgba(0,0,0,.22), 0 2px 8px rgba(226,156,51,.35); cursor: pointer; display: none;
     align-items: center; gap: 8px; transition: transform .12s ease, box-shadow .2s ease; }
   #fab .fab-plus { font-size: 22px; font-weight: 400; line-height: 1; margin-top: -2px; }
   #fab:active { transform: scale(.94); }
@@ -227,7 +227,7 @@
                           40% { transform: translateY(-7px); opacity: 1; } }
   #fab.show { animation: fabIn .45s ease both, fabPulse 2.4s ease-in-out 1.2s 2; }
   @keyframes fabIn { from { opacity: 0; transform: translateY(12px) scale(.9); } to { opacity: 1; transform: none; } }
-  @keyframes fabPulse { 0%,100% { box-shadow: 0 6px 20px rgba(0,0,0,.22); }
+  @keyframes fabPulse { 0%,100% { box-shadow: 0 6px 20px rgba(0,0,0,.22), 0 2px 8px rgba(226,156,51,.35); }
                         50% { box-shadow: 0 6px 28px rgba(0,0,0,.28), 0 0 0 10px color-mix(in srgb, var(--vet) 14%, transparent); } }
   #fab.show { display: flex; }
 
@@ -249,6 +249,9 @@
     display: flex; align-items: center; justify-content: center;
     border: 2.5px solid var(--stroke); box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 10px rgba(0,0,0,.22); }
   .marker-pin span { font-size: 18px; }
+  .marker-pin::before { content: ""; position: absolute; inset: 2px; border-radius: 50%;
+    background: linear-gradient(155deg, rgba(255,255,255,.35), transparent 55%);
+    pointer-events: none; }
   .marker-pin.lost { animation: pulse 1.5s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(210,75,60,.5);} 70% { box-shadow: 0 0 0 13px rgba(210,75,60,0);} 100% { box-shadow: 0 0 0 0 rgba(210,75,60,0);} }
   .marker-pin.closed { opacity: .45; }
@@ -378,7 +381,7 @@
   /* Кнопки */
   .pop-btn { border: none; border-radius: var(--r-ctl); padding: 12px 12px; font-size: 13.5px; font-weight: 800;
     letter-spacing: .01em; background: var(--btnbg); color: var(--btntx); cursor: pointer; width: 100%;
-    transition: transform .1s ease, filter .15s ease; }
+    transition: transform .1s ease, filter .15s ease; box-shadow: inset 0 1px 0 rgba(255,255,255,.22); }
   .pop-btn:active { transform: scale(.98); filter: brightness(.96); }
   .pop-btn.secondary { background: rgba(39,34,25,.07);
     background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--text); }
@@ -440,7 +443,7 @@
   #tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: var(--tabbar-h); z-index: 900;
     background: rgba(248,244,236,.92);
     background: color-mix(in srgb, var(--bg) 88%, transparent);
-    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4);
     border-top: 1px solid var(--line); display: flex; padding-bottom: env(safe-area-inset-bottom); }
   /* Навигация без подписей: иконки самодостаточны, а подписи съедали высоту
      и мешали на маленьких экранах. Активный пункт выделяем «таблеткой».
@@ -510,7 +513,7 @@
   /* Шапка карточки собаки — латунный жетон с пробитым отверстием и перфорацией */
   .dog-card-head { display: flex; align-items: center; gap: 13px; margin: 0 -18px 12px;
     padding: 14px 18px 16px;
-    background: linear-gradient(160deg, #eeb04a, var(--paw) 55%, var(--paw-deep));
+    background: radial-gradient(120% 65% at 18% -10%, rgba(255,255,255,.30), transparent 60%), linear-gradient(160deg, #eeb04a, var(--paw) 55%, var(--paw-deep));
     position: relative; }
   /* Вертикальная «геройская» раскладка — только для карточки собаки; тот же класс
      используется в шапке профиля пользователя, где нужен обычный ряд аватар+текст. */
