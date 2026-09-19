@@ -610,7 +610,7 @@
   </div>
   <div id="status"></div>
   <div id="count-badge" onclick="showScreen('dogs')" title="Открыть списком">—</div>
-  <button id="fab"><span class="fab-plus">+</span><span id="fabLabel">Добавить</span></button>
+  <button id="fab"><span class="fab-plus">+</span><span id="fabLabel" data-i18n="ui_add">Добавить</span></button>
   <button id="legendBtn" onclick="openLegend()" aria-label="Легенда">
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
       <circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 2.4c-.6.2-.9.7-.9 1.3v.4"/><circle cx="12" cy="16.8" r=".9" fill="currentColor" stroke="none"/>
@@ -671,7 +671,7 @@
   </div>
 
   <div class="screen" id="screen-support">
-    <h2>💚 Поддержать проект</h2>
+    <h2 data-i18n="sp_title">💚 Поддержать проект</h2>
     <div id="supportBody"></div>
   </div>
 
@@ -751,6 +751,33 @@ const I18N = {
     pf_city:'Город',
     pf_phone:'Телефон',
     pf_lang:'Язык бота',
+    pt_clinic:'Ветклиника',
+    pt_shop:'Зоомагазин',
+    pt_park:'Собачья площадка',
+    pt_groom:'Груминг',
+    pt_kennel:'Питомник',
+    pt_cafe:'Кафе',
+    pt_rest:'Ресторан',
+    pt_other:'Другое',
+    f_home:'Домашние',
+    f_street:'Уличные',
+    f_lost:'Потеряшки',
+    f_mine:'Мои',
+    ui_add:'Добавить',
+    ui_close:'Закрыть',
+    ui_photo:'Фото',
+    ad_more:'Дополнить анкету',
+    ad_tagnote:'Бирка означает, что собака уже в муниципальной программе. По её номеру пса опознают.',
+    sp_title:'💚 Поддержать проект',
+    sp_intro:'Этот бот — некоммерческий проект. Средства идут на оплату инфраструктуры и развитие нового функционала. 🐾',
+    sp_stars_h:'⭐ Звёздами Telegram',
+    sp_stars_s:'Оплата в пару тапов, прямо здесь — ничего копировать не нужно.',
+    sp_bank_h:'🏦 Переводом',
+    sp_write:'✉️ Написать',
+    sp_chat:'💬 Чат для обсуждения бота',
+    sb_lostrow:'🚨 Оповещения о пропаже',
+    sb_digestrow:'🏡 Дайджест «ищут новый дом»',
+    sb_instant:'Изменения сохраняются сразу',
     ui_refresh:'Обновить',
     ui_streetdog:'Уличный пёс',
     ui_sendreq:'🗑 Отправить',
@@ -1090,6 +1117,33 @@ const I18N = {
     pf_city:'ქალაქი',
     pf_phone:'ტელეფონი',
     pf_lang:'ბოტის ენა',
+    pt_clinic:'ვეტკლინიკა',
+    pt_shop:'ზოომაღაზია',
+    pt_park:'ძაღლების მოედანი',
+    pt_groom:'გრუმინგი',
+    pt_kennel:'питомник/სანაშენე',
+    pt_cafe:'კაფე',
+    pt_rest:'რესტორანი',
+    pt_other:'სხვა',
+    f_home:'შინაური',
+    f_street:'ქუჩის',
+    f_lost:'დაკარგულები',
+    f_mine:'ჩემი',
+    ui_add:'დამატება',
+    ui_close:'დახურვა',
+    ui_photo:'ფოტო',
+    ad_more:'პროფილის შევსება',
+    ad_tagnote:'ბირკა ნიშნავს, რომ ძაღლი უკვე მუნიციპალურ პროგრამაშია. მისი ნომრით ძაღლს ცნობენ.',
+    sp_title:'💚 პროექტის მხარდაჭერა',
+    sp_intro:'ეს ბოტი არაკომერციული პროექტია. თანხა ხმარდება ინფრასტრუქტურას და ახალი ფუნქციების განვითარებას. 🐾',
+    sp_stars_h:'⭐ Telegram-ის ვარსკვლავებით',
+    sp_stars_s:'გადახდა ორი შეხებით, აქვე — არაფრის კოპირება არ სჭირდება.',
+    sp_bank_h:'🏦 გადარიცხვით',
+    sp_write:'✉️ მისწერე',
+    sp_chat:'💬 ბოტის განხილვის ჩატი',
+    sb_lostrow:'🚨 შეტყობინებები დაკარგვაზე',
+    sb_digestrow:'🏡 დაიჯესტი „ეძებენ ახალ სახლს“',
+    sb_instant:'ცვლილებები ინახება მაშინვე',
     ui_refresh:'განახლება',
     ui_streetdog:'ქუჩის ძაღლი',
     ui_sendreq:'🗑 გაგზავნა',
@@ -1429,6 +1483,33 @@ const I18N = {
     pf_city:'City',
     pf_phone:'Phone',
     pf_lang:'Bot language',
+    pt_clinic:'Vet clinic',
+    pt_shop:'Pet shop',
+    pt_park:'Dog park',
+    pt_groom:'Grooming',
+    pt_kennel:'Kennel',
+    pt_cafe:'Cafe',
+    pt_rest:'Restaurant',
+    pt_other:'Other',
+    f_home:'Pets',
+    f_street:'Street',
+    f_lost:'Lost',
+    f_mine:'Mine',
+    ui_add:'Add',
+    ui_close:'Close',
+    ui_photo:'Photo',
+    ad_more:'More details',
+    ad_tagnote:'A tag means the dog is already in the municipal programme. It identifies the dog.',
+    sp_title:'💚 Support the project',
+    sp_intro:'This bot is a non-commercial project. Funds go to infrastructure and new features. 🐾',
+    sp_stars_h:'⭐ With Telegram Stars',
+    sp_stars_s:'Two taps, right here — nothing to copy.',
+    sp_bank_h:'🏦 By bank transfer',
+    sp_write:'✉️ Message',
+    sp_chat:'💬 Chat about the bot',
+    sb_lostrow:'🚨 Lost-dog alerts',
+    sb_digestrow:'🏡 Digest “looking for a home”',
+    sb_instant:'Changes save instantly',
     ui_refresh:'Refresh',
     ui_streetdog:'Street dog',
     ui_sendreq:'🗑 Send',
@@ -1876,15 +1957,24 @@ const DOG_ICONS = {
   stale:   '🕓'
 };
 
+// Ключ (Clinics, Shops…) — это то, что хранится и чем сверяется сервер; label —
+// только подпись на экране. Поэтому подпись берётся из словаря функцией: значение
+// в объекте вычислилось бы один раз при загрузке, до того как известен язык.
 const PLACE_TYPES = {
-  Clinics: { label: 'Ветклиника', icon: '🏥' },
-  Shops:   { label: 'Зоомагазин', icon: '🏪' },
-  Park:    { label: 'Собачья площадка', icon: '🌳' },
-  Groom:   { label: 'Груминг',    icon: '✂️' },
-  Kennel:  { label: 'Питомник',   icon: '🐶' },
-  Cafe:    { label: 'Кафе',       icon: '☕' },
-  Rest:    { label: 'Ресторан',   icon: '🍽' },
-  Other:   { label: 'Другое',     icon: '📍' }
+  Clinics: { label: () => t('pt_clinic'), icon: '🏥' },
+  Shops:   { label: () => t('pt_shop'),   icon: '🏪' },
+  Park:    { label: () => t('pt_park'),   icon: '🌳' },
+  Groom:   { label: () => t('pt_groom'),  icon: '✂️' },
+  Kennel:  { label: () => t('pt_kennel'), icon: '🐶' },
+  Cafe:    { label: () => t('pt_cafe'),   icon: '☕' },
+  Rest:    { label: () => t('pt_rest'),   icon: '🍽' },
+  Other:   { label: () => t('pt_other'),  icon: '📍' }
+};
+// То, что реально лежит в таблице и чем сверяется сервер. Переводу не подлежит:
+// подпись на экране и хранимое значение — разные вещи, и путать их нельзя.
+const PLACE_TYPE_VALUE = {
+  Clinics: 'Ветклиника', Shops: 'Зоомагазин', Park: 'Собачья площадка', Groom: 'Груминг',
+  Kennel: 'Питомник', Cafe: 'Кафе', Rest: 'Ресторан', Other: 'Другое'
 };
 // Возрастные группы приходят с сервера из справочника Lists — того же, что показывает
 // бот (см. ?type=ages). Захардкоженный список остаётся только фолбэком на случай, если
@@ -1983,8 +2073,10 @@ const SUBFILTERS = {
   // «Ищут новый дом» на карте намеренно нет: такие собаки обычно живут на передержке
   // у того, кто их пристраивает, и показывать их местоположение незачем — решение
   // принимают по анкете, а не по точке. Фильтр остался в списке собак.
-  dogs: [['all','sf_all'], ['home',`${DOG_ICONS.home} Домашние`], ['street',`${DOG_ICONS.street} Уличные`],
-         ['lost',`${DOG_ICONS.lost} Потеряшки`], ['mine',`${DOG_ICONS.mine} Мои`]],
+  // Подписи — ключи словаря, а не готовые строки: фильтры собираются один раз при
+  // загрузке файла, когда язык профиля ещё неизвестен.
+  dogs: [['all','sf_all'], ['home','f_home'], ['street','f_street'],
+         ['lost','f_lost'], ['mine','f_mine']],
   places: [['all','sf_all'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Groom','✂️'], ['Kennel','🐶'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
 };
 function renderSubfilters() {
@@ -2105,7 +2197,7 @@ function placePopupHtml(p) {
   const tinfo = PLACE_TYPES[p.type] || PLACE_TYPES.Other;
   const stars = p.rating != null ? '⭐'.repeat(Math.round(p.rating)) + ` ${p.rating} (${p.ratingCount})` : (p.ratingCount ? `${t('p_fewrates')} (${p.ratingCount})` : t('p_noreviews'));
   return `<div class="pop-title">${tinfo.icon} ${escapeHtml(p.name)}</div>
-    <div class="pop-row">🏷 ${escapeHtml(p.typeLabel || tinfo.label)}</div>
+    <div class="pop-row">🏷 ${escapeHtml(tinfo.label())}</div>
     ${p.address ? `<div class="pop-row">${escapeHtml(p.address)}</div>` : ''}
     ${p.phone ? `<div class="pop-row">📞 <a href="tel:${escapeAttr(p.phone)}">${escapeHtml(p.phone)}</a></div>` : ''}
     <div class="pop-row">${stars}</div>
@@ -2317,7 +2409,7 @@ function openLegend() {
   // Места: строки собираются из того же словаря, которым рисуются маркеры, — новый
   // тип места попадает в легенду сам, без ручной синхронизации.
   const placeRows = Object.keys(PLACE_TYPES).map(k =>
-    row(pin(PLACE_TYPES[k].icon, '', '--grey'), PLACE_TYPES[k].label)).join('');
+    row(pin(PLACE_TYPES[k].icon, '', '--grey'), PLACE_TYPES[k].label())).join('');
   const places = `
     <h3>${t('lg_places_h')}</h3>
     <div class="legend-grid">
@@ -2420,20 +2512,20 @@ function renderSupportScreen() {
   // в банковские реквизиты.
   const stars = [50, 100, 250, 500, 1000];
   box.innerHTML = `
-    <div class="geo-note" style="margin-bottom:12px">Этот бот — некоммерческий проект. Средства идут на оплату инфраструктуры и развитие нового функционала. 🐾</div>
-    <div class="sec-label">⭐ Звёздами Telegram</div>
+    <div class="geo-note" style="margin-bottom:12px">${t('sp_intro')}</div>
+    <div class="sec-label">${t('sp_stars_h')}</div>
     <div class="card">
-      <div class="list-sub" style="margin-bottom:10px">Оплата в пару тапов, прямо здесь — ничего копировать не нужно.</div>
+      <div class="list-sub" style="margin-bottom:10px">${t('sp_stars_s')}</div>
       <div class="star-row">${stars.map(n => `<button class="star-btn" onclick="donateStars(${n})">${n} ⭐</button>`).join('')}</div>
     </div>
-    <div class="sec-label">🏦 Переводом</div>
+    <div class="sec-label">${t('sp_bank_h')}</div>
     ${row('BOG', 'GE21BG0000000538937088')}
     ${row('TBC', 'GE87TB7838545064400012')}
     ${row(t('sp_recip'), 'Kirill Riabkov')}
     ${row(t('sp_tbank'), '+79055817402')}
     <div class="pop-actions vertical" style="margin-top:12px">
-      <button class="pop-btn" onclick="openTgUser('brutsky')">✉️ Написать @brutsky</button>
-      <button class="pop-btn secondary" onclick="openTgLink('https://t.me/+9W7Y065T78BhNTM6')">💬 Чат для обсуждения бота</button>
+      <button class="pop-btn" onclick="openTgUser('brutsky')">${t('sp_write')} @brutsky</button>
+      <button class="pop-btn secondary" onclick="openTgLink('https://t.me/+9W7Y065T78BhNTM6')">${t('sp_chat')}</button>
     </div>`;
 }
 function openTgLink(url) { if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank'); }
@@ -3061,7 +3153,7 @@ function openAddDogSheet(draft) {
         <input type="text" id="adTagNum" placeholder="${t('fd_tag_ph')}" value="${escapeAttr(d.tagNumber || '')}">
         <input type="text" id="adTagColor" placeholder="Цвет" value="${escapeAttr(d.tagColor || '')}">
       </div>
-      ${street ? `<div class="hint">Бирка означает, что собака уже в муниципальной программе. По её номеру пса опознают.</div>` : ''}</div>`;
+      ${street ? `<div class="hint">${t('ad_tagnote')}</div>` : ''}</div>`;
   const fBreed = `<div class="field"><label>${t('fd_breed')}</label>
       <select id="adBreedSel" onchange="document.getElementById('adBreedManual').style.display = this.value==='__manual__' ? 'block':'none'">
         ${selOpts(COMMON_BREEDS, d.breed, '—')}
@@ -3092,12 +3184,12 @@ function openAddDogSheet(draft) {
     </div>
     ${primary}
     <details class="more" ${d._moreOpen ? 'open' : ''} ontoggle="addDogDraft._moreOpen = this.open">
-      <summary>Дополнить анкету <span class="opt-mark">необязательно</span></summary>
+      <summary>${t('ad_more')} <span class="opt-mark">${t('ad_opt')}</span></summary>
       <div style="padding-top:10px">${extra}</div>
     </details>
     <div style="height:8px"></div>
     <div class="field">
-      <label>📷 Фото</label>
+      <label>📷 ${t('ui_photo')}</label>
       <div id="adPhotoBox" class="photo-pick ${d._photoKey ? 'has' : ''}"
            onclick="pickDogPhotoForForm()"
            style="${d._photoKey ? `background-image:url('${photoUrlFromKey(d._photoKey)}')` : ''}">
@@ -3688,7 +3780,7 @@ let pendingGeo = null;
 function openSuggestSheet(current) {
   const id = current.id, name = current.name;
   const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
-    `<option value="${PLACE_TYPES[tk].label}" ${current.typeLabel === PLACE_TYPES[tk].label ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`).join('');
+    `<option value="${PLACE_TYPE_VALUE[tk]}" ${current.typeLabel === PLACE_TYPE_VALUE[tk] ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label()}</option>`).join('');
   map.closePopup();
   openSheet(`
     <h3>Уточнить данные — «${escapeHtml(name)}»</h3>
@@ -3740,7 +3832,7 @@ async function submitDelete(id, name) {
 document.getElementById('fab').onclick = () => {
   if (activeTab === 'dogs') { openAddStreetDog(); return; } // на слое собак — добавить уличную
   const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
-    `<option value="${tk}" ${(subFilter !== 'all' && subFilter === tk) ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label}</option>`).join('');
+    `<option value="${tk}" ${(subFilter !== 'all' && subFilter === tk) ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label()}</option>`).join('');
   openSheet(`
     <h3>${t('fp_title')}</h3>
     <div class="geo-note" style="margin-bottom:10px">${t('fp_hint')}</div>
@@ -3923,14 +4015,16 @@ function openSubsSheet() {
   openSheet(`
     <h3>${t('sb_title')}</h3>
     <div class="card">
-      <div class="info-row"><span>🚨 Оповещения о пропаже</span>
-        <b><label class="sw"><input type="checkbox" id="swAlerts" ${on ? 'checked' : ''}><span></span></label></b></div>
-      <div class="list-sub" style="margin-top:2px">Редко, но именно они возвращают собак домой: находит обычно случайный сосед.</div>
+      <div class="info-row"><span>${t('sb_lostrow')}</span>
+        <b><label class="sw"><input type="checkbox" id="swAlerts" ${on ? 'checked' : ''}
+          onchange="saveSubToggle('lostAlerts', this.checked)"><span></span></label></b></div>
+      <div class="list-sub" style="margin-top:2px">${t('sb_lost_hint')}</div>
     </div>
     <div class="card">
-      <div class="info-row"><span>🏡 Дайджест «ищут новый дом»</span>
-        <b><label class="sw"><input type="checkbox" id="swDigest" ${dg ? 'checked' : ''}><span></span></label></b></div>
-      <div class="list-sub" style="margin-top:2px">Одно сообщение в неделю с одной собакой, которой ищут хозяев.</div>
+      <div class="info-row"><span>${t('sb_digestrow')}</span>
+        <b><label class="sw"><input type="checkbox" id="swDigest" ${dg ? 'checked' : ''}
+          onchange="saveSubToggle('digest', this.checked)"><span></span></label></b></div>
+      <div class="list-sub" style="margin-top:2px">${t('sb_digest_hint')}</div>
     </div>
     <div class="card tappable" onclick="openRegionSubs()">
       <div class="list-title" style="font-size:14px">${t('sb_regions')}</div>
@@ -3940,8 +4034,8 @@ function openSubsSheet() {
       <div class="list-title" style="font-size:14px">${t('sb_dogs')}</div>
       <div class="list-sub">${t('sb_dogs_sub')}</div>
     </div>
-    <button class="pop-btn" style="margin-top:12px" onclick="saveSubs()">Сохранить</button>
-    <button class="pop-btn secondary" onclick="closeSheet()">Отмена</button>
+    <div class="list-sub" style="margin:12px 0 8px;text-align:center">${t('sb_instant')}</div>
+    <button class="pop-btn secondary" onclick="closeSheet()">${t('ui_close')}</button>
   `);
 }
 
@@ -4040,20 +4134,28 @@ async function unsubDogFromList(i) {
   setStatus(`🔕 Отписка от «${d.name || 'собаки'}»`, 1800);
 }
 
-async function saveSubs() {
-  if (_inFlight['subs']) return;   // защита от повторного нажатия
-  _inFlight['subs'] = true;
+// Переключатель сохраняется сразу, по щелчку. Кнопка «Сохранить» здесь была лишним
+// шагом: человек видит, что тумблер уже сдвинулся, и уходит, не нажав её, — настройка
+// молча не применялась. Ошибку откатываем визуально, чтобы состояние тумблера не
+// расходилось с тем, что на сервере.
+async function saveSubToggle(field, value) {
+  const el = document.getElementById(field === 'digest' ? 'swDigest' : 'swAlerts');
+  const changes = {}; changes[field] = value;
   try {
-  const changes = {
-    lostAlerts: document.getElementById('swAlerts').checked,
-    digest: document.getElementById('swDigest').checked
-  };
-  const res = await callApi('updateProfile', { changes });
-  closeSheet();
-  if (res.ok) { haptic(); me.profile.lostAlerts = changes.lostAlerts; me.profile.digest = changes.digest;
-    renderProfile(); setStatus(t('ms_savedok'), 1800); }
-  else uiAlert(t('err_fail') + (res.error || ''));
-  } finally { delete _inFlight['subs']; }
+    const res = await callApi('updateProfile', { changes }, true);
+    if (!res || !res.ok) {
+      if (el) el.checked = !value;
+      uiAlert(t('err_fail') + ((res && res.error) || ''));
+      return;
+    }
+    haptic();
+    if (me && me.profile) me.profile[field] = value;
+    if (activeScreen === 'profile') renderProfile();
+    setStatus(t('ms_savedok'), 1400);
+  } catch (e) {
+    if (el) el.checked = !value;
+    uiAlert(t('err_fail'));
+  }
 }
 
 // ================== ДАШБОРД ПРОДУКТА (только админ) ==================
