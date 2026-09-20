@@ -23,6 +23,7 @@
     --shop:     #1f5b4b;
     --red:      #d24b3c;                /* потеряшки, опасные действия */
     --yellow:   #d9a13b;
+    --found:  #7b5cd6;   /* находка: сиреневый — не спорит ни с красным ЧП, ни с зелёным «ищет дом» */
     --green:    #2e7d5b;
     --grey:     #a49a8a;
 
@@ -266,6 +267,7 @@
      кольцом — читается как «не подтверждено», но не спорит с алармом потеряшки. */
   /* «Ищет дом»: зелёная заливка + мягкое свечение. Метка должна цеплять взгляд на
      карте, но не спорить с красной пульсацией потеряшки — там срочность выше. */
+  .marker-pin.found { box-shadow: 0 0 0 3px color-mix(in srgb, var(--found) 45%, transparent), var(--shadow-m); }
   .marker-pin.seeking { border-color: #fff; border-width: 3px;
     box-shadow: 0 0 0 3px rgba(46,160,90,.28), 0 2px 6px rgba(0,0,0,.25); }
   .marker-pin.stale { border-style: dashed; opacity: .6; }
@@ -751,6 +753,11 @@ const I18N = {
     pf_city:'Город',
     pf_phone:'Телефон',
     pf_lang:'Язык бота',
+    cm_invite_found:'💬 Узнал эту собаку или знаешь, чья она? Напиши — нашедший увидит.',
+    f_found:'Найденные',
+    lg_found:'Найдена',
+    lg_found_s:'Нашли чужую собаку и ищут хозяина — посмотри, вдруг узнаешь',
+    es_found:'Сейчас никто не нашёл чужую собаку. Найдёшь — отметь, хозяин ищет.',
     pt_clinic:'Ветклиника',
     pt_shop:'Зоомагазин',
     pt_park:'Собачья площадка',
@@ -1117,6 +1124,11 @@ const I18N = {
     pf_city:'ქალაქი',
     pf_phone:'ტელეფონი',
     pf_lang:'ბოტის ენა',
+    cm_invite_found:'💬 იცნობ ამ ძაღლს ან იცი ვისია? დაწერე — მპოვნელი დაინახავს.',
+    f_found:'ნაპოვნები',
+    lg_found:'ნაპოვნია',
+    lg_found_s:'იპოვეს სხვისი ძაღლი და პატრონს ეძებენ — შეხედე, იქნებ იცნობ',
+    es_found:'ახლა არავის უპოვია სხვისი ძაღლი. იპოვი — მონიშნე, პატრონი ეძებს.',
     pt_clinic:'ვეტკლინიკა',
     pt_shop:'ზოომაღაზია',
     pt_park:'ძაღლების მოედანი',
@@ -1483,6 +1495,11 @@ const I18N = {
     pf_city:'City',
     pf_phone:'Phone',
     pf_lang:'Bot language',
+    cm_invite_found:'💬 Recognise this dog or know whose it is? Write — the finder will see it.',
+    f_found:'Found',
+    lg_found:'Found',
+    lg_found_s:'Someone found a dog and is looking for the owner — take a look',
+    es_found:'No found dogs right now. If you find one, mark it — someone is looking.',
     pt_clinic:'Vet clinic',
     pt_shop:'Pet shop',
     pt_park:'Dog park',
@@ -1951,6 +1968,7 @@ const DOG_ICONS = {
   street:  '🐕',
   lost:    '🚨',
   seeking: '🏡',
+  found:   '🔎',   // нашли чужую, ищут хозяина
   mine:    '💛',   // бейдж в углу маркера + кольцо --paw-deep
   donor:   '🩸',
   pack:    '🐾',
@@ -2052,6 +2070,9 @@ function pinIcon(kind, item) {
     if (item.lost) { cls += ' lost'; color = cssVar('--red'); emoji = DOG_ICONS.lost; }
     // «Ищет дом» важнее статуса: это призыв к действию, а статус у таких собак всегда
     // уличный. Потеряшка всё равно перекрывает — там счёт идёт на часы.
+    // Находка стоит сразу после потеряшки: это тоже срочно, но смысл другой —
+    // не «ищите собаку», а «узнайте свою». Поэтому отдельный цвет, а не красный.
+    else if (item.status === 'Найдена') { cls += ' found'; color = cssVar('--found'); emoji = DOG_ICONS.found; }
     else if (item.seekingHome) { cls += ' seeking'; color = cssVar('--green'); emoji = DOG_ICONS.seeking; }
     else emoji = item.status === 'У владельца' ? DOG_ICONS.home : DOG_ICONS.street;
   } else {
@@ -2076,7 +2097,7 @@ const SUBFILTERS = {
   // Подписи — ключи словаря, а не готовые строки: фильтры собираются один раз при
   // загрузке файла, когда язык профиля ещё неизвестен.
   dogs: [['all','sf_all'], ['home','f_home'], ['street','f_street'],
-         ['lost','f_lost'], ['mine','f_mine']],
+         ['lost','f_lost'], ['found','f_found'], ['mine','f_mine']],
   places: [['all','sf_all'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Groom','✂️'], ['Kennel','🐶'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
 };
 function renderSubfilters() {
@@ -2183,6 +2204,7 @@ function filterDogsMap(list) {
   if (subFilter === 'home') return list.filter(d => d.status === 'У владельца');
   if (subFilter === 'street') return list.filter(d => d.status === 'Уличная');
   if (subFilter === 'lost') return list.filter(d => d.lost);
+  if (subFilter === 'found') return list.filter(d => d.status === 'Найдена');
   if (subFilter === 'seeking') return list.filter(d => d.seekingHome);
   return list;
 }
@@ -2400,6 +2422,7 @@ function openLegend() {
       ${row(pin(DOG_ICONS.home, ''), t('lg_home'), t('lg_home_s'))}
       ${row(pin(DOG_ICONS.street, ''), t('lg_street'), t('lg_street_s'))}
       ${row(pin(DOG_ICONS.lost, '', '--red'), t('lg_lost'), t('lg_lost_s'))}
+      ${row(pin(DOG_ICONS.found, 'found', '--found'), t('lg_found'), t('lg_found_s'))}
       ${row(pin(DOG_ICONS.seeking, 'seeking', '--green'), t('lg_seek'), t('lg_seek_s'))}
       ${row(pin(DOG_ICONS.street, 'stale'), t('lg_stale'), t('lg_stale_s'))}
       ${row(pin(DOG_ICONS.street, 'mine'), t('lg_mine'), t('lg_mine_s'))}
@@ -2632,7 +2655,11 @@ function updCount(el, max) {
 function findDog(id) { return (dataCache.dogs || []).find(d => d.id.toString() === id.toString()); }
 
 async function openDogCard(d) {
-  const isStreet = d.status === 'Уличная';
+  // Находка ведёт себя в карточке как уличная: её можно комментировать, ей можно
+  // добавить фото, на неё можно подписаться и предложить удаление. Разница только
+  // в значке на карте и в тексте пересылки — всё остальное совпадает.
+  const isFound = d.status === 'Найдена';
+  const isStreet = d.status === 'Уличная' || isFound;
   // Важное — всегда; второстепенное (только заполненное) — под «показать всё».
   const impRows = [
     d.breed ? [t('d_breed'), d.breed] : null,
@@ -2671,7 +2698,9 @@ async function openDogCard(d) {
   // Уличная: подтвердить, что пёс всё там же — один тап, без отправки новой точки.
   // Именно эти подтверждения удерживают собаку на карте (>3 мес — метка «устарело»,
   // >1 год — уходит с карты, >2 лет — становится неактивной).
-  if (isStreet && !d.lost && !seekLocked) {
+  // У находки подтверждать нечего: место находки — единичное событие, а не точка,
+  // по которой собака живёт. Кнопки «Собака здесь» и «Новая точка» ей не показываем.
+  if (isStreet && !isFound && !d.lost && !seekLocked) {
     actions += `<button class="pop-btn" onclick="confirmDogGeo('${d.id}','${escapeAttr(d.name || '')}')">${t('a_here')}</button>`;
   }
   // Сразу под подтверждением — отправка новой точки. Две эти кнопки читаются вместе:
@@ -2679,7 +2708,7 @@ async function openDogCard(d) {
   // ветки для своих и чужих, и выглядела как отдельная непонятная функция.
   // «Гуляет тут» здесь нет намеренно: это про домашнюю собаку на прогулке, у уличной
   // такого понятия нет — она живёт в районе, а не выходит гулять.
-  if (isStreet && !seekLocked) {
+  if (isStreet && !isFound && !seekLocked) {
     actions += `<button class="pop-btn secondary" onclick="setDogGeoFromCard('${d.id}')">${t('a_newpin')}</button>`;
   }
   // Кнопка «показать на карте» бессмысленна, когда карточку и открыли с карты —
@@ -2748,7 +2777,9 @@ async function openDogCard(d) {
       <div class="comments-title">${t('cm_head')}</div>
       <div id="commentsList" class="comments-inline"><div class="empty">…</div></div>
       <div class="comment-compose">
-        <div class="cm-invite">${isStreet
+        <div class="cm-invite">${isFound
+          ? t('cm_invite_found')
+          : isStreet
           ? t('cm_invite_st') : t('cm_invite_home')}</div>
         <textarea id="commentText" placeholder="${t('cm_ph')}" maxlength="500" oninput="updCount(this,500)"></textarea>
         <button class="pop-btn" id="commentSendBtn" onclick="submitComment('${d.id}','${escapeAttr(d.name || '')}')">${t('cm_send')}</button>
