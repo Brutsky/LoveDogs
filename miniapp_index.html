@@ -23,7 +23,7 @@
     --shop:     #1f5b4b;
     --red:      #d24b3c;                /* потеряшки, опасные действия */
     --yellow:   #d9a13b;
-    --found:  #7b5cd6;   /* находка: сиреневый — не спорит ни с красным ЧП, ни с зелёным «ищет дом» */
+    --found:  #e0392b;   /* находка: красный — это срочно, как и потеряшка */
     --green:    #2e7d5b;
     --grey:     #a49a8a;
 
@@ -753,6 +753,9 @@ const I18N = {
     pf_city:'Город',
     pf_phone:'Телефон',
     pf_lang:'Язык бота',
+    fo_gu_geo:'Ты больше не контакт по этой собаке, она стала уличной.\n\nПоставь актуальную точку — где пёс живёт сейчас, а не где ты его подобрал. Иначе соседи будут искать его не там.',
+    fo_gu_del:'У этой находки нет точки на карте, поэтому уличной она стать не может — соседи не поймут, где искать.\n\nПредложи удалить карточку: модератор посмотрит и уберёт.',
+    fo_seek_warn:'⚠️ Это чужая собака. Пристраивать её ты берёшь на себя: хозяин может найтись и позже, и тогда объясняться придётся тебе.\n\nСтатус находки снят, теперь она уличная и ищет дом.',
     cm_invite_found:'💬 Узнал эту собаку или знаешь, чья она? Напиши — нашедший увидит.',
     f_found:'Найденные',
     lg_found:'Найдена',
@@ -1124,6 +1127,9 @@ const I18N = {
     pf_city:'ქალაქი',
     pf_phone:'ტელეფონი',
     pf_lang:'ბოტის ენა',
+    fo_gu_geo:'შენ აღარ ხარ ამ ძაღლის საკონტაქტო, ის გახდა ქუჩის.\n\nდასვი აქტუალური წერტილი — სად ცხოვრობს ახლა, და არა სად აიყვანე. თორემ მეზობლები სხვაგან მოძებნიან.',
+    fo_gu_del:'ამ ნაპოვნს რუკაზე წერტილი არ აქვს, ამიტომ ქუჩის ვერ გახდება — მეზობლები ვერ გაიგებენ სად ეძებონ.\n\nშესთავაზე წაშლა: მოდერატორი ნახავს და მოაშორებს.',
+    fo_seek_warn:'⚠️ ეს სხვისი ძაღლია. მის მოწყობას შენს თავზე იღებ: პატრონი შეიძლება მოგვიანებითაც გამოჩნდეს.\n\nნაპოვნის სტატუსი მოხსნილია, ახლა ის ქუჩისაა და ეძებს სახლს.',
     cm_invite_found:'💬 იცნობ ამ ძაღლს ან იცი ვისია? დაწერე — მპოვნელი დაინახავს.',
     f_found:'ნაპოვნები',
     lg_found:'ნაპოვნია',
@@ -1495,6 +1501,9 @@ const I18N = {
     pf_city:'City',
     pf_phone:'Phone',
     pf_lang:'Bot language',
+    fo_gu_geo:'You are no longer the contact; the dog is now a street dog.\n\nSet its current spot — where it lives now, not where you picked it up.',
+    fo_gu_del:'This find has no map pin, so it cannot become a street dog — nobody would know where to look.\n\nSuggest deleting it: a moderator will review.',
+    fo_seek_warn:'⚠️ This is someone else’s dog. Rehoming it is on you: the owner may still turn up.\n\nThe found status is removed; it is now a street dog looking for a home.',
     cm_invite_found:'💬 Recognise this dog or know whose it is? Write — the finder will see it.',
     f_found:'Found',
     lg_found:'Found',
@@ -2081,8 +2090,12 @@ function pinIcon(kind, item) {
     if (item.onModeration) cls += ' moderation';
     emoji = (PLACE_TYPES[item.type] || PLACE_TYPES.Other).icon;
   }
+  // Размер обязан совпадать с CSS .marker-pin (38px). Было объявлено 30 при
+  // фактических 38: Leaflet ставит ЛЕВЫЙ ВЕРХНИЙ угол в точку минус якорь, поэтому
+  // центр кружка оказывался на четыре пикселя южнее и правее настоящей точки.
+  // На глаз это и есть «метка встала криво» — причём у всех меток сразу.
   return L.divIcon({ className: '', html: `<div class="${cls}" style="background:${color}"><span>${emoji}</span></div>`,
-    iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -18] });
+    iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -22] });
 }
 
 // Подписи фильтров — ключи словаря: подставляются на каждом рендере, поэтому
@@ -3140,7 +3153,13 @@ async function removeDonor(dogId) {
 async function toggleSeeking(dogId, on) {
   const res = await callApi('setSeeking', { dogId, on });
   closeSheet();
-  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(on ? t('ms_seekon') : t('ms_seekoff'), 2200); }
+  if (res.ok) {
+    haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen();
+    // Пристройство чужой собаки — решение с последствиями, и человек должен
+    // услышать об этом словами, а не увидеть молча сменившийся значок.
+    if (res.wasFound) { await uiAlert(t('fo_seek_warn')); return; }
+    setStatus(on ? t('ms_seekon') : t('ms_seekoff'), 2200);
+  }
   else if (res.error === 'tagged_dog') uiAlert(t('nt_tag'));
   else uiAlert(t('err_fail') + (res.error || ''));
 }
@@ -3151,8 +3170,23 @@ async function giveUpCare(dogId, name) {
   if (!await uiConfirm(`Убрать себя из контактов по «${name}»? Собака останется на карте, но связаться по ней будет не с кем, а отметка «ищет дом» снимется.`)) return;
   const res = await callApi('giveUpCare', { dogId });
   closeSheet();
-  if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(t('ms_giveup_ok'), 2200); }
-  else uiAlert(t('err_fail') + (res.error || ''));
+  if (!res.ok) { uiAlert(t('err_fail') + (res.error || '')); return; }
+  haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen();
+
+  // Находка без нашедшего перестаёт быть находкой. Дальше два исхода, и оба
+  // требуют действия: либо поставить актуальное место, либо убрать карточку —
+  // уличная собака без точки на карте бесполезна.
+  if (res.needDelete) {
+    await uiAlert(t('fo_gu_del'));
+    askDeleteDog(dogId, name, true);
+    return;
+  }
+  if (res.needGeo) {
+    await uiAlert(t('fo_gu_geo'));
+    setDogGeoFromCard(dogId);
+    return;
+  }
+  setStatus(t('ms_giveup_ok'), 2200);
 }
 
 // ================== ДОБАВЛЕНИЕ СОБАКИ ==================
@@ -4449,6 +4483,7 @@ function hideSplash() {
   try {
     const params = new URLSearchParams(window.location.search);
     if (params.get('layer') === 'lost') { activeTab = 'dogs'; subFilter = 'lost'; }
+    if (params.get('layer') === 'found') { activeTab = 'dogs'; subFilter = 'found'; }
     if (params.get('screen')) showScreen(params.get('screen'));
   } catch (e) {}
 })();
