@@ -753,6 +753,13 @@ const I18N = {
     pf_city:'Город',
     pf_phone:'Телефон',
     pf_lang:'Язык бота',
+    adc_title:'Что добавляем?',
+    adc_street:'Уличная собака',
+    adc_street_s:'Живёт в районе, её знают соседи',
+    adc_home:'Моя собака',
+    adc_home_s:'Домашняя — появится на карте на прогулке',
+    adc_found:'Нашёл чужую собаку',
+    adc_found_s:'Ищем хозяина — продолжим в боте',
     fo_gu_geo:'Ты больше не контакт по этой собаке, она стала уличной.\n\nПоставь актуальную точку — где пёс живёт сейчас, а не где ты его подобрал. Иначе соседи будут искать его не там.',
     fo_gu_del:'У этой находки нет точки на карте, поэтому уличной она стать не может — соседи не поймут, где искать.\n\nПредложи удалить карточку: модератор посмотрит и уберёт.',
     fo_seek_warn:'⚠️ Это чужая собака. Пристраивать её ты берёшь на себя: хозяин может найтись и позже, и тогда объясняться придётся тебе.\n\nСтатус находки снят, теперь она уличная и ищет дом.',
@@ -1127,6 +1134,13 @@ const I18N = {
     pf_city:'ქალაქი',
     pf_phone:'ტელეფონი',
     pf_lang:'ბოტის ენა',
+    adc_title:'რას ვამატებთ?',
+    adc_street:'ქუჩის ძაღლი',
+    adc_street_s:'ცხოვრობს უბანში, მეზობლები იცნობენ',
+    adc_home:'ჩემი ძაღლი',
+    adc_home_s:'შინაური — რუკაზე გამოჩნდება გასეირნებისას',
+    adc_found:'ვიპოვე სხვისი ძაღლი',
+    adc_found_s:'ვეძებთ პატრონს — გავაგრძელებთ ბოტში',
     fo_gu_geo:'შენ აღარ ხარ ამ ძაღლის საკონტაქტო, ის გახდა ქუჩის.\n\nდასვი აქტუალური წერტილი — სად ცხოვრობს ახლა, და არა სად აიყვანე. თორემ მეზობლები სხვაგან მოძებნიან.',
     fo_gu_del:'ამ ნაპოვნს რუკაზე წერტილი არ აქვს, ამიტომ ქუჩის ვერ გახდება — მეზობლები ვერ გაიგებენ სად ეძებონ.\n\nშესთავაზე წაშლა: მოდერატორი ნახავს და მოაშორებს.',
     fo_seek_warn:'⚠️ ეს სხვისი ძაღლია. მის მოწყობას შენს თავზე იღებ: პატრონი შეიძლება მოგვიანებითაც გამოჩნდეს.\n\nნაპოვნის სტატუსი მოხსნილია, ახლა ის ქუჩისაა და ეძებს სახლს.',
@@ -1501,6 +1515,13 @@ const I18N = {
     pf_city:'City',
     pf_phone:'Phone',
     pf_lang:'Bot language',
+    adc_title:'What are we adding?',
+    adc_street:'Street dog',
+    adc_street_s:'Lives in the area, neighbours know it',
+    adc_home:'My dog',
+    adc_home_s:'A pet — appears on the map during walks',
+    adc_found:'I found someone’s dog',
+    adc_found_s:'Looking for the owner — continue in the bot',
     fo_gu_geo:'You are no longer the contact; the dog is now a street dog.\n\nSet its current spot — where it lives now, not where you picked it up.',
     fo_gu_del:'This find has no map pin, so it cannot become a street dog — nobody would know where to look.\n\nSuggest deleting it: a moderator will review.',
     fo_seek_warn:'⚠️ This is someone else’s dog. Rehoming it is on you: the owner may still turn up.\n\nThe found status is removed; it is now a street dog looking for a home.',
@@ -3894,8 +3915,30 @@ async function submitDelete(id, name) {
   else uiAlert(t('err_fail') + (res.error || ''));
 }
 
+// Развилка под кнопкой «Добавить» на слое собак.
+function openAddDogChoice() {
+  openSheet(`
+    <h3>${t('adc_title')}</h3>
+    <div class="card tappable" onclick="closeSheet();openAddDogSheet({status:'Уличная'})">
+      <div class="list-title" style="font-size:14px">${DOG_ICONS.street} ${t('adc_street')}</div>
+      <div class="list-sub">${t('adc_street_s')}</div>
+    </div>
+    <div class="card tappable" onclick="closeSheet();openAddDogSheet({status:'У владельца'})">
+      <div class="list-title" style="font-size:14px">${DOG_ICONS.home} ${t('adc_home')}</div>
+      <div class="list-sub">${t('adc_home_s')}</div>
+    </div>
+    <div class="card tappable" onclick="closeSheet();openBotDeepLink('found')">
+      <div class="list-title" style="font-size:14px">${DOG_ICONS.found} ${t('adc_found')}</div>
+      <div class="list-sub">${t('adc_found_s')}</div>
+    </div>
+    <button class="pop-btn secondary" style="margin-top:10px" onclick="closeSheet()">${t('ui_close')}</button>
+  `);
+}
+
 document.getElementById('fab').onclick = () => {
-  if (activeTab === 'dogs') { openAddStreetDog(); return; } // на слое собак — добавить уличную
+  // На слое собак «Добавить» — это три разных события, а не одно. Раньше кнопка
+  // молча вела в форму уличной, и человек с чужой собакой на руках попадал не туда.
+  if (activeTab === 'dogs') { openAddDogChoice(); return; }
   const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
     `<option value="${tk}" ${(subFilter !== 'all' && subFilter === tk) ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label()}</option>`).join('');
   openSheet(`
