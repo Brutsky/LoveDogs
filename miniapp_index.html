@@ -899,6 +899,15 @@ const I18N = {
     fo_note:'Описание *',
     fo_note_ph:'Ошейник, поведение, приметы, во сколько нашёл',
     fo_contacts:'⚠️ В сообщении о находке увидят твои контакты: {c}. Иначе хозяин не сможет с тобой связаться.',
+    a_owner_found:'🎉 Хозяин нашёлся',
+    fo_owner_h:'🎉 Хозяин нашёлся?',
+    fo_owner_note:'Как это случилось',
+    fo_owner_note_ph:'Как узнали друг друга, где встретились…',
+    fo_owner_note_hint:'Это увидят те, кто получал сообщение о находке. Можно оставить пустым.',
+    fo_owner_go:'Подтвердить',
+    fo_owner_confirm:'Карточка находки будет удалена. Всем, кто получал сообщение о находке, уйдёт новость, что хозяин нашёлся (фото, описание и твой комментарий). Продолжить?',
+    fo_owner_ok:'🎉 Ура! Находка закрыта',
+    fo_owner_ok_sent:'🎉 Ура! Хорошая новость уйдёт тем, кто получал сообщение о находке',
     fo_contacts_unknown:'⚠️ В сообщении о находке увидят твой Telegram и телефон из профиля. Иначе хозяин не сможет с тобой связаться.',
     fo_contacts_none:'⚠️ У тебя не указаны ни Telegram-ник, ни телефон — хозяин не сможет с тобой связаться. Добавь телефон в профиле.',
     fo_announce:'📣 Сообщить о находке',
@@ -2787,6 +2796,9 @@ async function openDogCard(d) {
   if (canEditGallery) actions += `<button class="pop-btn secondary" onclick="addPhotoFromCard('${d.id}')">${t('a_addphoto')}</button>`;
   if (isStreet) actions += `<button class="pop-btn secondary" id="subBtn-${d.id}" onclick="toggleDogSub('${d.id}')">${d.subscribed ? t('a_unsub') : t('a_sub')}</button>`;
   if (d.mine) {
+    // Находку закрывает тот, кто её завёл: карточка удаляется, а получившим сообщение
+    // о находке уходит хорошая новость. Кнопка первой — это главное действие находки.
+    if (isFound) actions += `<button class="pop-btn" style="background:var(--green)" onclick="openFoundOwnerSheet('${d.id}')">${t('a_owner_found')}</button>`;
     actions += `<button class="pop-btn" onclick="openDogEditSheet(findDog('${d.id}'))">${t('a_edit')}</button>`;
     if (isHomeMine) {
       actions += `<button class="pop-btn secondary" onclick="walkHereMine('${d.id}')">${t('a_walks')}</button>`;
@@ -3111,6 +3123,36 @@ async function markFound(dogId) {
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(t('ms_foundok'), 2400); }
   else uiAlert(t('err_fail') + (res.error || ''));
 }
+// «Хозяин нашёлся» для находки: комментарий (необязательный) → подтверждение →
+// карточка удаляется, тем, кто получал сообщение о находке, уходит хорошая новость.
+function openFoundOwnerSheet(dogId) {
+  openSheet(`
+    <h3>${t('fo_owner_h')}</h3>
+    <div class="field"><label>${t('fo_owner_note')}</label>
+      <textarea id="foOwnerNote" maxlength="250" oninput="updCount(this,250)" placeholder="${t('fo_owner_note_ph')}"></textarea>
+      <div class="hint">${t('fo_owner_note_hint')}</div></div>
+    <div class="btn-row">
+      <button class="pop-btn secondary" onclick="closeSheet()">${t('co_cancel')}</button>
+      <button class="pop-btn" style="background:var(--green)" onclick="submitFoundOwner('${dogId}')">${t('fo_owner_go')}</button>
+    </div>
+  `);
+}
+async function submitFoundOwner(dogId) {
+  if (_inFlight['foundOwner']) return;   // защита от повторного нажатия
+  _inFlight['foundOwner'] = true;
+  try {
+    const el = document.getElementById('foOwnerNote');
+    const comment = el ? el.value.trim() : '';
+    if (!await uiConfirm(t('fo_owner_confirm'))) return;
+    const res = await callApi('foundOwnerFound', { dogId, comment });
+    if (res.ok) {
+      haptic('success'); closeSheet();
+      dataCache.dogs = null; await renderLayer(); renderDogsScreen();
+      setStatus(res.notified ? t('fo_owner_ok_sent') : t('fo_owner_ok'), 3000);
+    } else uiAlert(t('err_fail') + (res.error || ''));
+  } finally { delete _inFlight['foundOwner']; }
+}
+
 // suggest=true — карточка чужая (или старая уличная без автора): удаление не мгновенное,
 // а через модерацию. Формулировки честно об этом говорят, чтобы человек не удивлялся,
 // что собака осталась на карте.
