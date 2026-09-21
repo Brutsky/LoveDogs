@@ -131,6 +131,13 @@
   details.more > summary::after { content: '⌄'; margin-left: auto; font-size: 18px; color: var(--muted);
     transition: transform .18s ease; }
   details.more[open] > summary::after { transform: rotate(180deg); }
+  /* «Дополнить анкету» в форме новой собаки: выглядит как кнопка-строка, чтобы было
+     видно, что её можно раскрыть, а не как подпись раздела. */
+  details.more.tap { border-top: none; padding-top: 4px; }
+  details.more.tap > summary { padding: 11px 12px; border: 1px solid var(--line); border-radius: var(--r-ctl);
+    background: var(--card); }
+  details.more.tap > summary::after { color: var(--paw-deep); font-weight: 700; }
+  details.more.tap[open] > summary { border-color: var(--paw); }
   .title-sub { font-size: 13px; font-weight: 500; color: var(--muted); }
   .sw { position: relative; display: inline-block; width: 44px; height: 26px; }
   .sw input { opacity: 0; width: 0; height: 0; }
@@ -876,6 +883,32 @@ const I18N = {
     ad_pin_req:'Обязательно: без точки пса не найдут на карте',
     ad_hint_st:'Пёс, который живёт в районе. Нужны приметы и точка на карте — по ним его узнают соседи.',
     ad_hint_home:'Твоя собака. Достаточно клички — остальное можно дополнить позже.',
+    ad_hint_home2:'Добавь свою собаку. Достаточно указать только кличку. Остальное можно будет дозаполнить позже, но рекомендую добавить фото (уверен, у тебя есть много красивых), чтобы вас можно было узнать при встрече.',
+    ad_hint_st2:'Добавь уличную собаку. Лучше всего идентифицировать по бирке.',
+    ad_pin_walk:'📍 Укажи, где вы гуляете',
+    ad_req_note:'* — обязательное поле',
+    ad_err_name_st:'Укажи кличку собаки.',
+    ad_err_daylimit:'Сегодня ты уже добавил(а) максимум собак. Продолжим завтра 🙏',
+    ad_err_tag_exists:'Собака с такой биркой уже есть в базе. Открыть её карточку?',
+    fd_found:'🔎 Найденная',
+    fd_tagcolor:'Цвет',
+    fo_where_now:'Собака у тебя или на месте? *',
+    fo_withme:'🏠 Забрал(а) к себе',
+    fo_onspot:'📍 Осталась на месте',
+    fo_where_found:'Где найдена *',
+    fo_note:'Описание *',
+    fo_note_ph:'Ошейник, поведение, приметы, во сколько нашёл',
+    fo_contacts:'⚠️ В сообщении о находке увидят твои контакты: {c}. Иначе хозяин не сможет с тобой связаться.',
+    fo_contacts_unknown:'⚠️ В сообщении о находке увидят твой Telegram и телефон из профиля. Иначе хозяин не сможет с тобой связаться.',
+    fo_contacts_none:'⚠️ У тебя не указаны ни Telegram-ник, ни телефон — хозяин не сможет с тобой связаться. Добавь телефон в профиле.',
+    fo_announce:'📣 Сообщить о находке',
+    fo_announce_confirm:'Сообщение о находке уйдёт всем в городе после проверки модератором. В нём будут твои контакты. Включить?',
+    fo_err_photo:'📸 Добавь фото собаки — по нему хозяин её и узнает.',
+    fo_err_where:'Отметь, собака у тебя или осталась на месте.',
+    fo_err_geo:'📍 Отметь на карте, где нашёл собаку.',
+    fo_err_note:'Опиши собаку и обстоятельства — по ним хозяин её узнает.',
+    fo_ok:'✅ Находка на карте',
+    fo_ok_sent:'📨 Находка на карте, сообщение ушло модератору',
     ad_photo_rep:'Заменить',
     ad_photo_pick:'Выбрать снимок',
     ad_photo_st:'Без фото уличного пса не опознают и не перешлют карточку — это самое важное поле.',
@@ -3216,76 +3249,105 @@ let addDogDraft = null;
 function openAddStreetDog() {
   openAddDogSheet({ status: 'Уличная' });
 }
-// Форма добавления собаки.
-// Была одна на оба случая: одиннадцать полей подряд, все выглядят одинаково важными,
-// а обязательные у уличной и домашней разные. Человек либо бросал на середине, либо
-// заполнял лишнее. Теперь форма следует за ответом на первый вопрос:
-//   • ДОМАШНЯЯ — нужна только кличка. Всё остальное спрятано за «Дополнить анкету»:
-//     это личная карточка, её можно заполнять постепенно.
-//   • УЛИЧНАЯ — нужны точка на карте и приметы, по которым пса узнают соседи:
-//     окрас и бирка вынесены наверх, кличка необязательна (её часто нет).
-// Необязательные поля не исчезают — они сворачиваются, чтобы не пугать длиной.
+// Цвет бирки — из справочника, а не свободным текстом: так бирки сравнимы между собой.
+const TAG_COLOR_OPTIONS = ['жёлтый', 'зелёный', 'красный'];
+const FOUND_STATUS = 'Найдена';
+const FOUND_NOTE_MAX = 300;   // как на сервере (FOUND_NOTE_MAX в dog_bot.gs)
+
+// Форма «Новая собака»: три случая в одном месте — домашняя, уличная, найденная.
+// Раньше найденную заводили только в боте, а уличную сервер отклонял («добавляй через
+// бота»), хотя фото в форме уже можно было приложить. Теперь все три — здесь.
+//   • ДОМАШНЯЯ — обязательна только кличка. Фото и место прогулки — рядом, всё прочее
+//     в раскрывающейся «Дополнить анкету».
+//   • УЛИЧНАЯ — бирка и её цвет первыми (по ним пса узнают надёжнее всего), затем
+//     кличка, заметки, точка; обязательны кличка, точка и фото.
+//   • НАЙДЕННАЯ — только то, что нашедший реально знает: фото, где собака сейчас,
+//     место находки, описание. Рассылка о находке — отдельным переключателем.
+// Обязательные поля помечены «*», внизу одна сноска — без «необязательно» у каждого поля.
 function openAddDogSheet(draft) {
   addDogDraft = draft || addDogDraft || { status: 'У владельца' };
   const d = addDogDraft;
   const street = d.status === 'Уличная';
-  const statuses = [['У владельца', t('fd_home')], ['Уличная', t('fd_street')]];
+  const found = d.status === FOUND_STATUS;
+  const statuses = [['У владельца', t('fd_home')], ['Уличная', t('fd_street')], [FOUND_STATUS, t('fd_found')]];
 
-  const fName = `<div class="field"><label>${t('fd_name')}${street ? ` <span class="opt-mark">${t('ad_opt')}</span>` : ''}</label>
+  const fName = `<div class="field"><label>${t('fd_name')}</label>
       <input type="text" id="adName" value="${escapeAttr(d.name || '')}" placeholder="${street ? t('ad_name_st') : t('fd_name_ph')}"></div>`;
   const fColor = `<div class="field"><label>${t('fd_color')}</label><input type="text" id="adColor" value="${escapeAttr(d.color || '')}" placeholder="${t('fd_color_ph')}"></div>`;
-  const fTag = `<div class="field"><label>${t('fd_tag')}${street ? ` <span class="opt-mark">${t('ad_ifvisible')}</span>` : ''}</label>
+  const fTag = `<div class="field"><label>${t('fd_tag')}</label>
       <div class="field-row">
         <input type="text" id="adTagNum" placeholder="${t('fd_tag_ph')}" value="${escapeAttr(d.tagNumber || '')}">
-        <input type="text" id="adTagColor" placeholder="Цвет" value="${escapeAttr(d.tagColor || '')}">
-      </div>
-      ${street ? `<div class="hint">${t('ad_tagnote')}</div>` : ''}</div>`;
+        <select id="adTagColor" style="max-width:42%">${selOpts(TAG_COLOR_OPTIONS, d.tagColor, t('fd_tagcolor'))}</select>
+      </div></div>`;
   const fBreed = `<div class="field"><label>${t('fd_breed')}</label>
       <select id="adBreedSel" onchange="document.getElementById('adBreedManual').style.display = this.value==='__manual__' ? 'block':'none'">
         ${selOpts(COMMON_BREEDS, d.breed, '—')}
-        <option value="__manual__">${t('fd_type_text')}</option>
+        <option value="__manual__" ${d.breed === '__manual__' ? 'selected' : ''}>${t('fd_type_text')}</option>
       </select>
-      <input type="text" id="adBreedManual" placeholder="${t('fd_breed_ph')}" style="display:none;margin-top:6px" value="${escapeAttr(d.breedManual || '')}"></div>`;
+      <input type="text" id="adBreedManual" placeholder="${t('fd_breed_ph')}" style="display:${d.breed === '__manual__' ? 'block' : 'none'};margin-top:6px" value="${escapeAttr(d.breedManual || '')}"></div>`;
   const fSex = `<div class="field"><label>${t('fd_sex')}</label><select id="adSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>`;
   const fAge = `<div class="field"><label>${t('fd_age')}</label><select id="adAge">${ageOptsHtml(d.age, '—')}</select></div>`;
   const fRegion = REGIONS_LIST.length ? `<div class="field"><label>${t('fd_region_tb')}</label><select id="adRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : '';
   const fSter = `<div class="field"><label>${t('fd_ster')}</label><select id="adSter">${selOpts(TRISTATE, d.sterilized || t('fd_unknown'))}</select></div>`;
   const fMemo = `<div class="field"><label>${t('fd_notes')}</label><textarea id="adMemo" maxlength="200" oninput="updCount(this,200)" placeholder="${street ? t('ad_memo_home') : t('ad_memo_st')}">${escapeHtml(d.memo || '')}</textarea></div>`;
-  const fGeo = `<button class="pop-btn ${street ? '' : 'secondary'}" onclick="addDogPickGeo()">${d.lat ? t('fd_pin_set') : t('fd_pin')}</button>
-    <div class="geo-note">${d.lat ? '✅ ' + Number(d.lat).toFixed(5) + ', ' + Number(d.lng).toFixed(5) : (street ? t('ad_pin_req') : t('fd_pin_hint'))}</div>`;
-
-  // Что показываем сразу, а что прячем — зависит от типа собаки.
-  const primary = street ? [fColor, fTag, fName, fGeo].join('') : [fName, fGeo].join('');
-  const extra = street ? [fBreed, fSex, fAge, fRegion, fSter, fMemo].join('')
-                       : [fBreed, fColor, fSex, fAge, fRegion, fSter, fTag, fMemo].join('');
-
-  openSheet(`
-    <h3>${t('fd_new')}</h3>
-    <div class="field"><label>${t('fd_who')}</label>
-      <div class="seg-pick" id="adStatus">${statuses.map(([v, l]) =>
-        `<div class="opt ${d.status === v ? 'active' : ''}" data-v="${v}">${l}</div>`).join('')}</div>
-      <div class="hint">${street
-        ? t('ad_hint_st')
-        : t('ad_hint_home')}</div>
-    </div>
-    ${primary}
-    <details class="more" ${d._moreOpen ? 'open' : ''} ontoggle="addDogDraft._moreOpen = this.open">
-      <summary>${t('ad_more')} <span class="opt-mark">${t('ad_opt')}</span></summary>
-      <div style="padding-top:10px">${extra}</div>
-    </details>
-    <div style="height:8px"></div>
-    <div class="field">
-      <label>📷 ${t('ui_photo')}</label>
+  const geoNote = d.lat ? `<div class="geo-note">✅ ${Number(d.lat).toFixed(5)}, ${Number(d.lng).toFixed(5)}</div>` : '';
+  const fGeo = found
+    ? `<div class="field"><label>${t('fo_where_found')}</label>
+         <button class="pop-btn ${d.lat ? 'secondary' : ''}" onclick="addDogPickGeo()">${d.lat ? t('fd_pin_set') : t('fd_pin')}</button>${geoNote}</div>`
+    : street
+      ? `<button class="pop-btn ${d.lat ? 'secondary' : ''}" onclick="addDogPickGeo()">${d.lat ? t('fd_pin_set') : t('fd_pin') + ' *'}</button>${geoNote}`
+      : `<button class="pop-btn secondary" onclick="addDogPickGeo()">${d.lat ? t('fd_pin_set') : t('ad_pin_walk')}</button>${geoNote}`;
+  const fPhoto = `<div class="field">
+      <label>📷 ${t('ui_photo')}${(street || found) ? ' *' : ''}</label>
       <div id="adPhotoBox" class="photo-pick ${d._photoKey ? 'has' : ''}"
            onclick="pickDogPhotoForForm()"
            style="${d._photoKey ? `background-image:url('${photoUrlFromKey(d._photoKey)}')` : ''}">
         ${d._photoKey ? `<span class="rep">${t('ad_photo_rep')}</span>` : `<span class="ic">📷</span><span class="tx">${t('ad_photo_pick')}</span>`}
       </div>
-      <div class="hint">${street
-        ? t('ad_photo_st')
-        : t('ad_photo_home')}</div>
+      ${street ? `<div class="hint">${t('ad_photo_st')}</div>` : ''}
+    </div>`;
+  const more = (inner) => `
+    <details class="more tap" ${d._moreOpen ? 'open' : ''} ontoggle="addDogDraft._moreOpen = this.open">
+      <summary>${t('ad_more')}</summary>
+      <div style="padding-top:10px">${inner}</div>
+    </details>`;
+
+  let body = '';
+  if (found) {
+    // Находка: фото → где собака сейчас → место → описание → контакты → рассылка.
+    const where = [['1', t('fo_withme')], ['0', t('fo_onspot')]];
+    const wm = (d.foundWithMe === 1 || d.foundWithMe === 0) ? String(d.foundWithMe) : '';
+    body = fPhoto +
+      `<div class="field"><label>${t('fo_where_now')}</label>
+         <div class="seg-pick" id="adFoundWhere">${where.map(([v, l]) =>
+           `<div class="opt ${wm === v ? 'active' : ''}" data-v="${v}">${l}</div>`).join('')}</div></div>` +
+      fGeo +
+      `<div class="field"><label>${t('fo_note')}</label>
+         <textarea id="adFoundNote" maxlength="${FOUND_NOTE_MAX}" oninput="updCount(this,${FOUND_NOTE_MAX})" placeholder="${t('fo_note_ph')}">${escapeHtml(d.foundNote || '')}</textarea></div>` +
+      `<div class="hint" style="margin:0 0 12px">${foundContactsInfoHtml()}</div>` +
+      `<div class="field-row" style="justify-content:space-between;margin:0 0 14px">
+         <span style="font-size:14px;font-weight:600">${t('fo_announce')}</span>
+         <label class="switch"><input type="checkbox" id="adAnnounce" ${d.announce ? 'checked' : ''} onchange="onFoundAnnounceToggle(this)"><span class="slider-t"></span></label>
+       </div>`;
+  } else if (street) {
+    body = fTag + fName + fMemo + fGeo + more([fColor, fBreed, fSex, fAge, fRegion, fSter].join('')) +
+      '<div style="height:8px"></div>' + fPhoto;
+  } else {
+    body = fName + fPhoto + fGeo + more([fBreed, fColor, fSex, fAge, fRegion, fSter, fTag, fMemo].join(''));
+  }
+
+  const hint = found ? '' : `<div class="hint">${street ? t('ad_hint_st2') : t('ad_hint_home2')}</div>`;
+  openSheet(`
+    <h3>${t('fd_new')}</h3>
+    <div class="field"><label>${t('fd_who')}</label>
+      <div class="seg-pick" id="adStatus">${statuses.map(([v, l]) =>
+        `<div class="opt ${d.status === v ? 'active' : ''}" data-v="${v}">${l}</div>`).join('')}</div>
+      ${hint}
     </div>
+    ${body}
+    <div style="height:6px"></div>
     <button class="pop-btn" id="addDogSaveBtn" onclick="submitAddDog()">${t('fd_save')}</button>
+    <div class="hint" style="margin-top:8px">${t('ad_req_note')}</div>
   `);
 
   document.querySelectorAll('#adStatus .opt').forEach(o => o.onclick = () => {
@@ -3294,6 +3356,35 @@ function openAddDogSheet(draft) {
     addDogDraft.status = o.dataset.v;
     openAddDogSheet(addDogDraft);
   });
+  document.querySelectorAll('#adFoundWhere .opt').forEach(o => o.onclick = () => {
+    collectAddDogDraft();
+    addDogDraft.foundWithMe = Number(o.dataset.v);
+    document.querySelectorAll('#adFoundWhere .opt').forEach(x => x.classList.toggle('active', x === o));
+  });
+}
+
+// Что увидят люди о нашедшем. Берём из профиля: Telegram-ник и телефон.
+function foundContactsInfoHtml() {
+  if (!me || !me.profile) return t('fo_contacts_unknown');   // профиль ещё грузится
+  const p = me.profile;
+  const tgName = (p.username || '').toString();
+  const tel = (p.tel && p.tel !== 'Не указан') ? p.tel.toString() : '';
+  if (!tgName && !tel) return t('fo_contacts_none');
+  const parts = [];
+  if (tgName) parts.push('<b>' + escapeHtml(tgName.charAt(0) === '@' ? tgName : '@' + tgName) + '</b>');
+  if (tel) parts.push('<b>' + escapeHtml(tel) + '</b>');
+  return t('fo_contacts').replace('{c}', parts.join(', '));
+}
+
+// Включение рассылки — только после явного подтверждения: сообщение уйдёт всему
+// городу и содержит открытые контакты.
+async function onFoundAnnounceToggle(el) {
+  collectAddDogDraft();
+  if (el.checked) {
+    const ok = await uiConfirm(t('fo_announce_confirm'));
+    el.checked = !!ok;
+  }
+  addDogDraft.announce = !!el.checked;
 }
 
 function collectAddDogDraft() {
@@ -3301,12 +3392,14 @@ function collectAddDogDraft() {
   // пустую строку и затирало уже введённое — при смене типа собаки данные пропадали.
   const map = { name: 'adName', breed: 'adBreedSel', breedManual: 'adBreedManual', color: 'adColor',
     sex: 'adSex', age: 'adAge', region: 'adRegion', sterilized: 'adSter',
-    tagNumber: 'adTagNum', tagColor: 'adTagColor', memo: 'adMemo' };
+    tagNumber: 'adTagNum', tagColor: 'adTagColor', memo: 'adMemo', foundNote: 'adFoundNote' };
   addDogDraft = addDogDraft || {};
   Object.keys(map).forEach(k => {
     const el = document.getElementById(map[k]);
     if (el) addDogDraft[k] = el.value;
   });
+  const an = document.getElementById('adAnnounce');
+  if (an) addDogDraft.announce = !!an.checked;
 }
 async function addDogPickGeo() {
   collectAddDogDraft();
@@ -3319,51 +3412,86 @@ async function submitAddDog() {
   if (_inFlight['addDog']) return;   // защита от повторного нажатия
   _inFlight['addDog'] = true;
   try {
-  // Сохранение идёт заметное время (запись в таблицу + уведомления), и без защиты
+  // Сохранение идёт заметное время (запись в таблицу, фото, уведомления), и без защиты
   // повторные тапы создавали ДУБЛИ анкет. Блокируем кнопку на время запроса.
   if (addDogSubmitting) return;
   collectAddDogDraft();
   const d = addDogDraft;
-  // Уличную раньше приходилось заводить в боте — только там можно было приложить
-  // фото. Теперь снимок грузится прямо здесь, и выгонять человека некуда. Но без
-  // фото уличного пса действительно не опознают, поэтому оно обязательно.
-  if (d.status === 'Уличная' && !d._photoKey) {
-    uiAlert(t('ad_err_photo'));
-    return;
+  const street = d.status === 'Уличная';
+  const found = d.status === FOUND_STATUS;
+
+  // Проверки в порядке полей на экране — первое незаполненное и называем.
+  if (found) {
+    if (!d._photoKey) { uiAlert(t('fo_err_photo')); return; }
+    if (d.foundWithMe !== 1 && d.foundWithMe !== 0) { uiAlert(t('fo_err_where')); return; }
+    if (!d.lat) { uiAlert(t('fo_err_geo')); return; }
+    if (!(d.foundNote || '').trim()) {
+      uiAlert(t('fo_err_note'));
+      const el = document.getElementById('adFoundNote'); if (el) el.focus();
+      return;
+    }
+  } else {
+    if (!d.name || !d.name.trim()) {
+      uiAlert(street ? t('ad_err_name_st') : t('ad_err_name'));
+      const el = document.getElementById('adName'); if (el) el.focus();
+      return;
+    }
+    if (street && !d.lat) { uiAlert(t('ad_err_geo')); return; }
+    if (street && !d._photoKey) { uiAlert(t('ad_err_photo')); return; }
   }
-  if (d.status !== 'Уличная' && (!d.name || !d.name.trim())) {
-    uiAlert(t('ad_err_name'));
-    const el = document.getElementById('adName'); if (el) el.focus();
-    return;
+
+  let payload;
+  if (found) {
+    payload = { status: FOUND_STATUS, lat: d.lat, lng: d.lng, photoKey: d._photoKey,
+      foundWithMe: d.foundWithMe, foundNote: d.foundNote.trim(), announce: !!d.announce };
+  } else {
+    let breed = d.breed === '__manual__' ? (d.breedManual || '').trim() : d.breed;
+    if (d.breed === '__manual__' && breed && !/^[A-Za-zА-Яа-яЁё\u10A0-\u10FF\s-]+$/.test(breed)) {
+      uiAlert(t('ad_err_breed')); return;
+    }
+    payload = {
+      status: d.status, name: d.name.trim(), breed, color: d.color, sex: d.sex, age: d.age,
+      region: d.region || '', sterilized: d.sterilized, tagNumber: d.tagNumber,
+      tagColor: d.tagColor, memo: d.memo, lat: d.lat || '', lng: d.lng || '',
+      photoKey: d._photoKey || ''
+    };
   }
-  let breed = d.breed === '__manual__' ? (d.breedManual || '').trim() : d.breed;
-  if (d.breed === '__manual__' && breed && !/^[A-Za-zА-Яа-яЁё\u10A0-\u10FF\s-]+$/.test(breed)) {
-    uiAlert(t('ad_err_breed')); return;
-  }
-  const payload = {
-    status: d.status, name: d.name.trim(), breed, color: d.color, sex: d.sex, age: d.age,
-    region: d.region || '', sterilized: d.sterilized, tagNumber: d.tagNumber,
-    tagColor: d.tagColor, memo: d.memo, lat: d.lat || '', lng: d.lng || ''
-  };
+
   const btn = document.getElementById('addDogSaveBtn');
   addDogSubmitting = true;
   if (btn) { btn.disabled = true; btn.textContent = t('cm_sending'); }
   try {
     const res = await callApi('addDog', payload);
     if (res.ok) {
-      // Снимок уже лежит в хранилище — привязываем его обложкой к только что
-      // созданной анкете. Раньше id собаки не существовало, поэтому порядок такой.
-      if (d._photoKey && res.id) {   // addDog отдаёт id новой анкеты полем id
+      // Новый сервер привязывает фото сам (photoAttached в ответе). Если ответ без этого
+      // поля — значит, сервер ещё старой версии: привязываем отдельным запросом, как раньше.
+      if (d._photoKey && res.id && res.photoAttached === undefined) {
         const at = await callApi('attachPhoto', { dogId: res.id, key: d._photoKey, asCover: true });
         if (!at || !at.ok) setStatus(t('ad_photo_fail'), 3500);
+      } else if (res.photoAttached === false) {
+        setStatus(t('ad_photo_fail'), 3500);
       }
       haptic(); addDogDraft = null; closeSheet();
       dataCache.dogs = null; await renderLayer(); renderDogsScreen();
-      setStatus(t('ad_ok'), 2200);
+      if (res.photoAttached !== false) {
+        setStatus(found ? (res.announced ? t('fo_ok_sent') : t('fo_ok')) : t('ad_ok'), 2600);
+      }
     } else if (res.error === 'limit') uiAlert(t('ad_err_limit'));
+    else if (res.error === 'day_limit') uiAlert(t('ad_err_daylimit'));
     else if (res.error === 'duplicate') uiAlert(t('ad_err_dup'));
-    else if (res.error === 'geo_required') uiAlert(t('ad_err_geo'));
-    else if (res.error === 'street_use_bot') uiAlert('📸 Уличную собаку добавляй через бота — там можно приложить фото.');
+    else if (res.error === 'geo_required') uiAlert(found ? t('fo_err_geo') : t('ad_err_geo'));
+    else if (res.error === 'photo_required') uiAlert(found ? t('fo_err_photo') : t('ad_err_photo'));
+    else if (res.error === 'note_required') uiAlert(t('fo_err_note'));
+    else if (res.error === 'where_required') uiAlert(t('fo_err_where'));
+    else if (res.error === 'tag_exists' && res.dogId) {
+      // Такая бирка уже в базе — это почти наверняка тот же пёс. Предлагаем открыть его.
+      if (await uiConfirm(t('ad_err_tag_exists'))) {
+        addDogDraft = null; closeSheet();
+        dataCache.dogs = null; await renderLayer();
+        const dog = findDog(res.dogId);
+        if (dog) openDogCard(dog);
+      }
+    }
     else uiAlert(t('err_fail') + (res.error || ''));
   } finally {
     addDogSubmitting = false;
@@ -3915,30 +4043,11 @@ async function submitDelete(id, name) {
   else uiAlert(t('err_fail') + (res.error || ''));
 }
 
-// Развилка под кнопкой «Добавить» на слое собак.
-function openAddDogChoice() {
-  openSheet(`
-    <h3>${t('adc_title')}</h3>
-    <div class="card tappable" onclick="closeSheet();openAddDogSheet({status:'Уличная'})">
-      <div class="list-title" style="font-size:14px">${DOG_ICONS.street} ${t('adc_street')}</div>
-      <div class="list-sub">${t('adc_street_s')}</div>
-    </div>
-    <div class="card tappable" onclick="closeSheet();openAddDogSheet({status:'У владельца'})">
-      <div class="list-title" style="font-size:14px">${DOG_ICONS.home} ${t('adc_home')}</div>
-      <div class="list-sub">${t('adc_home_s')}</div>
-    </div>
-    <div class="card tappable" onclick="closeSheet();openBotDeepLink('found')">
-      <div class="list-title" style="font-size:14px">${DOG_ICONS.found} ${t('adc_found')}</div>
-      <div class="list-sub">${t('adc_found_s')}</div>
-    </div>
-    <button class="pop-btn secondary" style="margin-top:10px" onclick="closeSheet()">${t('ui_close')}</button>
-  `);
-}
-
 document.getElementById('fab').onclick = () => {
-  // На слое собак «Добавить» — это три разных события, а не одно. Раньше кнопка
-  // молча вела в форму уличной, и человек с чужой собакой на руках попадал не туда.
-  if (activeTab === 'dogs') { openAddDogChoice(); return; }
+  // На слое собак «Добавить» — сразу форма «Новая собака»: выбор домашняя / уличная /
+  // найденная живёт в самой форме, отдельный экран-развилка был лишним тапом.
+  // Недописанный черновик сохраняется — случайно закрыл, открыл снова, всё на месте.
+  if (activeTab === 'dogs') { openAddDogSheet(addDogDraft || { status: 'У владельца' }); return; }
   const typeOpts = Object.keys(PLACE_TYPES).map(tk =>
     `<option value="${tk}" ${(subFilter !== 'all' && subFilter === tk) ? 'selected' : ''}>${PLACE_TYPES[tk].icon} ${PLACE_TYPES[tk].label()}</option>`).join('');
   openSheet(`
