@@ -899,6 +899,17 @@ const I18N = {
     fo_note:'Описание *',
     fo_note_ph:'Ошейник, поведение, приметы, во сколько нашёл',
     fo_contacts:'⚠️ В сообщении о находке увидят твои контакты: {c}. Иначе хозяин не сможет с тобой связаться.',
+    a_found_mine:'🙋 Это моя собака',
+    b_found:'🔎 найдена — ищем хозяина',
+    d_found_where:'Где найдена',
+    d_found_h:'🔎 Собаку нашли — ищем хозяина',
+    d_found_withme:'🏠 Сейчас собака у нашедшего',
+    d_found_onspot:'📍 Собака осталась на месте находки',
+    d_signs:'Приметы',
+    fm_h:'🙌 Свяжись с нашедшим',
+    fm_nocontacts:'Контактов в профиле нашедшего нет, но мы передали ему твои — он напишет сам.',
+    fm_notified:'Мы предупредили нашедшего, что откликнулся возможный хозяин.',
+    fm_closed:'Эта находка уже закрыта.',
     a_owner_found:'🎉 Хозяин нашёлся',
     fo_owner_h:'🎉 Хозяин нашёлся?',
     fo_owner_note:'Как это случилось',
@@ -2731,17 +2742,21 @@ function updCount(el, max) {
 function findDog(id) { return (dataCache.dogs || []).find(d => d.id.toString() === id.toString()); }
 
 async function openDogCard(d) {
-  // Находка ведёт себя в карточке как уличная: её можно комментировать, ей можно
-  // добавить фото, на неё можно подписаться и предложить удаление. Разница только
-  // в значке на карте и в тексте пересылки — всё остальное совпадает.
+  // Находка в карточке похожа на уличную (комментарии, подписка, пересылка), но
+  // дополнять анкету и добавлять фото может только нашедший, админ и модератор —
+  // по этой карточке хозяин узнаёт свою собаку, и чужие правки его собьют.
+  // Зеркало canEditDog_ на сервере.
   const isFound = d.status === 'Найдена';
   const isStreet = d.status === 'Уличная' || isFound;
+  const isStaff = !!(me && me.profile && (me.profile.moderator || me.profile.isAdmin));
+  // Описание находки и пометка «где собака сейчас» лежат в donorMemo одной строкой.
+  const foundInfo = isFound ? splitFoundNote(d.donorMemo) : null;
   // Важное — всегда; второстепенное (только заполненное) — под «показать всё».
   const impRows = [
     d.breed ? [t('d_breed'), d.breed] : null,
     d.age ? [t('d_age'), d.age] : null,
     d.sex ? [t('d_sex'), d.sex] : null,
-    [t('d_region'), ((d.city || '') + (d.region ? ', ' + d.region : '')) || '—'],
+    [isFound ? t('d_found_where') : t('d_region'), ((d.city || '') + (d.region ? ', ' + d.region : '')) || '—'],
     [t('d_status'), d.status || '—']
   ].filter(Boolean);
   const extraRows = [
@@ -2750,7 +2765,8 @@ async function openDogCard(d) {
     d.sterilized ? [t('d_ster'), d.sterilized] : null,
     d.weightKg ? [t('d_weight'), d.weightKg + t('d_kg')] : null,
     d.vaccinated ? [t('d_vacc'), d.vaccinated] : null,
-    d.isDonor ? [t('d_donor'), d.donorMemo || 'да'] : null
+    d.isDonor ? [t('d_donor'), d.donorMemo || 'да'] : null,
+    d.memo && isFound ? [t('d_signs'), d.memo] : null
   ].filter(Boolean);
   const infoHtml = rr => rr.map(r => `<div class="info-row"><span>${r[0]}</span><b>${escapeHtml(r[1])}</b></div>`).join('');
   const badges = [
@@ -2758,6 +2774,7 @@ async function openDogCard(d) {
     d.seekingHome ? `<span class="badge ok">${t('b_seeking')}</span>` : '',
     d.isDonor ? `<span class="badge">${t('b_donor')}</span>` : '',
     d.lost ? `<span class="badge warn">🚨 потерялась${d.lostDaysAgo != null ? ' · ' + d.lostDaysAgo + t('d_days') : ''}</span>` : '',
+    isFound ? `<span class="badge warn">${t('b_found')}</span>` : '',
     !d.exactLocation && !d.lost ? `<span class="badge">${t('b_approx')}</span>` : ''
   ].join('');
 
@@ -2769,7 +2786,7 @@ async function openDogCard(d) {
   // Зеркало canEditDog_: своя собака ИЛИ любая уличная — но пристраиваемую ведёт
   // только тот, кто её завёл: пока идёт поиск дома, чужие правки только путают.
   const seekLocked = !!d.seekingHome && !d.mine;
-  const canEditGallery = !!d.mine || (isStreet && !seekLocked);
+  const canEditGallery = !!d.mine || (isFound ? isStaff : (isStreet && !seekLocked));
   let actions = '';
   // Уличная: подтвердить, что пёс всё там же — один тап, без отправки новой точки.
   // Именно эти подтверждения удерживают собаку на карте (>3 мес — метка «устарело»,
@@ -2828,9 +2845,15 @@ async function openDogCard(d) {
     if (d.hasOwner && (!isStreet || d.seekingHome)) {
       actions += `<button class="pop-btn" onclick="contactOwner('${d.id}','${escapeAttr(d.name || '')}')">${isStreet ? t('a_contact_seek') : t('a_contact_home')}</button>`;
     }
+    // Находка: главное действие постороннего — узнать свою собаку. Правка — только
+    // админу и модератору.
+    if (isFound) {
+      actions += `<button class="pop-btn" onclick="claimFoundDog('${d.id}')">${t('a_found_mine')}</button>`;
+      if (isStaff) actions += `<button class="pop-btn secondary" onclick="openDogEditSheet(findDog('${d.id}'))">${t('a_edit')}</button>`;
+    }
     // Уличную дополняет любой (первичные данные о найденном псе) — кроме той,
     // что сейчас ищет новый дом: её анкету ведёт один человек.
-    if (isStreet && !seekLocked) {
+    else if (isStreet && !seekLocked) {
       actions += `<button class="pop-btn secondary" onclick="openDogEditSheet(findDog('${d.id}'))">${t('a_fill')}</button>`;
     }
     // Спрятанные без объяснения кнопки читаются как поломка, поэтому говорим прямо.
@@ -2850,7 +2873,9 @@ async function openDogCard(d) {
     <div class="dog-info">${infoHtml(impRows)}</div>
     ${extraRows.length ? `<button class="more-toggle" id="moreToggle" onclick="toggleDogExtra()">${t('d_more')} ⌄</button>
       <div class="dog-info" id="dogExtra" style="display:none">${infoHtml(extraRows)}</div>` : ''}
-    ${d.memo ? `<div class="dog-memo">📝 ${escapeHtml(d.memo)}</div>` : ''}
+    ${foundInfo ? `<div class="dog-memo"><b>${t('d_found_h')}</b>${foundInfo.text ? `<br>💬 ${escapeHtml(foundInfo.text)}` : ''}${
+        foundInfo.withMe === true ? `<br>${t('d_found_withme')}` : foundInfo.withMe === false ? `<br>${t('d_found_onspot')}` : ''}</div>` : ''}
+    ${d.memo && !isFound ? `<div class="dog-memo">📝 ${escapeHtml(d.memo)}</div>` : ''}
     <div class="pop-actions vertical">${actions}</div>
     <div class="comments-block">
       <div class="comments-title">${t('cm_head')}</div>
@@ -3123,6 +3148,38 @@ async function markFound(dogId) {
   if (res.ok) { haptic(); dataCache.dogs = null; await renderLayer(); renderDogsScreen(); setStatus(t('ms_foundok'), 2400); }
   else uiAlert(t('err_fail') + (res.error || ''));
 }
+// Разбор описания находки: текст и пометка «у нашедшего / на месте» (зеркало
+// splitFoundNote_ на сервере — пометку дописывают в конец и бот, и мини-апп).
+function splitFoundNote(raw) {
+  let text = (raw || '').toString().trim();
+  let withMe = null;
+  const mWith = '(собака у нашедшего)', mSpot = '(осталась на месте)';
+  if (text.endsWith(mWith)) { withMe = true; text = text.slice(0, -mWith.length).trim(); }
+  else if (text.endsWith(mSpot)) { withMe = false; text = text.slice(0, -mSpot.length).trim(); }
+  return { text, withMe };
+}
+
+// «Это моя собака»: показываем контакты нашедшего, нашедшему сервер сообщает,
+// кто откликнулся.
+async function claimFoundDog(dogId) {
+  if (_inFlight['foundMine']) return;
+  _inFlight['foundMine'] = true;
+  try {
+    const res = await callApi('foundMine', { dogId });
+    if (!res.ok) { uiAlert(res.error === 'closed' || res.error === 'not found' ? t('fm_closed') : t('err_fail') + (res.error || '')); return; }
+    const lines = [];
+    if (res.tg) lines.push(`Telegram: <b>${escapeHtml(res.tg)}</b>`);
+    if (res.tel) lines.push(`${t('pf_phone')}: <b>${escapeHtml(res.tel)}</b>`);
+    openSheet(`
+      <h3>${t('fm_h')}</h3>
+      <div class="dog-memo">${lines.length ? lines.join('<br>') : t('fm_nocontacts')}</div>
+      <div class="hint" style="margin:8px 0 12px">${t('fm_notified')}</div>
+      <button class="pop-btn secondary" onclick="closeSheet()">${t('ui_close')}</button>
+    `);
+    haptic('success');
+  } finally { delete _inFlight['foundMine']; }
+}
+
 // «Хозяин нашёлся» для находки: комментарий (необязательный) → подтверждение →
 // карточка удаляется, тем, кто получал сообщение о находке, уходит хорошая новость.
 function openFoundOwnerSheet(dogId) {
