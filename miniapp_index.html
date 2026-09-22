@@ -163,6 +163,25 @@
     border-color: var(--paw); background: var(--bg); cursor: text; }
   .edit-row input::placeholder { color: var(--hint); font-weight: 400; }
   .edit-hint { font-size: 12px; color: var(--hint); margin-top: 8px; }
+  /* Профиль: у каждого изменяемого значения — мягкая подложка и значок справа
+     (✎ — вписать, ⌄ — выбрать из списка). Без них значения читались как обычный
+     текст, и было непонятно, что их вообще можно менять. */
+  .edit-row .val.pen, .edit-row .val.pick { position: relative; }
+  .edit-row .val.pen input, .edit-row .val.pick select {
+    background: var(--surface-soft); border-color: var(--line); padding: 7px 30px 7px 10px; }
+  .edit-row .val.pen::after, .edit-row .val.pick::after {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--paw-deep); font-weight: 700; pointer-events: none; }
+  .edit-row .val.pen::after { content: '✎'; font-size: 14px; }
+  .edit-row .val.pick::after { content: '⌄'; font-size: 17px; margin-top: -4px; }
+  .edit-row .val.pen input:focus { background: var(--bg); }
+  .edit-row .val.err input { border-color: var(--red); background: color-mix(in srgb, var(--red) 8%, var(--card)); }
+  .edit-row .field-err { font-size: 12px; color: var(--red); text-align: right; margin-top: 4px; }
+  .edit-row.wrap > span { flex: 1 1 auto; line-height: 1.35; }
+  /* Строка-переход (уведомления): выглядит как пункт меню с шевроном, а не как
+     серая кнопка, которая сливалась с фоном карточек. */
+  .nav-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .nav-row .chev { color: var(--hint); font-size: 22px; line-height: 1; }
   .legend-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
   .legend-row { display: flex; gap: 12px; align-items: flex-start; }
   /* Слот фиксированной ширины под настоящий .marker-pin: легенда показывает ровно
@@ -741,6 +760,8 @@ const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initData
 // а когда загрузится профиль — уточняем сохранённым выбором пользователя.
 const I18N = {
   RU: {
+    pf_mydogs_h:'Мои собаки',
+    pf_name_empty:'Имя не может быть пустым — оставил прежнее',
     fp_title:'Добавить место',
     fp_hint:'Добавляем только проверенные, полезные для собак места — и без дублей 🙏',
     fp_type:'Тип места',
@@ -1032,14 +1053,14 @@ const I18N = {
     sb_dogs_hint:'Приходят новости: новое фото, уточнённое место, комментарии соседей.',
     sb_dogs_empty:'Ты пока ни за кем не следишь. Подписка включается сама, когда заводишь уличную собаку или дополняешь её анкету.',
     sb_back:'⬅️ Назад',
-    pf_tel:'📞 Телефон',
+    pf_tel:'Телефон',
     pf_edit_hint:'Нажми на значение, чтобы изменить — сохраняется само.',
-    pf_notif_btn:'🔔 Настройка уведомлений',
+    pf_notif_btn:'🔔 Уведомления',
     pf_retry:'Повторить',
     pf_loadfail:'Не получилось загрузить профиль.',
     pf_empty_res:'Пока пусто',
     pf_adddog:'➕ Добавить собаку',
-    pf_showtg:'Показывать мой юзернейм в «Кто рядом?»',
+    pf_showtg:'Показывать мой ник в «Кто рядом?»',
     pf_lostalerts:'🔔 Сообщать о потеряшках моего города',
     pf_saved:'✅ Профиль обновлён',
     pf_nodogs:'У тебя пока нет добавленных собак. Открой «Собаки» → «＋», чтобы добавить.',
@@ -1168,6 +1189,7 @@ const I18N = {
     empty:'Пусто', cancel:'Отмена', save:'Сохранить', close:'Закрыть'
   },
   GE: {
+    pf_mydogs_h:'ჩემი ძაღლები',
     fp_title:'ადგილის დამატება',
     fp_hint:'ვამატებთ მხოლოდ შემოწმებულ, ძაღლებისთვის სასარგებლო ადგილებს — დუბლების გარეშე 🙏',
     fp_type:'ადგილის ტიპი',
@@ -1413,9 +1435,9 @@ const I18N = {
     sb_dogs_hint:'მოდის სიახლეები: ახალი ფოტო, დაზუსტებული ადგილი, მეზობლების კომენტარები.',
     sb_dogs_empty:'ჯერ არავის თვალს არ ადევნებ. გამოწერა თავისით ირთვება, როცა ქუჩის ძაღლს ამატებ ან მის პროფილს ავსებ.',
     sb_back:'⬅️ უკან',
-    pf_tel:'📞 ტელეფონი',
+    pf_tel:'ტელეფონი',
     pf_edit_hint:'დააჭირე მნიშვნელობას შესაცვლელად — ინახება ავტომატურად.',
-    pf_notif_btn:'🔔 შეტყობინებების პარამეტრები',
+    pf_notif_btn:'🔔 შეტყობინებები',
     pf_retry:'ხელახლა',
     pf_loadfail:'პროფილის ჩატვირთვა ვერ მოხერხდა.',
     pf_empty_res:'ჯერ ცარიელია',
@@ -1549,6 +1571,8 @@ const I18N = {
     empty:'ცარიელია', cancel:'გაუქმება', save:'შენახვა', close:'დახურვა'
   },
   EN: {
+    pf_mydogs_h:'My dogs',
+    pf_name_empty:'Name can’t be empty — kept the previous one',
     fp_title:'Add a place',
     fp_hint:'We only add verified, dog-useful places — and no duplicates 🙏',
     fp_type:'Place type',
@@ -1794,9 +1818,9 @@ const I18N = {
     sb_dogs_hint:'News: a new photo, an updated location, neighbours’ comments.',
     sb_dogs_empty:'You are not following anyone yet. It turns on by itself when you add a street dog or complete its profile.',
     sb_back:'⬅️ Back',
-    pf_tel:'📞 Phone',
+    pf_tel:'Phone',
     pf_edit_hint:'Tap a value to change it — it saves itself.',
-    pf_notif_btn:'🔔 Notification settings',
+    pf_notif_btn:'🔔 Notifications',
     pf_retry:'Retry',
     pf_loadfail:'Could not load the profile.',
     pf_empty_res:'Nothing here yet',
@@ -3253,10 +3277,7 @@ async function renderProfileMyDogs() {
   if (!mine.length) {
     // Пустой список без кнопки — тупик: человек видит, что собак нет, и не знает,
     // что с этим делать. Заводить собаку начинают отсюда чаще всего.
-    box.innerHTML = `<div class="card">
-      <div class="list-sub" style="margin-bottom:10px">${t('pf_nodogs')}</div>
-      <button class="pop-btn" onclick="openAddDogSheet()">${t('pf_adddog')}</button>
-    </div>`;
+    box.innerHTML = `<button class="pop-btn" style="margin-bottom:12px" onclick="openAddDogSheet({ status: 'У владельца' })">${t('pf_adddog')}</button>`;
     return;
   }
   const statusIco = st => st === 'У владельца' ? DOG_ICONS.home : DOG_ICONS.street;
@@ -4250,34 +4271,40 @@ function renderProfile() {
   const cities = me.cities || [];
   document.getElementById('profileBody').innerHTML = `
     <div class="card">
-      <div class="edit-row"><span>${t('fd_name2')}</span><div class="val">
-        <input type="text" id="pfName" value="${escapeAttr(p.name || '')}" placeholder="Имя"
-               onblur="saveProfileField('name', this.value)"
+      <div class="edit-row"><span>${t('fd_name2')}</span><div class="val pen" id="pfNameBox">
+        <input type="text" id="pfName" value="${escapeAttr(p.name || '')}" maxlength="40" required
+               aria-label="${escapeAttr(t('fd_name2'))}"
+               oninput="this.parentNode.classList.toggle('err', !this.value.trim())"
+               onblur="saveProfileName(this)"
                onkeydown="if(event.key==='Enter')this.blur()"></div></div>
-      <div class="edit-row"><span>🏙 ${t('pf_city')}</span><div class="val">
+      <div class="edit-row"><span>${t('pf_city')}</span><div class="val ${cities.length ? 'pick' : ''}">
         ${cities.length
-          ? `<select id="pfCity" onchange="saveProfileField('city', this.value)">${selOpts(cities, p.city)}</select>`
+          ? `<select id="pfCity" aria-label="${escapeAttr(t('pf_city'))}" onchange="saveProfileField('city', this.value)">${selOpts(cities, p.city)}</select>`
           : `<b>${escapeHtml(p.city || '—')}</b>`}</div></div>
-      <div class="edit-row"><span>${t('pf_tel')}</span><div class="val">
+      <div class="edit-row"><span>${t('pf_tel')}</span><div class="val pen">
         <input type="tel" id="pfTel" value="${escapeAttr(p.tel === 'Не указан' ? '' : (p.tel || ''))}" placeholder="+995…"
-               onblur="saveProfileField('tel', this.value)"
+               aria-label="${escapeAttr(t('pf_tel'))}"
+               onblur="saveProfileField('tel', this.value.trim())"
                onkeydown="if(event.key==='Enter')this.blur()"></div></div>
-      <div class="edit-row"><span>${t('pf_lang')}</span><div class="val">
-        <select id="pfLang" onchange="saveProfileField('lang', this.value)">
+      <div class="edit-row"><span>${t('pf_lang')}</span><div class="val pick">
+        <select id="pfLang" aria-label="${escapeAttr(t('pf_lang'))}" onchange="saveProfileField('lang', this.value)">
           <option value="RU" ${p.lang === 'RU' ? 'selected' : ''}>🇷🇺 Русский</option>
           <option value="GE" ${p.lang === 'GE' ? 'selected' : ''}>🇬🇪 ქართული</option>
           <option value="EN" ${p.lang === 'EN' ? 'selected' : ''}>🇬🇧 English</option>
         </select></div></div>
-      <div class="edit-row"><span>👁 ${t('pf_showtg')}</span>
+      <div class="edit-row wrap"><span>${t('pf_showtg')}</span>
         <label class="sw"><input type="checkbox" ${p.showTg === 'Показан' ? 'checked' : ''}
+          aria-label="${escapeAttr(t('pf_showtg'))}"
           onchange="saveProfileField('showTg', this.checked ? 'Показан' : 'Скрыт')"><span></span></label></div>
-      <div class="edit-hint">${t('pf_edit_hint')}</div>
     </div>
 
-    <div id="profileMyDogs"><div class="empty" style="padding:16px">Загружаю…</div></div>
+    <div class="sec-label">${t('pf_mydogs_h')}</div>
+    <div id="profileMyDogs"><div class="empty" style="padding:16px">${t('loading')}</div></div>
 
-    <button class="pop-btn secondary" onclick="openSubsSheet()">${t('pf_notif_btn')}</button>
-
+    <div class="card tappable nav-row" onclick="openSubsSheet()">
+      <div class="list-title" style="font-size:14px">${t('pf_notif_btn')}</div>
+      <span class="chev">›</span>
+    </div>
 
     ${p.isAdmin ? `<div class="sec-label">📊 Аналитика</div>
       <div class="card tappable" onclick="openAdminDashboard()">
@@ -4563,13 +4590,28 @@ async function openAdminDashboard() {
 
 // Сохранение одного поля профиля. Без перезагрузки всего экрана: полный reload
 // сбрасывал бы фокус и прокрутку прямо во время правки следующего поля.
+// Имя не может быть пустым: стёр случайно и ушёл с поля — возвращаем прежнее и
+// коротко говорим почему. Сервер тоже отклоняет пустое имя (name_empty).
+function saveProfileName(el) {
+  const v = (el.value || '').trim();
+  const box = document.getElementById('pfNameBox');
+  if (!v) {
+    el.value = (me && me.profile && me.profile.name) || '';
+    if (box) box.classList.remove('err');
+    setStatus(t('pf_name_empty'), 2200);
+    return;
+  }
+  if (box) box.classList.remove('err');
+  el.value = v;
+  saveProfileField('name', v);
+}
 async function saveProfileField(field, value) {
   if (!me || !me.profile) return;
   const before = me.profile[field];
   if (String(before || '') === String(value || '')) return;   // ничего не поменялось
   const res = await callApi('updateProfile', { changes: { [field]: value } }, true);
   if (!res || !res.ok) {
-    uiAlert(t('err_fail') + ((res && res.error) || ''));
+    uiAlert(res && res.error === 'name_empty' ? t('pf_name_empty') : t('err_fail') + ((res && res.error) || ''));
     renderProfile();   // вернуть прежнее значение на экран
     return;
   }

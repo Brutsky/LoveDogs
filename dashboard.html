@@ -141,10 +141,27 @@
 // страница без Telegram (или не у админа) данных не получит.
 const API_URL = "https://script.google.com/macros/s/AKfycbwuaKkog3Ebjowds_pE4SmxjS63UIlZseNE-NE48KQSYLmNas3gkAqCS1p7TM-0tv1r/exec";
 const tg = window.Telegram && window.Telegram.WebApp;
-if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+// Внутри Telegram есть подписанный initData. В обычном браузере его нет — тогда
+// доступ по секретному ключу из ссылки «🔗 Дашборд в браузере» (админ-панель бота).
+const inTelegram = !!(tg && tg.initData);
+if (inTelegram) { try { tg.ready(); tg.expand(); } catch (e) {} }
+
+// Ключ приходит в ссылке после «#key=» — эта часть не уходит на хостинг. Запоминаем
+// его в браузере и убираем из адресной строки, чтобы не светился на экране и в истории.
+const KEY_STORE = 'ld_dash_key';
+function readKey() {
+  const m = location.hash.match(/key=([A-Za-z0-9]+)/);
+  if (m) {
+    try { localStorage.setItem(KEY_STORE, m[1]); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    return m[1];
+  }
+  try { return localStorage.getItem(KEY_STORE) || ''; } catch (e) { return ''; }
+}
+const dashKey = inTelegram ? '' : readKey();
 
 // «Назад»: если пришли из мини-аппа — возвращаемся в него, иначе закрываем окно.
-if (tg && tg.BackButton) {
+if (inTelegram && tg.BackButton) {
   tg.BackButton.show();
   tg.BackButton.onClick(() => { if (history.length > 1) history.back(); else tg.close(); });
 }
@@ -185,8 +202,10 @@ function bars(rows, cls, max) {
 }
 
 async function callApi(action, payload) {
-  const res = await fetch(API_URL, { method: 'POST',
-    body: JSON.stringify({ action, initData: tg ? tg.initData : '', payload: payload || {} }) });
+  const body = inTelegram
+    ? { action, initData: tg.initData, payload: payload || {} }
+    : { action, dashKey, payload: payload || {} };
+  const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
   return res.json();
 }
 
@@ -197,8 +216,8 @@ function showState(title, text) {
 async function load(refresh) {
   const btn = document.getElementById('refreshBtn');
   btn.disabled = true;
-  if (!tg || !tg.initData) {
-    showState('Открой из бота', 'Дашборд работает внутри Telegram: Админ-панель → «📈 Дашборд продукта».');
+  if (!inTelegram && !dashKey) {
+    showState('Нужна ссылка доступа', 'В боте: Админ-панель → «🔗 Дашборд в браузере». Открой ту ссылку — браузер её запомнит. Внутри Telegram: «📈 Дашборд продукта».');
     document.getElementById('sub').textContent = '';
     return;
   }
@@ -209,11 +228,15 @@ async function load(refresh) {
   btn.disabled = false;
   if (!d || !d.ok) {
     if (d && d.error === 'no rights') showState('Только для админов', 'Этот раздел видят админы из ADMIN_IDS.');
+    else if (d && d.error === 'bad_key') {
+      try { localStorage.removeItem(KEY_STORE); } catch (e) {}
+      showState('Ссылка больше не действует', 'Её сменили в боте. Возьми новую: Админ-панель → «🔗 Дашборд в браузере».');
+    }
     else if (d && d.error === 'auth') showState('Сессия устарела', 'Закрой окно и открой дашборд из бота заново.');
     else showState('Не получилось посчитать', (d && d.error) || 'Неизвестная ошибка');
     return;
   }
-  if (tg.HapticFeedback && refresh) try { tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
+  if (inTelegram && tg.HapticFeedback && refresh) try { tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
   render(d);
 }
 
