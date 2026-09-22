@@ -152,7 +152,7 @@
   .edit-row { display: flex; align-items: center; justify-content: space-between;
     gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
   .edit-row:last-child { border-bottom: 0; }
-  .edit-row > span { color: var(--hint); font-size: 14px; flex: 0 0 auto; }
+  .edit-row > span { color: var(--text); font-size: 14px; font-weight: 600; flex: 0 0 auto; }
   .edit-row .val { flex: 1 1 auto; min-width: 0; text-align: right; }
   .edit-row input[type=text], .edit-row input[type=tel], .edit-row select {
     width: 100%; text-align: right; font-family: inherit; font-size: 15px; font-weight: 600;
@@ -172,8 +172,32 @@
   .edit-row .val.pen::after, .edit-row .val.pick::after {
     position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
     color: var(--paw-deep); font-weight: 700; pointer-events: none; }
-  .edit-row .val.pen::after { content: '✎'; font-size: 14px; }
-  .edit-row .val.pick::after { content: '⌄'; font-size: 17px; margin-top: -4px; }
+  .edit-row .val.pen::after { content: '✎'; font-size: 19px; }
+  .edit-row .val.pick::after { content: '⌄'; font-size: 20px; margin-top: -5px; transition: transform .15s; }
+  .edit-row .val.pick.open::after { transform: translateY(-50%) rotate(180deg); margin-top: 3px; }
+  /* Выбор из справочника — своя выпадашка, а не системный select: на телефоне
+     select открывается отдельным окном-барабаном, и связь с полем теряется. */
+  .pick-btn { width: 100%; text-align: right; font: 600 15px var(--font-body); color: var(--text);
+    background: var(--surface-soft); border: 1px solid var(--line); border-radius: 9px;
+    padding: 7px 32px 7px 10px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pick-btn:focus-visible { outline: 2px solid var(--paw); outline-offset: 1px; }
+  .pick-list { margin: -4px 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+    box-shadow: var(--shadow-m); max-height: 260px; overflow-y: auto; padding: 4px; }
+  .pick-list[hidden] { display: none; }
+  .pick-opt { display: flex; justify-content: space-between; align-items: center; width: 100%;
+    text-align: left; font: 500 15px var(--font-body); color: var(--text); background: none; border: 0;
+    padding: 11px 12px; border-radius: 9px; cursor: pointer; }
+  .pick-opt:active, .pick-opt:hover { background: var(--surface-soft); }
+  .pick-opt.on { font-weight: 800; color: var(--paw-deep); }
+  .pick-opt.on::after { content: '✓'; font-weight: 800; }
+  /* Мои собаки в профиле: текст слева, фото справа — как в списке подписок. */
+  .mydog { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .mydog .txt { min-width: 0; }
+  .mydog .list-title, .mydog .list-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mydog .ava { width: 54px; height: 54px; border-radius: 13px; flex: 0 0 54px; background: var(--surface-soft);
+    background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center;
+    font-size: 24px; }
+  .mydog.lost .ava { box-shadow: 0 0 0 2px var(--red); }
   .edit-row .val.pen input:focus { background: var(--bg); }
   .edit-row .val.err input { border-color: var(--red); background: color-mix(in srgb, var(--red) 8%, var(--card)); }
   .edit-row .field-err { font-size: 12px; color: var(--red); text-align: right; margin-top: 4px; }
@@ -760,6 +784,8 @@ const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initData
 // а когда загрузится профиль — уточняем сохранённым выбором пользователя.
 const I18N = {
   RU: {
+    pf_dog_lost:'Потерялась',
+    pf_notif_sub:'Пропажи и находки, дайджест, районы, собаки',
     pf_mydogs_h:'Мои собаки',
     pf_name_empty:'Имя не может быть пустым — оставил прежнее',
     fp_title:'Добавить место',
@@ -820,7 +846,7 @@ const I18N = {
     sp_bank_h:'🏦 Переводом',
     sp_write:'✉️ Написать',
     sp_chat:'💬 Чат для обсуждения бота',
-    sb_lostrow:'🚨 Оповещения о пропаже',
+    sb_lostrow:'🚨 Оповещения о пропаже/находке',
     sb_digestrow:'🏡 Дайджест «ищут новый дом»',
     sb_instant:'Изменения сохраняются сразу',
     ui_refresh:'Обновить',
@@ -942,8 +968,8 @@ const I18N = {
     fo_owner_ok_sent:'🎉 Ура! Хорошая новость уйдёт тем, кто получал сообщение о находке',
     fo_contacts_unknown:'⚠️ В сообщении о находке увидят твой Telegram и телефон из профиля. Иначе хозяин не сможет с тобой связаться.',
     fo_contacts_none:'⚠️ У тебя не указаны ни Telegram-ник, ни телефон — хозяин не сможет с тобой связаться. Добавь телефон в профиле.',
-    fo_announce:'📣 Сообщить о находке',
-    fo_announce_confirm:'Сообщение о находке уйдёт всем в городе после проверки модератором. В нём будут твои контакты. Включить?',
+    fo_announce:'📣 Запустить рассылку',
+    fo_announce_confirm:'Рассылка о находке уйдёт всем в городе после проверки модератором. В ней будут твои контакты. Включить?',
     fo_err_photo:'📸 Добавь фото собаки — по нему хозяин её и узнает.',
     fo_err_where:'Отметь, собака у тебя или осталась на месте.',
     fo_err_geo:'📍 Отметь на карте, где нашёл собаку.',
@@ -1042,7 +1068,7 @@ const I18N = {
     cm_del_title:'Удалить комментарий',
     sb_title:'🔔 Что мне приходит',
     sb_lost:'Оповещения о пропаже',
-    sb_lost_hint:'Редко, но именно они возвращают собак домой: находит обычно случайный сосед.',
+    sb_lost_hint:'Когда в городе теряется собака или кто-то нашёл чужую. И хорошая новость, когда собака нашлась или нашёлся хозяин.',
     sb_digest:'Дайджест «ищут новый дом»',
     sb_digest_hint:'Одно сообщение в неделю с одной собакой, которой ищут хозяев.',
     sb_regions:'🗺 Подписки на районы',
@@ -1055,12 +1081,12 @@ const I18N = {
     sb_back:'⬅️ Назад',
     pf_tel:'Телефон',
     pf_edit_hint:'Нажми на значение, чтобы изменить — сохраняется само.',
-    pf_notif_btn:'🔔 Уведомления',
+    pf_notif_btn:'🔔 Настройка уведомлений',
     pf_retry:'Повторить',
     pf_loadfail:'Не получилось загрузить профиль.',
     pf_empty_res:'Пока пусто',
     pf_adddog:'➕ Добавить собаку',
-    pf_showtg:'Показывать мой ник в «Кто рядом?»',
+    pf_showtg:'Показывать мой @username',
     pf_lostalerts:'🔔 Сообщать о потеряшках моего города',
     pf_saved:'✅ Профиль обновлён',
     pf_nodogs:'У тебя пока нет добавленных собак. Открой «Собаки» → «＋», чтобы добавить.',
@@ -1437,12 +1463,12 @@ const I18N = {
     sb_back:'⬅️ უკან',
     pf_tel:'ტელეფონი',
     pf_edit_hint:'დააჭირე მნიშვნელობას შესაცვლელად — ინახება ავტომატურად.',
-    pf_notif_btn:'🔔 შეტყობინებები',
+    pf_notif_btn:'🔔 შეტყობინებების პარამეტრები',
     pf_retry:'ხელახლა',
     pf_loadfail:'პროფილის ჩატვირთვა ვერ მოხერხდა.',
     pf_empty_res:'ჯერ ცარიელია',
     pf_adddog:'➕ ძაღლის დამატება',
-    pf_showtg:'ვაჩვენო ჩემი იუზერნეიმი «ვინ არის რაიონში»-ში',
+    pf_showtg:'ვაჩვენო ჩემი @username',
     pf_lostalerts:'🔔 შემატყობინე ჩემი ქალაქის დაკარგულებზე',
     pf_saved:'✅ პროფილი განახლდა',
     pf_nodogs:'ჯერ არ გაქვს დამატებული ძაღლები. გახსენი «ძაღლები» → «＋» დასამატებლად.',
@@ -1571,6 +1597,8 @@ const I18N = {
     empty:'ცარიელია', cancel:'გაუქმება', save:'შენახვა', close:'დახურვა'
   },
   EN: {
+    pf_dog_lost:'Lost',
+    pf_notif_sub:'Lost & found, digest, districts, dogs',
     pf_mydogs_h:'My dogs',
     pf_name_empty:'Name can’t be empty — kept the previous one',
     fp_title:'Add a place',
@@ -1631,7 +1659,7 @@ const I18N = {
     sp_bank_h:'🏦 By bank transfer',
     sp_write:'✉️ Message',
     sp_chat:'💬 Chat about the bot',
-    sb_lostrow:'🚨 Lost-dog alerts',
+    sb_lostrow:'🚨 Lost & found alerts',
     sb_digestrow:'🏡 Digest “looking for a home”',
     sb_instant:'Changes save instantly',
     ui_refresh:'Refresh',
@@ -1807,7 +1835,7 @@ const I18N = {
     cm_del_title:'Delete comment',
     sb_title:'🔔 What I receive',
     sb_lost:'Lost-dog alerts',
-    sb_lost_hint:'Rare, but this is what brings dogs home: usually a random neighbour finds them.',
+    sb_lost_hint:'When a dog goes missing or someone finds one in your city. And the good news when it is back home or the owner is found.',
     sb_digest:'Digest “looking for a home”',
     sb_digest_hint:'One message a week about one dog that needs an owner.',
     sb_regions:'🗺 District subscriptions',
@@ -1820,12 +1848,12 @@ const I18N = {
     sb_back:'⬅️ Back',
     pf_tel:'Phone',
     pf_edit_hint:'Tap a value to change it — it saves itself.',
-    pf_notif_btn:'🔔 Notifications',
+    pf_notif_btn:'🔔 Notification settings',
     pf_retry:'Retry',
     pf_loadfail:'Could not load the profile.',
     pf_empty_res:'Nothing here yet',
     pf_adddog:'➕ Add a dog',
-    pf_showtg:'Show my username in «Who\'s around»',
+    pf_showtg:'Show my @username',
     pf_lostalerts:'🔔 Notify me about lost dogs in my city',
     pf_saved:'✅ Profile updated',
     pf_nodogs:'You have no dogs yet. Open «Dogs» → «＋» to add one.',
@@ -2207,8 +2235,9 @@ const SUBFILTERS = {
   // принимают по анкете, а не по точке. Фильтр остался в списке собак.
   // Подписи — ключи словаря, а не готовые строки: фильтры собираются один раз при
   // загрузке файла, когда язык профиля ещё неизвестен.
-  dogs: [['all','sf_all'], ['home','f_home'], ['street','f_street'],
-         ['lost','f_lost'], ['found','f_found'], ['mine','f_mine']],
+  // Порядок — по срочности: сначала то, где нужна помощь прямо сейчас.
+  dogs: [['all','sf_all'], ['lost','f_lost'], ['found','f_found'], ['street','f_street'],
+         ['home','f_home'], ['mine','f_mine']],
   places: [['all','sf_all'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Groom','✂️'], ['Kennel','🐶'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
 };
 function renderSubfilters() {
@@ -2222,7 +2251,7 @@ function renderSubfilters() {
     chip.className = 'chip' + (subFilter === k ? ' active' : '');
     // если label — ключ словаря, переводим; иначе это эмодзи-иконка категории
     chip.textContent = /^[a-z_]+$/.test(label) ? t(label) : label;
-    chip.onclick = () => { subFilter = k; renderSubfilters(); renderLayer(); };
+    chip.onclick = () => { subFilter = k; if (activeTab === 'dogs') sharedDogFilter = k; renderSubfilters(); renderLayer(); };
     box.appendChild(chip);
   });
   document.getElementById('fab').classList.toggle('show', activeScreen === 'map');
@@ -2424,7 +2453,8 @@ document.querySelectorAll('#tabs .tab').forEach(tab => {
     document.querySelectorAll('#tabs .tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     activeTab = tab.dataset.k;
-    subFilter = 'all';
+    // Вернулись на слой собак — восстанавливаем общий фильтр собак, а не сбрасываем.
+    subFilter = (activeTab === 'dogs' && SUBFILTERS.dogs.some(x => x[0] === sharedDogFilter)) ? sharedDogFilter : 'all';
     renderSubfilters();
     renderLayer();
   };
@@ -2442,13 +2472,14 @@ function showScreen(name) {
   if (name === 'dogs') {
     // Фильтр переносится с карты: список — то же множество собак, просто другим
     // представлением, и терять выбранный фильтр при переключении нелогично.
-    if (activeTab === 'dogs' && subFilter && DOG_SEGMENTS.some(x => x[0] === subFilter)) dogSegment = subFilter;
-    dogSegment = dogSegment || 'all';
+    dogSegment = DOG_SEGMENTS.some(x => x[0] === sharedDogFilter) ? sharedDogFilter : 'all';
     initDogsScreen();
   }
-  if (name === 'map' && dogSegment && activeTab === 'dogs') {
-    // И обратно: если в списке выбрали фильтр, который есть на карте, — переносим.
-    if (SUBFILTERS.dogs.some(x => x[0] === dogSegment)) { subFilter = dogSegment; renderSubfilters(); renderLayer(); }
+  if (name === 'map' && activeTab === 'dogs') {
+    // Фильтра нет на карте («ищут дом», «доноры») — показываем всех, но выбор в
+    // списке не трогаем: вернёшься — он на месте.
+    const want = SUBFILTERS.dogs.some(x => x[0] === sharedDogFilter) ? sharedDogFilter : 'all';
+    if (want !== subFilter) { subFilter = want; renderSubfilters(); renderLayer(); }
   }
   if (name === 'sitters') loadSitters();
   if (name === 'profile') loadProfile();
@@ -3280,17 +3311,24 @@ async function renderProfileMyDogs() {
     box.innerHTML = `<button class="pop-btn" style="margin-bottom:12px" onclick="openAddDogSheet({ status: 'У владельца' })">${t('pf_adddog')}</button>`;
     return;
   }
-  const statusIco = st => st === 'У владельца' ? DOG_ICONS.home : DOG_ICONS.street;
-  box.innerHTML = mine.map(d => `
-    <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
-      <div class="row-between">
-        <div>
-          <div class="list-title">${d.lost ? '🚨 ' : ''}${escapeHtml(d.name || t('pf_noname'))}</div>
-          <div class="list-sub">${statusIco(d.status)} ${escapeHtml(d.status)}${d.breed ? ' · ' + escapeHtml(d.breed) : ''}</div>
-        </div>
-        <div style="font-size:22px">💛</div>
+  // Строка — как в подписках на собак: кличка и подробности слева, фото справа.
+  // Сердечко «моя» здесь убрано: в разделе «Мои собаки» оно ничего не сообщало.
+  const statusIco = d => d.status === 'У владельца' ? DOG_ICONS.home
+    : d.status === 'Найдена' ? DOG_ICONS.found : DOG_ICONS.street;
+  box.innerHTML = mine.map(d => {
+    const url = photoUrlFromKey(d.photoKey);
+    const status = d.lost ? `${DOG_ICONS.lost} ${t('pf_dog_lost')}` : `${statusIco(d)} ${escapeHtml(d.status || '')}`;
+    const details = [d.breed, d.region].filter(Boolean).map(escapeHtml).join(' · ');
+    return `
+    <div class="card tappable mydog ${d.lost ? 'lost' : ''}" onclick="openDogCard(findDog('${d.id}'))">
+      <div class="txt">
+        <div class="list-title">${escapeHtml(d.name || t('pf_noname'))}</div>
+        <div class="list-sub">${status}</div>
+        ${details ? `<div class="list-sub">${details}</div>` : ''}
       </div>
-    </div>`).join('');
+      <div class="ava" style="${url ? `background-image:url('${url}')` : ''}">${url ? '' : statusIco(d)}</div>
+    </div>`;
+  }).join('') + `<button class="pop-btn secondary" style="margin-top:2px" onclick="openAddDogSheet({ status: 'У владельца' })">${t('pf_adddog')}</button>`;
 }
 
 // ---- Донорство / опека / «ищет дом» (зеркало кнопок бота) ----
@@ -3624,9 +3662,14 @@ async function submitAddDog() {
 let dogSegment = 'all'; // по умолчанию — все собаки города (без фильтров)
 // Порядок повторяет фильтры на карте: список — это то же самое, только другим
 // представлением, и переключаться между ними не должно быть как между разными приложениями.
-const DOG_SEGMENTS = [['all','Все'], ['home',`${DOG_ICONS.home} Домашние`], ['street',`${DOG_ICONS.street} Уличные`],
-  ['lost',`${DOG_ICONS.lost} Потеряшки`], ['seeking',`${DOG_ICONS.seeking} Ищут дом`],
-  ['donors',`${DOG_ICONS.donor} Доноры`], ['mine',`${DOG_ICONS.mine} Мои`]];
+// Порядок — по срочности, как на карте: потерялись, найдены, ищут дом, затем остальное.
+const DOG_SEGMENTS = [['all','Все'], ['lost',`${DOG_ICONS.lost} Потеряшки`], ['found',`${DOG_ICONS.found} Найдены`],
+  ['seeking',`${DOG_ICONS.seeking} Ищут дом`], ['street',`${DOG_ICONS.street} Уличные`],
+  ['home',`${DOG_ICONS.home} Домашние`], ['donors',`${DOG_ICONS.donor} Доноры`], ['mine',`${DOG_ICONS.mine} Мои`]];
+// Один выбор фильтра на карту и список. Раньше они переписывали друг друга: «Ищут дом»
+// в списке терялся после захода на карту (там такого фильтра нет), а назад
+// возвращался фильтр карты.
+let sharedDogFilter = 'all';
 async function initDogsScreen() {
   await loadData('dogs');
   if (dogSegment === null) dogSegment = 'all';
@@ -3642,7 +3685,7 @@ function renderDogSegments() {
     const chip = document.createElement('div');
     chip.className = 'chip' + (dogSegment === k ? ' active' : '');
     chip.textContent = label;
-    chip.onclick = () => { dogSegment = k; renderDogSegments(); renderDogsScreen(); };
+    chip.onclick = () => { dogSegment = k; sharedDogFilter = k; renderDogSegments(); renderDogsScreen(); };
     box.appendChild(chip);
   });
 }
@@ -3667,6 +3710,7 @@ function renderDogsScreen() {
     if (dogSegment === 'street') filtered = scoped.filter(d => d.status === 'Уличная');
     if (dogSegment === 'home') filtered = scoped.filter(d => d.status === 'У владельца');
     if (dogSegment === 'lost') filtered = scoped.filter(d => d.lost);
+  if (dogSegment === 'found') filtered = scoped.filter(d => d.status === 'Найдена');
     if (dogSegment === 'seeking') filtered = scoped.filter(d => d.seekingHome);
     if (dogSegment === 'donors') {
       const minW = +document.getElementById('donorWeight').value;
@@ -3700,6 +3744,8 @@ function renderDogsScreen() {
       mine:    { ico: '🐶', text: t('es_mine'),
                  btn: act(t('pf_adddog'), "openAddDogSheet({status:'У владельца'})") },
       lost:    { ico: '🎉', text: t('es_lost'), btn: reset },
+      found:   { ico: DOG_ICONS.found, text: t('es_found'),
+                 btn: act(t('fd_found'), "openAddDogSheet({status:'Найдена'})") },
       seeking: { ico: DOG_ICONS.seeking, text: t('es_seeking'),
                  btn: act(t('pf_adddog'), "openAddDogSheet({status:'Уличная'})") },
       donors:  { ico: DOG_ICONS.donor, text: t('es_donors'), btn: reset },
@@ -3716,7 +3762,7 @@ function renderDogsScreen() {
     box.innerHTML = addBtn + `<div class="empty"><div class="big">${st.ico}</div>${st.text}${st.btn}</div>`;
     return;
   }
-  const statusIco = s => s === 'У владельца' ? DOG_ICONS.home : DOG_ICONS.street;
+  const statusIco = s => s === 'У владельца' ? DOG_ICONS.home : s === 'Найдена' ? DOG_ICONS.found : DOG_ICONS.street;
   box.innerHTML = addBtn + filtered.map(d => `
     <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
       <div class="row-between">
@@ -4240,6 +4286,7 @@ async function loadProfile(force) {
   const res = await callApi('getMe', {});
   if (!res.ok) { document.getElementById('profileBody').innerHTML = `<div class="empty">Не получилось загрузить профиль (${escapeHtml(res.error || '')})</div>`; return; }
   me = res;
+  writeMeCache(res);
   if (me.botUsername) BOT_USERNAME = me.botUsername;
   if (me.profile) syncLangFromProfile(me.profile);
   if (me.profile) centerMapByCity(me.profile.city);
@@ -4277,21 +4324,21 @@ function renderProfile() {
                oninput="this.parentNode.classList.toggle('err', !this.value.trim())"
                onblur="saveProfileName(this)"
                onkeydown="if(event.key==='Enter')this.blur()"></div></div>
-      <div class="edit-row"><span>${t('pf_city')}</span><div class="val ${cities.length ? 'pick' : ''}">
+      <div class="edit-row"><span>${t('pf_city')}</span><div class="val ${cities.length ? 'pick' : ''}" id="pickbox-city">
         ${cities.length
-          ? `<select id="pfCity" aria-label="${escapeAttr(t('pf_city'))}" onchange="saveProfileField('city', this.value)">${selOpts(cities, p.city)}</select>`
+          ? `<button type="button" class="pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="togglePick('city')">${escapeHtml(p.city || '—')}</button>`
           : `<b>${escapeHtml(p.city || '—')}</b>`}</div></div>
+      ${cities.length ? `<div class="pick-list" id="pick-city" role="listbox" hidden>${cities.map((c, i) =>
+        `<button type="button" class="pick-opt ${c === p.city ? 'on' : ''}" role="option" onclick="choosePick('city', ${i})">${escapeHtml(c)}</button>`).join('')}</div>` : ''}
       <div class="edit-row"><span>${t('pf_tel')}</span><div class="val pen">
         <input type="tel" id="pfTel" value="${escapeAttr(p.tel === 'Не указан' ? '' : (p.tel || ''))}" placeholder="+995…"
                aria-label="${escapeAttr(t('pf_tel'))}"
                onblur="saveProfileField('tel', this.value.trim())"
                onkeydown="if(event.key==='Enter')this.blur()"></div></div>
-      <div class="edit-row"><span>${t('pf_lang')}</span><div class="val pick">
-        <select id="pfLang" aria-label="${escapeAttr(t('pf_lang'))}" onchange="saveProfileField('lang', this.value)">
-          <option value="RU" ${p.lang === 'RU' ? 'selected' : ''}>🇷🇺 Русский</option>
-          <option value="GE" ${p.lang === 'GE' ? 'selected' : ''}>🇬🇪 ქართული</option>
-          <option value="EN" ${p.lang === 'EN' ? 'selected' : ''}>🇬🇧 English</option>
-        </select></div></div>
+      <div class="edit-row"><span>${t('pf_lang')}</span><div class="val pick" id="pickbox-lang">
+        <button type="button" class="pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="togglePick('lang')">${PROFILE_LANGS.find(x => x[0] === p.lang) ? PROFILE_LANGS.find(x => x[0] === p.lang)[1] : PROFILE_LANGS[0][1]}</button></div></div>
+      <div class="pick-list" id="pick-lang" role="listbox" hidden>${PROFILE_LANGS.map(([v, l], i) =>
+        `<button type="button" class="pick-opt ${v === (p.lang || 'RU') ? 'on' : ''}" role="option" onclick="choosePick('lang', ${i})">${l}</button>`).join('')}</div>
       <div class="edit-row wrap"><span>${t('pf_showtg')}</span>
         <label class="sw"><input type="checkbox" ${p.showTg === 'Показан' ? 'checked' : ''}
           aria-label="${escapeAttr(t('pf_showtg'))}"
@@ -4301,8 +4348,11 @@ function renderProfile() {
     <div class="sec-label">${t('pf_mydogs_h')}</div>
     <div id="profileMyDogs"><div class="empty" style="padding:16px">${t('loading')}</div></div>
 
-    <div class="card tappable nav-row" onclick="openSubsSheet()">
-      <div class="list-title" style="font-size:14px">${t('pf_notif_btn')}</div>
+    <div class="card tappable nav-row" style="margin-top:22px" onclick="openSubsSheet()">
+      <div>
+        <div class="list-title" style="font-size:14px">${t('pf_notif_btn')}</div>
+        <div class="list-sub">${t('pf_notif_sub')}</div>
+      </div>
       <span class="chev">›</span>
     </div>
 
@@ -4512,84 +4562,123 @@ function openFullDashboard() {
   location.href = new URL('dashboard.html', location.href).href;
 }
 async function openAdminDashboard() {
+  // Мини-дашборд — сводка на один экран. Считает тот же сервер и из тех же данных,
+  // что и полный (Dashboard.gs, действие adminDashboard), поэтому цифры совпадают.
   openSheet(`<h3>📊 Дашборд продукта</h3><div class="empty">Считаю метрики…</div>`);
-  const res = await callApi('adminMetrics', {});
-  if (!res.ok) { openSheet(`<h3>📊 Дашборд</h3><div class="empty">Не получилось: ${escapeHtml(res.error || '')}</div>`); return; }
-  const m = res.metrics;
-  const maxSeries = Math.max(1, ...m.series.newUsers, ...m.series.active);
-  const spark = (arr) => arr.map((v, i) =>
-    `<div class="${i === arr.length - 1 ? 'today' : ''}" style="height:${Math.round(v / maxSeries * 100)}%" title="${v}"></div>`).join('');
-  // Воронка недели: сколько людей дошло до каждого шага
-  const f = [
-    ['Зарегистрировались', m.week.start],
-    ['Открыли карту', m.week.mapUsers],
-    ['Добавили собаку', m.week.dogAdded],
-    ['Добавили место', m.week.placeAdded],
-  ];
-  const fMax = Math.max(1, ...f.map(x => x[1]));
+  const res = await callApi('adminDashboard', {});
+  if (!res.ok) { openSheet(`<h3>📊 Дашборд</h3><div class="empty">Не получилось: ${escapeHtml(res.error || '')}</div>
+    <button class="pop-btn secondary" onclick="closeSheet()">${t('ui_close')}</button>`); return; }
+  const k = res.kpi, f = res.funnel, md = res.moderation, al = res.alerts;
+  const dlt = (cur, prev) => {
+    if (!prev) return cur ? '<span style="color:var(--green)">▲ новое</span>' : '';
+    const p = Math.round((cur - prev) * 100 / prev);
+    return p === 0 ? '<span style="color:var(--hint)">= неделю назад</span>'
+      : `<span style="color:${p > 0 ? 'var(--green)' : 'var(--red)'}">${p > 0 ? '▲ +' : '▼ '}${p}%</span>`;
+  };
+  // Активные по дням — последние 14 из 60, которые считает сервер.
+  const dau = res.daily.dau.slice(-14), days = res.daily.labels.slice(-14);
+  const sMax = Math.max(1, ...dau);
+  const spark = dau.map((v, i) =>
+    `<div class="${i === dau.length - 1 ? 'today' : ''}" style="height:${Math.round(v / sMax * 100)}%" title="${v}"></div>`).join('');
+  const steps = [['Пришли', f.registered], ['Открыли карту', f.openedMap], ['Завели собаку', f.addedDog],
+                 ['Добавили своё', f.contributed], ['Вернулись', f.returned]];
+  const fTop = Math.max(1, f.registered);
+  const pending = md.alerts + md.places + md.suggestions;
   openSheet(`
     <h3>📊 Дашборд продукта</h3>
-    <button class="pop-btn" style="margin-bottom:12px" onclick="openFullDashboard()">📈 Полный дашборд</button>
+    <div class="list-sub" style="margin:-8px 0 12px">Обновлено ${escapeHtml(res.generatedAt || '')}</div>
 
-    <div class="sec-label">Живость</div>
     <div class="kpi-grid">
-      <div class="kpi"><div class="val">${m.users.d1}</div><div class="lbl">за 24 часа</div></div>
-      <div class="kpi"><div class="val">${m.users.d7}</div><div class="lbl">за 7 дней</div></div>
-      <div class="kpi"><div class="val">${m.users.d30}</div><div class="lbl">за 30 дней</div></div>
-      <div class="kpi"><div class="val">${m.users.total}</div><div class="lbl">всего</div></div>
-      <div class="kpi warn"><div class="val">${m.users.dormant}</div><div class="lbl">спят &gt;30 дн.</div></div>
-      <div class="kpi"><div class="val">${m.users.noData}</div><div class="lbl">без данных</div></div>
+      <div class="kpi"><div class="val">${k.wau}</div><div class="lbl">активны за 7 дней<br>${dlt(k.wau, k.wauPrev)}</div></div>
+      <div class="kpi"><div class="val">${k.dau}</div><div class="lbl">сегодня<br>из ${k.mau} за 30 дн.</div></div>
+      <div class="kpi"><div class="val">+${k.newUsers7}</div><div class="lbl">новых за неделю<br>${dlt(k.newUsers7, k.newUsersPrev7)}</div></div>
+      <div class="kpi"><div class="val">${k.users}</div><div class="lbl">пользователей</div></div>
+      <div class="kpi"><div class="val">${k.dogs}</div><div class="lbl">собак<br>+${k.dogsNew7} за неделю</div></div>
+      <div class="kpi ${k.activation >= 30 ? 'good' : 'warn'}"><div class="val">${k.activation}%</div><div class="lbl">завели<br>свою собаку</div></div>
     </div>
 
-    <div class="sec-label">Ключевое</div>
+    <div class="sec-label">Срочное сейчас</div>
     <div class="kpi-grid">
-      <div class="kpi ${m.funnel.activation >= 30 ? 'good' : 'warn'}">
-        <div class="val">${m.funnel.activation}%</div><div class="lbl">активация<br>(добавили собаку)</div></div>
-      <div class="kpi ${m.funnel.retention >= 30 ? 'good' : 'warn'}">
-        <div class="val">${m.funnel.retention}%</div><div class="lbl">возвраты<br>новичков</div></div>
-      <div class="kpi"><div class="val">${m.dogs.total}</div><div class="lbl">собак<br>в базе</div></div>
-    </div>
-    <div class="list-sub" style="margin:-2px 2px 8px">
-      Возвраты: ${m.funnel.cohortReturned} из ${m.funnel.cohortTotal} зарегистрировавшихся 2–14 дней назад.
-    </div>
-
-    <div class="sec-label">Новые пользователи, 14 дней</div>
-    <div class="card">
-      <div class="spark">${spark(m.series.newUsers)}</div>
-      <div class="spark-x"><span>${escapeHtml(m.series.days[0])}</span><span>${escapeHtml(m.series.days[m.series.days.length - 1])}</span></div>
+      <div class="kpi warn"><div class="val">${k.urgent.lost}</div><div class="lbl">потерялись</div></div>
+      <div class="kpi warn"><div class="val">${k.urgent.found}</div><div class="lbl">найдены,<br>ищут хозяина</div></div>
+      <div class="kpi"><div class="val">${k.urgent.seeking}</div><div class="lbl">ищут дом</div></div>
     </div>
 
     <div class="sec-label">Активные по дням, 14 дней</div>
     <div class="card">
-      <div class="spark">${spark(m.series.active)}</div>
-      <div class="spark-x"><span>${escapeHtml(m.series.days[0])}</span><span>${escapeHtml(m.series.days[m.series.days.length - 1])}</span></div>
+      <div class="spark">${spark}</div>
+      <div class="spark-x"><span>${escapeHtml(days[0] || '')}</span><span>${escapeHtml(days[days.length - 1] || '')}</span></div>
     </div>
 
-    <div class="sec-label">Воронка за 7 дней</div>
+    <div class="sec-label">Путь новичка за 30 дней</div>
     <div class="card">
-      ${f.map(([nm, v]) => `
+      ${steps.map(([nm, v], i) => `
         <div class="bar-row">
           <span class="nm">${nm}</span>
-          <span class="bar-track"><span class="bar-fill" style="width:${Math.round(v / fMax * 100)}%"></span></span>
-          <span class="cnt">${v}</span>
+          <span class="bar-track"><span class="bar-fill" style="width:${Math.round(v / fTop * 100)}%"></span></span>
+          <span class="cnt">${v}${i ? `<span style="color:var(--hint);font-weight:500"> ${Math.round(v * 100 / fTop)}%</span>` : ''}</span>
         </div>`).join('')}
-      <div class="list-sub" style="margin-top:6px">Возвращались за неделю: ${m.week.returns} раз</div>
     </div>
 
-    <div class="sec-label">Контент</div>
+    <div class="sec-label">За 30 дней</div>
     <div class="card">
-      <div class="info-row"><span>🏠 Домашних / 🌳 уличных</span><b>${m.dogs.home} / ${m.dogs.street}</b></div>
-      <div class="info-row"><span>${t('dash_lost')}</span><b>${m.dogs.lost}</b></div>
-      <div class="info-row"><span>${t('dash_stale')}</span><b>${m.dogs.staleStreet}</b></div>
-      <div class="info-row"><span>${t('dash_pub')}</span><b>${m.places.total}</b></div>
-      <div class="info-row"><span>${t('dash_mod')}</span><b>${m.places.onModeration}</b></div>
-      <div class="info-row"><span>${t('dash_nogeo')}</span><b>${m.places.noGeo}</b></div>
+      <div class="info-row"><span>🚨 Оповещений о пропаже · охват</span><b>${al.lost30} · ${al.lostReach30}</b></div>
+      <div class="info-row"><span>🔎 Сообщений о находке · охват</span><b>${al.found30} · ${al.foundReach30}</b></div>
+      <div class="info-row"><span>🎉 «Нашлась» и «хозяин нашёлся»</span><b>${al.allclear30 + al.ownerfound30}</b></div>
+      <div class="info-row"><span>📷 Фото · 💬 комментарии</span><b>${res.content30.photos} · ${res.content30.comments}</b></div>
     </div>
+
+    <div class="sec-label">Ждут модерации</div>
+    <div class="card">
+      ${pending ? `
+      <div class="info-row"><span>Рассылки о пропаже/находке</span><b>${md.alerts}</b></div>
+      <div class="info-row"><span>Новые места</span><b>${md.places}</b></div>
+      <div class="info-row"><span>Правки и удаления</span><b>${md.suggestions}</b></div>`
+      : `<div class="list-sub" style="margin:0">Пусто — всё разобрано.</div>`}
+    </div>
+
+    <button class="pop-btn" style="margin-top:6px" onclick="openFullDashboard()">📈 Полный дашборд</button>
   `);
 }
 
 // Сохранение одного поля профиля. Без перезагрузки всего экрана: полный reload
 // сбрасывал бы фокус и прокрутку прямо во время правки следующего поля.
+// Выпадающий выбор в профиле (город, язык).
+const PROFILE_LANGS = [['RU', '🇷🇺 Русский'], ['GE', '🇬🇪 ქართული'], ['EN', '🇬🇧 English']];
+function togglePick(kind) {
+  const list = document.getElementById('pick-' + kind);
+  if (!list) return;
+  const willOpen = list.hidden;
+  closePicks();
+  if (!willOpen) return;
+  list.hidden = false;
+  const box = document.getElementById('pickbox-' + kind);
+  if (box) { box.classList.add('open'); const b = box.querySelector('.pick-btn'); if (b) b.setAttribute('aria-expanded', 'true'); }
+  const on = list.querySelector('.pick-opt.on');
+  if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
+}
+function closePicks() {
+  document.querySelectorAll('.pick-list').forEach(l => { l.hidden = true; });
+  document.querySelectorAll('.val.pick.open').forEach(b => {
+    b.classList.remove('open');
+    const btn = b.querySelector('.pick-btn'); if (btn) btn.setAttribute('aria-expanded', 'false');
+  });
+}
+function choosePick(kind, i) {
+  closePicks();
+  if (kind === 'city') {
+    const c = (me && me.cities || [])[i];
+    if (c) saveProfileField('city', c).then(() => { if (activeScreen === 'profile') renderProfile(); });
+  } else if (kind === 'lang') {
+    const l = PROFILE_LANGS[i];
+    if (l) saveProfileField('lang', l[0]);
+  }
+}
+// Тап мимо выпадашки — закрыть её.
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.pick-list') && !e.target.closest('.val.pick')) closePicks();
+});
+
 // Имя не может быть пустым: стёр случайно и ушёл с поля — возвращаем прежнее и
 // коротко говорим почему. Сервер тоже отклоняет пустое имя (name_empty).
 function saveProfileName(el) {
@@ -4616,6 +4705,7 @@ async function saveProfileField(field, value) {
     return;
   }
   me.profile[field] = value;
+  writeMeCache(me);
   haptic();
   setStatus(t('pf_saved'), 1600);
   // Язык и город меняют не только эту строку: язык — все надписи, город — центр карты.
@@ -4783,8 +4873,8 @@ function hideSplash() {
 (function initFromQuery() {
   try {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('layer') === 'lost') { activeTab = 'dogs'; subFilter = 'lost'; }
-    if (params.get('layer') === 'found') { activeTab = 'dogs'; subFilter = 'found'; }
+    if (params.get('layer') === 'lost') { activeTab = 'dogs'; subFilter = 'lost'; sharedDogFilter = 'lost'; }
+    if (params.get('layer') === 'found') { activeTab = 'dogs'; subFilter = 'found'; sharedDogFilter = 'found'; }
     if (params.get('screen')) showScreen(params.get('screen'));
   } catch (e) {}
 })();
@@ -4803,13 +4893,41 @@ renderSubfilters();
 // и первая отрисовка шла со всеми городами сразу — карта моргала.
 let viewerCity = null;
 
-async function loadProfileQuietly() {
+// Профиль храним и в браузере: при следующем открытии мини-аппа он показывается
+// сразу, до ответа сервера, а свежий подменяет его молча. Раньше экран профиля
+// ждал getMe, если человек открывал его в первые секунды после старта.
+function meCacheKey() { return 'ld_me_' + (MY_UID || 'anon'); }
+function readMeCache() {
+  try {
+    const box = JSON.parse(localStorage.getItem(meCacheKey()) || 'null');
+    if (!box || !box.t || Date.now() - box.t > 7 * 86400000) return null;
+    return box.me;
+  } catch (e) { return null; }
+}
+function writeMeCache(res) { try { localStorage.setItem(meCacheKey(), JSON.stringify({ t: Date.now(), me: res })); } catch (e) {} }
+
+async function loadProfileQuietly(attempt) {
   try {
     const res = await callApi('getMe', {}, true);
-    if (!applyMePayload(res)) return;
+    if (!applyMePayload(res)) throw new Error((res && res.error) || 'getMe');
+    writeMeCache(res);
     renderSubfilters();
     renderLayer();
-    if (activeScreen === 'profile') renderProfile();
+    // Экран профиля собираем заранее, даже если он не открыт: переход будет мгновенным.
+    try { renderProfile(); } catch (e) {}
+    // Следом — ситтеры, тоже фоном: после профиля сеть свободна.
+    prefetchSittersQuietly();
+  } catch (e) {
+    // Холодный старт Apps Script иногда отвечает ошибкой — одна повторная попытка.
+    if (!attempt) setTimeout(() => loadProfileQuietly(1), 3000);
+  }
+}
+async function prefetchSittersQuietly() {
+  try {
+    if (sittersCache || readSittersCache()) return;
+    const box = await fetchSitters(true);
+    applySittersBox(box);
+    if (activeScreen === 'sitters') renderSitters();
   } catch (e) {}
 }
 
@@ -4832,6 +4950,11 @@ function applyMePayload(res) {
 // Старт: сначала карта и ничего больше. Профиль грузится следом, фоном — он нужен
 // профилю, ситтерам и формам, но не нужен, чтобы показать собак твоего города.
 // Раньше карта ждала его, а он лезет в таблицу за справочниками и счётчиками.
+// Профиль из прошлого сеанса — сразу, до сети (см. readMeCache).
+(function applyCachedMe() {
+  const cachedMe = readMeCache();
+  if (cachedMe) { try { applyMePayload(cachedMe); } catch (e) {} }
+})();
 (async function boot() {
   try { await loadData('dogs'); } catch (e) {}
 })().finally(() => {
