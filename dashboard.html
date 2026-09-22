@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Love Dogs · пульс продукта</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  /* Те же токены, что у мини-аппа: латунь (собаки), хвоя (места), красный (срочное).
+     Фон и текст берём из темы Telegram — страница живёт внутри него. */
+  :root {
+    --paw: #e29c33; --paw-deep: #b87a1d; --vet: #1f5b4b; --red: #d24b3c; --green: #2e7d5b;
+    --found: #e0392b; --grey: #a49a8a; --sky: #4f7fa8;
+    --bg:   var(--tg-theme-bg-color, #f8f4ec);
+    --text: var(--tg-theme-text-color, #272219);
+    --hint: var(--tg-theme-hint-color, #7c7263);
+    --card: var(--tg-theme-secondary-bg-color, #ffffff);
+    --line: color-mix(in srgb, var(--text) 11%, transparent);
+    --surface: color-mix(in srgb, var(--paw) 12%, var(--card));
+    --r: 18px;
+    --font-body: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-disp: "Unbounded", "Manrope", sans-serif;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: var(--tg-theme-bg-color, #17140f); --text: var(--tg-theme-text-color, #efe7d8);
+            --hint: var(--tg-theme-hint-color, #a39884); --card: var(--tg-theme-secondary-bg-color, #221e17); }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased; }
+  body { padding: calc(14px + env(safe-area-inset-top, 0px)) 14px calc(28px + env(safe-area-inset-bottom, 0px)); }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  /* Шапка: название и одна строка статуса. Кнопка обновления — справа. */
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  h1 { font-family: var(--font-disp); font-weight: 600; font-size: 21px; letter-spacing: -.02em; margin: 0 0 4px; line-height: 1.15; }
+  .sub { font-size: 12.5px; color: var(--hint); }
+  .btn { border: 1px solid var(--line); background: var(--card); color: var(--text); font: 600 13px var(--font-body);
+    padding: 9px 13px; border-radius: 12px; cursor: pointer; white-space: nowrap; }
+  .btn:active { transform: scale(.97); }
+  .btn:focus-visible { outline: 2px solid var(--paw); outline-offset: 2px; }
+  .btn[disabled] { opacity: .5; }
+
+  /* Главные цифры: число крупно, подпись мелко, дельта к прошлой неделе цветом. */
+  .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
+  @media (min-width: 640px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+  .kpi { background: var(--card); border-radius: var(--r); padding: 13px 14px 12px; border: 1px solid var(--line); }
+  .kpi .v { font-family: var(--font-disp); font-weight: 600; font-size: 26px; letter-spacing: -.03em; line-height: 1.05; }
+  .kpi .l { font-size: 12.5px; color: var(--hint); margin-top: 5px; line-height: 1.3; }
+  .kpi .d { font-size: 12px; font-weight: 700; margin-top: 6px; }
+  .up { color: var(--green); } .down { color: var(--red); } .flat { color: var(--hint); }
+  .kpi.urgent { background: color-mix(in srgb, var(--red) 9%, var(--card)); border-color: color-mix(in srgb, var(--red) 25%, transparent); }
+  .kpi.urgent .v { color: var(--red); }
+  .kpi.lead { background: var(--surface); border-color: color-mix(in srgb, var(--paw) 35%, transparent); }
+
+  /* Разделы: заголовок раздела — обычным текстом, без капса и надстрочных меток. */
+  h2 { font-family: var(--font-disp); font-weight: 600; font-size: 15.5px; letter-spacing: -.01em; margin: 26px 2px 10px; }
+  .grid2 { display: grid; gap: 12px; }
+  @media (min-width: 760px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+  .card { background: var(--card); border-radius: var(--r); padding: 14px; border: 1px solid var(--line); }
+  .card h3 { font-size: 13.5px; font-weight: 700; margin: 0 0 3px; }
+  .card .note { font-size: 12px; color: var(--hint); margin: 0 0 10px; line-height: 1.4; }
+  .chart { position: relative; height: 220px; }
+  .chart.tall { height: 260px; }
+  .chart.donut { height: 200px; }
+
+  /* Горизонтальные полосы — для рейтингов, долей и воронки. */
+  .bars { display: flex; flex-direction: column; gap: 8px; }
+  .bar { display: grid; grid-template-columns: minmax(90px, 38%) 1fr auto; align-items: center; gap: 9px; font-size: 13px; }
+  .bar .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar .t { height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--text) 7%, transparent); overflow: hidden; }
+  .bar .f { height: 100%; border-radius: 999px; background: var(--paw); }
+  .bar .c { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
+  .bar.vet .f { background: var(--vet); } .bar.red .f { background: var(--red); } .bar.green .f { background: var(--green); }
+
+  /* Воронка: каждая ступень показывает, сколько дошло и какой процент от предыдущей. */
+  .funnel .step { margin-bottom: 11px; }
+  .funnel .top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; gap: 8px; }
+  .funnel .top b { font-variant-numeric: tabular-nums; }
+  .funnel .conv { color: var(--hint); font-size: 12px; font-weight: 600; }
+  .funnel .t { height: 22px; border-radius: 8px; background: color-mix(in srgb, var(--text) 6%, transparent); overflow: hidden; }
+  .funnel .f { height: 100%; background: linear-gradient(90deg, var(--paw), var(--paw-deep)); border-radius: 8px; }
+
+  /* Когорты: теплокарта. Чем насыщеннее латунь, тем больше людей вернулось. */
+  .cohort { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: 12px; }
+  .cohort th { font-weight: 600; color: var(--hint); text-align: center; padding: 2px 0; }
+  .cohort th:first-child, .cohort td:first-child { text-align: left; white-space: nowrap; padding-right: 6px; }
+  .cohort td { text-align: center; padding: 7px 2px; border-radius: 7px; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .cohort td.size { color: var(--hint); font-weight: 500; }
+  .cohort td.empty { background: transparent; }
+  .scroll-x { overflow-x: auto; }
+
+  /* Пары «число — подпись» внутри карточек. */
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 14px; }
+  @media (min-width: 520px) { .stats.s3 { grid-template-columns: repeat(3, 1fr); } }
+  .stat .v { font-family: var(--font-disp); font-weight: 600; font-size: 20px; letter-spacing: -.02em; }
+  .stat .l { font-size: 12px; color: var(--hint); line-height: 1.3; margin-top: 2px; }
+  .stat.warn .v { color: var(--red); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--hint); margin: 0 0 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+  /* Полоса «свежесть уличных»: одна строка, доли разными цветами. */
+  .stack { display: flex; height: 16px; border-radius: 999px; overflow: hidden; margin: 6px 0 10px; }
+  .stack span { height: 100%; }
+
+  table.list { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.list th { text-align: left; font-weight: 600; color: var(--hint); font-size: 12px; padding: 0 6px 6px 0; }
+  table.list td { padding: 7px 6px 7px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  table.list td.num, table.list th.num { text-align: right; }
+
+  .state { text-align: center; padding: 60px 20px; color: var(--hint); font-size: 14px; line-height: 1.5; }
+  .state b { display: block; color: var(--text); font-family: var(--font-disp); font-weight: 600; font-size: 17px; margin-bottom: 6px; }
+  .loader { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--paw);
+    margin: 0 auto 14px; animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .loader { animation: none; } }
+  footer { margin-top: 26px; font-size: 11.5px; color: var(--hint); line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Пульс Love Dogs</h1>
+      <div class="sub" id="sub">Считаю метрики…</div>
+    </div>
+    <button class="btn" id="refreshBtn" onclick="load(true)" disabled>Обновить</button>
+  </header>
+  <main id="app"><div class="state"><div class="loader"></div>Собираю данные из таблицы…</div></main>
+  <footer id="foot"></footer>
+</div>
+
+<script>
+// Тот же бэкенд, что у мини-аппа. Права проверяет сервер по подписанному initData:
+// страница без Telegram (или не у админа) данных не получит.
+const API_URL = "https://script.google.com/macros/s/AKfycbwuaKkog3Ebjowds_pE4SmxjS63UIlZseNE-NE48KQSYLmNas3gkAqCS1p7TM-0tv1r/exec";
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+
+// «Назад»: если пришли из мини-аппа — возвращаемся в него, иначе закрываем окно.
+if (tg && tg.BackButton) {
+  tg.BackButton.show();
+  tg.BackButton.onClick(() => { if (history.length > 1) history.back(); else tg.close(); });
+}
+
+const charts = [];
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+// Canvas не понимает var() и color-mix(), поэтому цвет для графиков вычисляем через
+// пробный элемент: браузер сам разрешит переменные темы Telegram в rgb().
+let _probe = null;
+function color(name) {
+  if (!_probe) { _probe = document.createElement('span'); _probe.style.display = 'none'; document.body.appendChild(_probe); }
+  _probe.style.color = ''; _probe.style.color = `var(${name})`;
+  return getComputedStyle(_probe).color || '#888';
+}
+function alpha(c, a) {
+  const m = String(c).match(/[\d.]+/g);
+  return m && m.length >= 3 ? `rgba(${m[0]}, ${m[1]}, ${m[2]}, ${a})` : c;
+}
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString('ru-RU'));
+const pct = (a, b) => (b ? Math.round(a * 100 / b) : 0);
+
+// Дельта к прошлому периоду: +12% зелёным, −8% красным.
+function delta(cur, prev, label) {
+  if (!prev && !cur) return `<div class="d flat">без изменений ${label}</div>`;
+  if (!prev) return `<div class="d up">▲ новое ${label}</div>`;
+  const p = Math.round((cur - prev) * 100 / prev);
+  const cls = p > 0 ? 'up' : p < 0 ? 'down' : 'flat';
+  return `<div class="d ${cls}">${p > 0 ? '▲ +' : p < 0 ? '▼ ' : ''}${p}% ${label}</div>`;
+}
+
+function bars(rows, cls, max) {
+  const m = max || Math.max(1, ...rows.map(r => r[1]));
+  return `<div class="bars">${rows.map(([n, v, sfx]) => `
+    <div class="bar ${cls || ''}"><span class="n" title="${esc(n)}">${esc(n)}</span>
+      <span class="t"><span class="f" style="width:${Math.max(2, Math.round(v * 100 / m))}%"></span></span>
+      <span class="c">${fmt(v)}${sfx || ''}</span></div>`).join('')}</div>`;
+}
+
+async function callApi(action, payload) {
+  const res = await fetch(API_URL, { method: 'POST',
+    body: JSON.stringify({ action, initData: tg ? tg.initData : '', payload: payload || {} }) });
+  return res.json();
+}
+
+function showState(title, text) {
+  document.getElementById('app').innerHTML = `<div class="state"><b>${esc(title)}</b>${esc(text)}</div>`;
+}
+
+async function load(refresh) {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  if (!tg || !tg.initData) {
+    showState('Открой из бота', 'Дашборд работает внутри Telegram: Админ-панель → «📈 Дашборд продукта».');
+    document.getElementById('sub').textContent = '';
+    return;
+  }
+  if (refresh) document.getElementById('sub').textContent = 'Пересчитываю…';
+  let d;
+  try { d = await callApi('adminDashboard', { refresh: !!refresh }); }
+  catch (e) { showState('Нет связи с сервером', 'Проверь интернет и нажми «Обновить».'); btn.disabled = false; return; }
+  btn.disabled = false;
+  if (!d || !d.ok) {
+    if (d && d.error === 'no rights') showState('Только для админов', 'Этот раздел видят админы из ADMIN_IDS.');
+    else if (d && d.error === 'auth') showState('Сессия устарела', 'Закрой окно и открой дашборд из бота заново.');
+    else showState('Не получилось посчитать', (d && d.error) || 'Неизвестная ошибка');
+    return;
+  }
+  if (tg.HapticFeedback && refresh) try { tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
+  render(d);
+}
+
+function render(d) {
+  charts.splice(0).forEach(c => c.destroy());
+  document.getElementById('sub').textContent =
+    `Обновлено ${d.generatedAt}${d.cached ? ' · из кэша' : ''}`;
+  const k = d.kpi, dg = d.dogs, al = d.alerts, au = d.audience, md = d.moderation;
+
+  // ---------- Главные цифры ----------
+  const kpis = `
+    <section class="kpis">
+      <div class="kpi lead"><div class="v">${fmt(k.wau)}</div><div class="l">активны за 7 дней</div>${delta(k.wau, k.wauPrev, 'к прошлой неделе')}</div>
+      <div class="kpi"><div class="v">${fmt(k.users)}</div><div class="l">пользователей всего</div>${delta(k.newUsers7, k.newUsersPrev7, `новых: +${fmt(k.newUsers7)}`)}</div>
+      <div class="kpi"><div class="v">${fmt(k.dau)}<span style="font-size:15px;color:var(--hint)"> / ${fmt(k.mau)}</span></div><div class="l">сегодня / за 30 дней · прилипаемость ${k.stickiness}%</div></div>
+      <div class="kpi"><div class="v">${fmt(k.dogs)}</div><div class="l">собак в базе</div>${delta(k.dogsNew7, k.dogsNewPrev7, `добавлено: +${fmt(k.dogsNew7)}`)}</div>
+      <div class="kpi urgent"><div class="v">${fmt(k.urgent.lost)}</div><div class="l">потерялись сейчас</div></div>
+      <div class="kpi urgent"><div class="v">${fmt(k.urgent.found)}</div><div class="l">найдены, ищут хозяина</div></div>
+      <div class="kpi"><div class="v">${fmt(k.urgent.seeking)}</div><div class="l">ищут новый дом</div></div>
+      <div class="kpi"><div class="v">${k.activation}%</div><div class="l">пользователей завели свою собаку</div></div>
+    </section>`;
+
+  // ---------- Активность ----------
+  const activity = `
+    <h2>Активность</h2>
+    <div class="card">
+      <h3>Каждый день, последние 60 дней</h3>
+      <p class="note">Активный — сделал в этот день хоть что-то: зашёл, открыл карту, добавил, прокомментировал.</p>
+      <div class="legend"><span><i style="background:var(--paw)"></i>активные</span><span><i style="background:var(--vet)"></i>новые</span><span><i style="background:var(--sky)"></i>открывали карту</span></div>
+      <div class="chart tall"><canvas id="cDaily"></canvas></div>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card">
+        <h3>По неделям</h3>
+        <p class="note">Активные за неделю и новички, 12 недель.</p>
+        <div class="chart"><canvas id="cWeekly"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Путь новичка за 30 дней</h3>
+        <p class="note">Из тех, кто пришёл за последний месяц: сколько дошло до каждого шага.</p>
+        ${funnel(d.funnel)}
+      </div>
+    </div>`;
+
+  // ---------- Удержание ----------
+  const retention = `
+    <h2>Удержание</h2>
+    <div class="card">
+      <h3>Когорты по неделе регистрации</h3>
+      <p class="note">Доля людей, которые проявили активность через 1, 2, 3… недели после прихода.</p>
+      <div class="scroll-x">${cohortTable(d.cohorts)}</div>
+    </div>`;
+
+  // ---------- Вклад сообщества ----------
+  const c30 = d.content30;
+  const content = `
+    <h2>Вклад сообщества</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Что добавляют, по неделям</h3>
+        <div class="legend"><span><i style="background:var(--paw)"></i>собаки</span><span><i style="background:var(--vet)"></i>места</span><span><i style="background:var(--sky)"></i>фото</span><span><i style="background:var(--grey)"></i>комментарии</span></div>
+        <div class="chart"><canvas id="cContent"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>За 30 дней</h3>
+        <div class="stats" style="margin:8px 0 16px">
+          <div class="stat"><div class="v">${fmt(c30.photos)}</div><div class="l">фото в галереи</div></div>
+          <div class="stat"><div class="v">${fmt(c30.comments)}</div><div class="l">комментариев</div></div>
+          <div class="stat"><div class="v">${fmt(c30.reviews)}</div><div class="l">отзывов о местах</div></div>
+          <div class="stat"><div class="v">${fmt(dg.owners)}</div><div class="l">владельцев собак</div></div>
+        </div>
+        <h3>Самые активные</h3>
+        <p class="note">Собаки ×3, фото и отзывы ×2, комментарии ×1.</p>
+        ${d.top.length ? `<table class="list"><tr><th>Кто</th><th class="num">🐕</th><th class="num">📷</th><th class="num">💬</th></tr>
+          ${d.top.map(t => `<tr><td>${esc(t.name)}</td><td class="num">${t.dogs}</td><td class="num">${t.photos}</td><td class="num">${t.comments}</td></tr>`).join('')}</table>`
+          : '<p class="note">Пока пусто.</p>'}
+      </div>
+    </div>`;
+
+  // ---------- Собаки ----------
+  const geo = dg.streetGeo, geoTotal = Object.values(geo).reduce((a, b) => a + b, 0) || 1;
+  const geoParts = [['fresh', 'свежие', css('--green')], ['stale', 'устарели', css('--paw')],
+                    ['hidden', 'скрыты с карты', css('--red')], ['inactive', 'неактивны', css('--grey')],
+                    ['unknown', 'без даты', 'color-mix(in srgb, var(--text) 15%, transparent)']];
+  const photoPct = (p) => p[1] ? Math.round(p[0] * 100 / p[1]) : 0;
+  const dogsSec = `
+    <h2>Собаки</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Кто на карте</h3>
+        <div class="chart donut"><canvas id="cDogs"></canvas></div>
+        <div class="stats s3" style="margin-top:12px">
+          <div class="stat"><div class="v">${fmt(dg.donors)}</div><div class="l">доноров крови</div></div>
+          <div class="stat"><div class="v">${pct(dg.streetTag, dg.street)}%</div><div class="l">уличных с биркой</div></div>
+          <div class="stat"><div class="v">${fmt(dg.deleted)}</div><div class="l">анкет удалено</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>С фотографией</h3>
+        <p class="note">Без фото собаку не узнают — это главный показатель качества анкет.</p>
+        ${bars([['Домашние', photoPct(dg.photo.home), '%'], ['Уличные', photoPct(dg.photo.street), '%'], ['Найденные', photoPct(dg.photo.found), '%']], 'green', 100)}
+        <h3 style="margin-top:18px">Свежесть уличных</h3>
+        <p class="note">Когда соседи последний раз подтверждали, что пёс на месте.</p>
+        <div class="stack">${geoParts.map(([key, , col]) => geo[key] ? `<span style="width:${geo[key] * 100 / geoTotal}%;background:${col}" title="${geo[key]}"></span>` : '').join('')}</div>
+        <div class="legend">${geoParts.map(([key, lbl, col]) => geo[key] ? `<span><i style="background:${col}"></i>${lbl}: ${geo[key]}</span>` : '').join('')}</div>
+      </div>
+    </div>
+    ${dg.topRegions.length ? `<div class="card" style="margin-top:12px"><h3>Районы, где больше всего собак</h3><div style="margin-top:10px">${bars(dg.topRegions)}</div></div>` : ''}`;
+
+  // ---------- Помощь ----------
+  const help = `
+    <h2>Помощь: пропажи и находки</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Рассылки по месяцам</h3>
+        <div class="legend"><span><i style="background:var(--red)"></i>пропажи</span><span><i style="background:var(--found);opacity:.55"></i>находки</span><span><i style="background:var(--green)"></i>«нашлась» и «хозяин нашёлся»</span></div>
+        <div class="chart"><canvas id="cAlerts"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>За 30 дней</h3>
+        <div class="stats" style="margin-top:8px">
+          <div class="stat warn"><div class="v">${fmt(al.lost30)}</div><div class="l">оповещений о пропаже · охват ${fmt(al.lostReach30)} чел.</div></div>
+          <div class="stat warn"><div class="v">${fmt(al.found30)}</div><div class="l">сообщений о находке · охват ${fmt(al.foundReach30)} чел.</div></div>
+          <div class="stat"><div class="v">${fmt(al.allclear30)}</div><div class="l">раз «собака нашлась»</div></div>
+          <div class="stat"><div class="v">${fmt(al.ownerfound30)}</div><div class="l">раз «хозяин нашёлся»</div></div>
+          <div class="stat"><div class="v">${fmt(md.alertsApproved30)}</div><div class="l">заявок одобрено модераторами</div></div>
+          <div class="stat"><div class="v">${fmt(md.alertsRejected30)}</div><div class="l">заявок отклонено</div></div>
+        </div>
+      </div>
+    </div>`;
+
+  // ---------- Места ----------
+  const pl = d.places;
+  const placesSec = `
+    <h2>Места</h2>
+    <div class="grid2">
+      <div class="card"><h3>По категориям</h3><div style="margin-top:10px">${bars(pl.byType, 'vet')}</div></div>
+      <div class="card">
+        <div class="stats">
+          <div class="stat"><div class="v">${fmt(pl.total)}</div><div class="l">мест на карте</div></div>
+          <div class="stat ${pl.noGeo ? 'warn' : ''}"><div class="v">${fmt(pl.noGeo)}</div><div class="l">без точки на карте</div></div>
+          <div class="stat"><div class="v">${pl.avgRating || '—'}</div><div class="l">средняя оценка · ${fmt(pl.rated)} мест с оценками</div></div>
+          <div class="stat"><div class="v">${fmt(pl.reviews30)}</div><div class="l">отзывов за 30 дней</div></div>
+        </div>
+      </div>
+    </div>`;
+
+  // ---------- Аудитория ----------
+  const audience = `
+    <h2>Аудитория</h2>
+    <div class="grid2">
+      <div class="card"><h3>Города</h3><div style="margin-top:10px">${bars(au.cities)}</div>
+        <h3 style="margin-top:18px">Язык интерфейса</h3><div style="margin-top:10px">${bars(au.langs, 'vet')}</div></div>
+      <div class="card"><h3>Настройки людей</h3>
+        <p class="note">Доля от всех пользователей. Показывает, до скольких дойдёт тревога и дайджест.</p>
+        ${bars([['Оповещения о пропажах', au.lostOnPct, '%'], ['Дайджест «ищут дом»', au.digestOnPct, '%'],
+                ['Подписаны на район', au.regionSubsPct, '%'], ['Указали телефон', au.withPhonePct, '%'],
+                ['Показывают Telegram', au.showTgPct, '%']], '', 100)}
+        <div class="stats" style="margin-top:16px">
+          <div class="stat ${au.blocked ? 'warn' : ''}"><div class="v">${fmt(au.blocked)}</div><div class="l">заблокировано админом</div></div>
+          <div class="stat"><div class="v">${fmt(au.moderators)}</div><div class="l">модераторов</div></div>
+        </div>
+      </div>
+    </div>`;
+
+  // ---------- Модерация и здоровье ----------
+  const health = `
+    <h2>Модерация и здоровье</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Ждут решения</h3>
+        <div class="stats" style="margin-top:8px">
+          <div class="stat ${md.alerts ? 'warn' : ''}"><div class="v">${fmt(md.alerts)}</div><div class="l">рассылок о пропаже/находке</div></div>
+          <div class="stat ${md.places ? 'warn' : ''}"><div class="v">${fmt(md.places)}</div><div class="l">новых мест</div></div>
+          <div class="stat ${md.suggestions ? 'warn' : ''}"><div class="v">${fmt(md.suggestions)}</div><div class="l">правок и удалений</div></div>
+          <div class="stat"><div class="v">${fmt(md.feedback30)}</div><div class="l">сообщений в обратную связь за 30 дней</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Рассылки всем</h3>
+        <p class="note">Доля заблокировавших бота — главный сигнал оттока.</p>
+        ${d.broadcasts.length ? `<table class="list"><tr><th>Дата</th><th class="num">Дошло</th><th class="num">Блок</th><th class="num">Ошибки</th></tr>
+          ${d.broadcasts.map(b => `<tr><td>${esc(b.date)}</td><td class="num">${fmt(b.sent)}</td><td class="num">${fmt(b.blocked)}${b.total ? ` <span style="color:var(--hint)">(${pct(b.blocked, b.total)}%)</span>` : ''}</td><td class="num">${fmt(b.failed)}</td></tr>`).join('')}</table>`
+          : '<p class="note">Рассылок ещё не было.</p>'}
+      </div>
+    </div>`;
+
+  document.getElementById('app').innerHTML = kpis + activity + retention + content + dogsSec + help + placesSec + audience + health;
+  document.getElementById('foot').innerHTML =
+    `Данные — из таблицы бота. Активность восстановлена по действиям людей, поэтому это нижняя оценка: тот, кто только посмотрел карту, может не попасть. Посчитано за ${Math.round((d.computeMs || 0) / 100) / 10} с.`;
+  drawCharts(d);
+}
+
+function funnel(f) {
+  const steps = [['Пришли', f.registered], ['Открыли карту', f.openedMap], ['Завели собаку', f.addedDog],
+                 ['Добавили что-то своё', f.contributed], ['Вернулись в другой день', f.returned]];
+  const top = Math.max(1, f.registered);
+  return `<div class="funnel">${steps.map(([n, v], i) => `
+    <div class="step"><div class="top"><span>${n}</span><span><b>${fmt(v)}</b>
+      ${i ? `<span class="conv"> · ${pct(v, top)}%</span>` : ''}</span></div>
+      <div class="t"><div class="f" style="width:${Math.max(1.5, v * 100 / top)}%"></div></div></div>`).join('')}</div>`;
+}
+
+function cohortTable(rows) {
+  const maxK = Math.max(1, ...rows.map(r => r.ret.length));
+  const head = `<tr><th>Неделя</th><th>Людей</th>${Array.from({ length: maxK }, (_, i) => `<th>+${i + 1}</th>`).join('')}</tr>`;
+  const body = rows.map(r => `<tr><td>${esc(r.week)}</td><td class="size">${r.size}</td>${
+    Array.from({ length: maxK }, (_, i) => {
+      const v = r.ret[i];
+      if (v === undefined || v === null || !r.size) return '<td class="empty"></td>';
+      const a = Math.min(1, v / 60);   // 60% и выше — полная заливка
+      return `<td style="background:color-mix(in srgb, var(--paw) ${Math.round(8 + a * 80)}%, transparent)">${v}%</td>`;
+    }).join('')}</tr>`).join('');
+  return `<table class="cohort">${head}${body}</table>`;
+}
+
+function drawCharts(d) {
+  if (!window.Chart) return;
+  const text = color('--hint'), grid = alpha(color('--text'), .09);
+  Chart.defaults.font.family = css('--font-body');
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = text;
+  const axes = {
+    x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+    y: { beginAtZero: true, grid: { color: grid }, border: { display: false }, ticks: { precision: 0, maxTicksLimit: 5 } }
+  };
+  const base = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                 plugins: { legend: { display: false }, tooltip: { padding: 10, cornerRadius: 10 } } };
+  const paw = color('--paw'), vet = color('--vet'), sky = color('--sky'), red = color('--red'),
+        green = color('--green'), grey = color('--grey'), found = color('--found'), card = color('--card');
+
+  charts.push(new Chart(document.getElementById('cDaily'), {
+    type: 'bar',
+    data: { labels: d.daily.labels, datasets: [
+      { type: 'line', label: 'Активные', data: d.daily.dau, borderColor: paw, backgroundColor: alpha(paw, .14),
+        fill: true, tension: .35, pointRadius: 0, borderWidth: 2.2, order: 1 },
+      { type: 'line', label: 'Открывали карту', data: d.daily.mapUsers, borderColor: sky, borderDash: [4, 4],
+        tension: .35, pointRadius: 0, borderWidth: 1.6, order: 2 },
+      { label: 'Новые', data: d.daily.newUsers, backgroundColor: vet, borderRadius: 3, barPercentage: .7, order: 3 }
+    ] },
+    options: { ...base, scales: axes }
+  }));
+
+  charts.push(new Chart(document.getElementById('cWeekly'), {
+    type: 'bar',
+    data: { labels: d.weekly.labels, datasets: [
+      { label: 'Активные за неделю', data: d.weekly.wau, backgroundColor: paw, borderRadius: 5 },
+      { label: 'Новые', data: d.weekly.newUsers, backgroundColor: vet, borderRadius: 5 }
+    ] },
+    options: { ...base, scales: axes }
+  }));
+
+  charts.push(new Chart(document.getElementById('cContent'), {
+    type: 'bar',
+    data: { labels: d.weekly.labels, datasets: [
+      { label: 'Собаки', data: d.weekly.dogAdded, backgroundColor: paw, stack: 's' },
+      { label: 'Места', data: d.weekly.placeAdded, backgroundColor: vet, stack: 's' },
+      { label: 'Фото', data: d.weekly.photos, backgroundColor: sky, stack: 's' },
+      { label: 'Комментарии', data: d.weekly.comments, backgroundColor: grey, stack: 's', borderRadius: 4 }
+    ] },
+    options: { ...base, scales: { x: { ...axes.x, stacked: true }, y: { ...axes.y, stacked: true } } }
+  }));
+
+  const dg = d.dogs;
+  charts.push(new Chart(document.getElementById('cDogs'), {
+    type: 'doughnut',
+    data: { labels: ['Домашние', 'Уличные', 'Найденные'],
+            datasets: [{ data: [dg.home, dg.street, dg.found], backgroundColor: [paw, vet, found],
+                         borderColor: card, borderWidth: 3, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '64%',
+      plugins: { legend: { display: true, position: 'right', labels: { boxWidth: 10, boxHeight: 10, padding: 12 } } } }
+  }));
+
+  const a = d.alerts.byMonth;
+  charts.push(new Chart(document.getElementById('cAlerts'), {
+    type: 'bar',
+    data: { labels: d.alerts.months, datasets: [
+      { label: 'Пропажи', data: a.lost, backgroundColor: red, borderRadius: 4 },
+      { label: 'Находки', data: a.foundreport, backgroundColor: alpha(found, .55), borderRadius: 4 },
+      { label: 'Хорошие новости', data: a.found.map((v, i) => v + a.ownerfound[i]), backgroundColor: green, borderRadius: 4 }
+    ] },
+    options: { ...base, scales: axes }
+  }));
+}
+
+load(false);
+</script>
+</body>
+</html>
