@@ -4477,6 +4477,13 @@ async function saveSubToggle(field, value) {
 // ================== ДАШБОРД ПРОДУКТА (только админ) ==================
 // Все цифры считает сервер (computeMetrics_), клиент только рисует. Права проверяются
 // на сервере по подписанному initData — открыть «в обход» через DevTools нельзя.
+// Полный дашборд — отдельная страница dashboard.html рядом с мини-аппом. Переход
+// внутри того же окна: Telegram хранит initData в sessionStorage, поэтому страница
+// остаётся авторизованной, а кнопка «Назад» вернёт сюда.
+function openFullDashboard() {
+  closeSheet();
+  location.href = new URL('dashboard.html', location.href).href;
+}
 async function openAdminDashboard() {
   openSheet(`<h3>📊 Дашборд продукта</h3><div class="empty">Считаю метрики…</div>`);
   const res = await callApi('adminMetrics', {});
@@ -4495,6 +4502,7 @@ async function openAdminDashboard() {
   const fMax = Math.max(1, ...f.map(x => x[1]));
   openSheet(`
     <h3>📊 Дашборд продукта</h3>
+    <button class="pop-btn" style="margin-bottom:12px" onclick="openFullDashboard()">📈 Полный дашборд</button>
 
     <div class="sec-label">Живость</div>
     <div class="kpi-grid">
