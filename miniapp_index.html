@@ -946,6 +946,8 @@ const I18N = {
     fo_note:'Описание *',
     fo_note_ph:'Ошейник, поведение, приметы, во сколько нашёл',
     fo_contacts:'⚠️ В сообщении о находке увидят твои контакты: {c}. Иначе хозяин не сможет с тобой связаться.',
+    fc_head_owner:'📇 Хозяин:',
+    fc_owner:'хозяин',
     fc_head:'🙋 Нашёл(а):',
     fc_finder:'нашедший',
     fc_loading:'Загружаю контакты нашедшего…',
@@ -2093,6 +2095,10 @@ let currentLayer = L.markerClusterGroup({
     });
   }
 }).addTo(map);
+// Потерявшиеся и найденные — отдельным слоем БЕЗ кластеризации. В общей куче их
+// красные метки съедались серым кружком с числом, и самое срочное на карте
+// становилось невидимым.
+let urgentLayer = L.layerGroup().addTo(map);
 let dataCache = { dogs: null, places: null };
 let activeTab = 'dogs';     // слой карты
 let subFilter = 'all';
@@ -2241,8 +2247,8 @@ const SUBFILTERS = {
   // Подписи — ключи словаря, а не готовые строки: фильтры собираются один раз при
   // загрузке файла, когда язык профиля ещё неизвестен.
   // Порядок — по срочности: сначала то, где нужна помощь прямо сейчас.
-  dogs: [['all','sf_all'], ['lost','f_lost'], ['found','f_found'], ['street','f_street'],
-         ['home','f_home'], ['mine','f_mine']],
+  dogs: [['all','sf_all'], ['lost','f_lost', DOG_ICONS.lost], ['found','f_found', DOG_ICONS.found],
+         ['street','f_street', DOG_ICONS.street], ['home','f_home', DOG_ICONS.home], ['mine','f_mine', DOG_ICONS.mine]],
   places: [['all','sf_all'], ['Clinics','🏥'], ['Shops','🏪'], ['Park','🌳'], ['Groom','✂️'], ['Kennel','🐶'], ['Cafe','☕'], ['Rest','🍽'], ['Other','📍']]
 };
 function renderSubfilters() {
@@ -2251,11 +2257,13 @@ function renderSubfilters() {
   try { document.body.dataset.layer = activeTab; } catch (e) {}
   const box = document.getElementById('subfilters');
   box.innerHTML = '';
-  SUBFILTERS[activeTab].forEach(([k, label]) => {
+  SUBFILTERS[activeTab].forEach(([k, label, ico]) => {
     const chip = document.createElement('div');
     chip.className = 'chip' + (subFilter === k ? ' active' : '');
-    // если label — ключ словаря, переводим; иначе это эмодзи-иконка категории
-    chip.textContent = /^[a-z_]+$/.test(label) ? t(label) : label;
+    // если label — ключ словаря, переводим; иначе это эмодзи-иконка категории.
+    // Значок перед названием — тот же, что у метки на карте: так фильтр и метка
+    // читаются как одно и то же, без перевода взглядом.
+    chip.textContent = (ico ? ico + ' ' : '') + (/^[a-z_]+$/.test(label) ? t(label) : label);
     chip.onclick = () => { subFilter = k; if (activeTab === 'dogs') sharedDogFilter = k; renderSubfilters(); renderLayer(); };
     box.appendChild(chip);
   });
@@ -2411,6 +2419,7 @@ async function renderLayer() {
   const raw = await loadData(kind);
   let list = kind === 'dogs' ? filterDogsMap(raw) : filterPlacesMap(raw);
   currentLayer.clearLayers();
+  urgentLayer.clearLayers();
   if (kind === 'dogs') {
     const { packs, singles } = clusterStreetDogs(list);
     // Маркеры-стаи
@@ -2425,9 +2434,10 @@ async function renderLayer() {
     // Одиночные собаки
     singles.forEach(item => {
       if (!item.lat || !item.lng) return;
-      const marker = L.marker([item.lat, item.lng], { icon: pinIcon('dogs', item) });
+      const urgent = !!item.lost || item.status === 'Найдена';
+      const marker = L.marker([item.lat, item.lng], { icon: pinIcon('dogs', item), zIndexOffset: urgent ? 1000 : 0 });
       marker.on('click', () => openDogCard(item));
-      currentLayer.addLayer(marker);
+      (urgent ? urgentLayer : currentLayer).addLayer(marker);
     });
     document.getElementById('count-badge').textContent = `🐕 ${list.length} собак`;
   } else {
@@ -2935,7 +2945,8 @@ async function openDogCard(d) {
       <div class="dog-info" id="dogExtra" style="display:none">${infoHtml(extraRows)}</div>` : ''}
     ${foundInfo ? `<div class="dog-memo"><b>${t('d_found_h')}</b>${foundInfo.text ? `<br>💬 ${escapeHtml(foundInfo.text)}` : ''}${
         foundInfo.withMe === true ? `<br>${t('d_found_withme')}` : foundInfo.withMe === false ? `<br>${t('d_found_onspot')}` : ''}</div>
-      <div class="dog-memo" id="fcBox">${t('fc_loading')}</div>` : ''}
+` : ''}
+    <div class="dog-memo" id="fcBox">${t('fc_loading')}</div>
     ${d.memo && !isFound ? `<div class="dog-memo">📝 ${escapeHtml(d.memo)}</div>` : ''}
     <div class="pop-actions vertical">${actions}</div>
     <div class="comments-block">
@@ -2954,26 +2965,33 @@ async function openDogCard(d) {
 
   loadDogMedia(d);
   loadDogCommentsInline(d.id, d.name || '');
-  if (isFound) loadFoundContacts(d.id);
+  loadDogContacts(d.id);
 }
 
-// Контакты нашедшего в карточке находки. Отдельным запросом, а не в общем слое карты:
-// телефоны не должны лежать в кэше карты у всех подряд. Настройка «скрывать ник» на
-// находку не распространяется — иначе хозяину некуда писать.
-async function loadFoundContacts(dogId) {
+// Контакты в карточке: нашедшего у находки, хозяина у домашней, потерявшейся и
+// уличной «ищет дом». Правила проверяет сервер (действие dogContacts), здесь только
+// показ. Отдельным запросом, а не в общем слое карты: телефоны не должны лежать в
+// кэше, который раздаётся всем. Ответ держим в памяти сессии — вторую карточку того
+// же пса открываем уже без запроса.
+const dogContactsCache = {};
+async function loadDogContacts(dogId) {
   const box = document.getElementById('fcBox');
   if (!box) return;
-  let res;
-  try { res = await callApi('foundContacts', { dogId }, true); } catch (e) { res = null; }
-  if (!document.getElementById('fcBox')) return;   // карточку успели закрыть
-  if (!res || !res.ok) { box.remove(); return; }
-  const who = res.name ? escapeHtml(res.name) : t('fc_finder');
-  let html = `<b>${t('fc_head')}</b> ${who}`;
-  if (res.tg) html += `<br>✉️ <a href="#" onclick="openTgLink('https://t.me/${encodeURIComponent(res.tg.replace('@',''))}');return false">${escapeHtml(res.tg)}</a>`;
+  let res = dogContactsCache[dogId];
+  if (!res) {
+    try { res = await callApi('dogContacts', { dogId }, true); } catch (e) { res = null; }
+    if (res && res.ok) dogContactsCache[dogId] = res;
+  }
+  const el = document.getElementById('fcBox');
+  if (!el) return;                                  // карточку успели закрыть
+  if (!res || !res.ok || !res.visible) { el.remove(); return; }
+  const head = res.role === 'finder' ? t('fc_head') : t('fc_head_owner');
+  if (res.mine) { el.innerHTML = `<b>${head}</b> ${t('fc_you')}`; return; }
+  let html = `<b>${head}</b> ${res.name ? escapeHtml(res.name) : t(res.role === 'finder' ? 'fc_finder' : 'fc_owner')}`;
+  if (res.tg) html += `<br>✉️ <a href="#" onclick="openTgLink('https://t.me/${encodeURIComponent(res.tg.replace('@', ''))}');return false">${escapeHtml(res.tg)}</a>`;
   if (res.tel) html += `<br>📞 <a href="tel:${escapeAttr(res.tel.replace(/[^+\d]/g, ''))}">${escapeHtml(res.tel)}</a>`;
   if (!res.tg && !res.tel) html += `<br>${t('fc_none')}`;
-  if (res.mine) html = `<b>${t('fc_head')}</b> ${t('fc_you')}`;
-  box.innerHTML = html;
+  el.innerHTML = html;
 }
 
 // Счётчик фотографий поверх обложки: раньше о том, что снимков несколько, можно было
