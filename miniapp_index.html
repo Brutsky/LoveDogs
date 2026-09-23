@@ -946,6 +946,11 @@ const I18N = {
     fo_note:'Описание *',
     fo_note_ph:'Ошейник, поведение, приметы, во сколько нашёл',
     fo_contacts:'⚠️ В сообщении о находке увидят твои контакты: {c}. Иначе хозяин не сможет с тобой связаться.',
+    fc_head:'🙋 Нашёл(а):',
+    fc_finder:'нашедший',
+    fc_loading:'Загружаю контакты нашедшего…',
+    fc_none:'Контактов в профиле нет. Напиши в боте — передам анонимно.',
+    fc_you:'ты',
     a_found_mine:'🙋 Это моя собака',
     b_found:'🔎 найдена — ищем хозяина',
     d_found_where:'Где найдена',
@@ -2929,7 +2934,8 @@ async function openDogCard(d) {
     ${extraRows.length ? `<button class="more-toggle" id="moreToggle" onclick="toggleDogExtra()">${t('d_more')} ⌄</button>
       <div class="dog-info" id="dogExtra" style="display:none">${infoHtml(extraRows)}</div>` : ''}
     ${foundInfo ? `<div class="dog-memo"><b>${t('d_found_h')}</b>${foundInfo.text ? `<br>💬 ${escapeHtml(foundInfo.text)}` : ''}${
-        foundInfo.withMe === true ? `<br>${t('d_found_withme')}` : foundInfo.withMe === false ? `<br>${t('d_found_onspot')}` : ''}</div>` : ''}
+        foundInfo.withMe === true ? `<br>${t('d_found_withme')}` : foundInfo.withMe === false ? `<br>${t('d_found_onspot')}` : ''}</div>
+      <div class="dog-memo" id="fcBox">${t('fc_loading')}</div>` : ''}
     ${d.memo && !isFound ? `<div class="dog-memo">📝 ${escapeHtml(d.memo)}</div>` : ''}
     <div class="pop-actions vertical">${actions}</div>
     <div class="comments-block">
@@ -2948,6 +2954,26 @@ async function openDogCard(d) {
 
   loadDogMedia(d);
   loadDogCommentsInline(d.id, d.name || '');
+  if (isFound) loadFoundContacts(d.id);
+}
+
+// Контакты нашедшего в карточке находки. Отдельным запросом, а не в общем слое карты:
+// телефоны не должны лежать в кэше карты у всех подряд. Настройка «скрывать ник» на
+// находку не распространяется — иначе хозяину некуда писать.
+async function loadFoundContacts(dogId) {
+  const box = document.getElementById('fcBox');
+  if (!box) return;
+  let res;
+  try { res = await callApi('foundContacts', { dogId }, true); } catch (e) { res = null; }
+  if (!document.getElementById('fcBox')) return;   // карточку успели закрыть
+  if (!res || !res.ok) { box.remove(); return; }
+  const who = res.name ? escapeHtml(res.name) : t('fc_finder');
+  let html = `<b>${t('fc_head')}</b> ${who}`;
+  if (res.tg) html += `<br>✉️ <a href="#" onclick="openTgLink('https://t.me/${encodeURIComponent(res.tg.replace('@',''))}');return false">${escapeHtml(res.tg)}</a>`;
+  if (res.tel) html += `<br>📞 <a href="tel:${escapeAttr(res.tel.replace(/[^+\d]/g, ''))}">${escapeHtml(res.tel)}</a>`;
+  if (!res.tg && !res.tel) html += `<br>${t('fc_none')}`;
+  if (res.mine) html = `<b>${t('fc_head')}</b> ${t('fc_you')}`;
+  box.innerHTML = html;
 }
 
 // Счётчик фотографий поверх обложки: раньше о том, что снимков несколько, можно было
