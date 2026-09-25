@@ -784,7 +784,12 @@ const MY_UID = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initData
 // а когда загрузится профиль — уточняем сохранённым выбором пользователя.
 const I18N = {
   RU: {
-    ad_hint_found:'Чужая собака, которая явно потерялась: ошейник, бирка, ухоженная, сама подошла. Будем искать её настоящего хозяина — сообщение уйдёт всем в городе, твои контакты будут видны. Если хозяина у собаки нет — переключись выше на «Уличная».',
+    ad_seek_opened:'Отметил «ищет новый дом». Твой @username теперь виден в карточке — без него не напишут. Скрыть обратно можно в профиле.',
+    ad_seek_confirm:'Твой @username станет виден в карточке — иначе некому написать про собаку. Скрыть обратно можно в профиле. Включаем?',
+    ad_seek_tag:'У собаки бирка — значит, она в муниципальной программе, и пристройство оформляется официально, через мониторинг или приют. Отметка «ищет новый дом» доступна только собакам без бирки.',
+    ad_seek_hint:'Включи, если хочешь пристроить собаку. Она попадёт в еженедельный дайджест по городу и в список «Ищут новый дом».',
+    ad_seek:'🏡 Ищет новый дом',
+    ad_hint_found:'Чужая собака, которая явно потерялась: ошейник, ухоженная, сама подошла. Будем искать её настоящего хозяина. Если у собаки бирка в ухе — это зарегистрированная уличная собака, у неё хозяина нет: выбери слева «Уличная».',
     pf_dog_lost:'Потерялась',
     pf_notif_sub:'Пропажи и находки, дайджест, районы, собаки',
     pf_mydogs_h:'Мои собаки',
@@ -2914,7 +2919,9 @@ async function openDogCard(d) {
     // но только если она отмечена как «ищет дом». В остальных случаях человек,
     // внёсший пса на карту, не обязан отвечать за него перед незнакомыми.
     if (d.hasOwner && (!isStreet || d.seekingHome)) {
-      actions += `<button class="pop-btn" onclick="contactOwner('${d.id}','${escapeAttr(d.name || '')}')">${isStreet ? t('a_contact_seek') : t('a_contact_home')}</button>`;
+      // Кнопка анонимной передачи нужна только когда контактов не видно. Если человек
+      // открыл ник или телефон, писать надо напрямую — loadDogContacts её уберёт.
+      actions += `<button class="pop-btn" id="contactOwnerBtn" onclick="contactOwner('${d.id}','${escapeAttr(d.name || '')}')">${isStreet ? t('a_contact_seek') : t('a_contact_home')}</button>`;
     }
     // Находка: главное действие постороннего — узнать свою собаку. Правка — только
     // админу и модератору.
@@ -2986,6 +2993,10 @@ async function loadDogContacts(dogId) {
   const el = document.getElementById('fcBox');
   if (!el) return;                                  // карточку успели закрыть
   if (!res || !res.ok || !res.visible) { el.remove(); return; }
+  if (res.tg || res.tel) {
+    const btn = document.getElementById('contactOwnerBtn');
+    if (btn) btn.remove();
+  }
   const head = res.role === 'finder' ? t('fc_head') : t('fc_head_owner');
   if (res.mine) { el.innerHTML = `<b>${head}</b> ${t('fc_you')}`; return; }
   let html = `<b>${head}</b> ${res.name ? escapeHtml(res.name) : t(res.role === 'finder' ? 'fc_finder' : 'fc_owner')}`;
@@ -3415,6 +3426,7 @@ async function toggleSeeking(dogId, on) {
     // Пристройство чужой собаки — решение с последствиями, и человек должен
     // услышать об этом словами, а не увидеть молча сменившийся значок.
     if (res.wasFound) { await uiAlert(t('fo_seek_warn')); return; }
+    if (res.usernameOpened) { await uiAlert(t('ad_seek_opened')); return; }
     setStatus(on ? t('ms_seekon') : t('ms_seekoff'), 2200);
   }
   else if (res.error === 'tagged_dog') uiAlert(t('nt_tag'));
@@ -3479,7 +3491,8 @@ function openAddDogSheet(draft) {
   const fColor = `<div class="field"><label>${t('fd_color')}</label><input type="text" id="adColor" value="${escapeAttr(d.color || '')}" placeholder="${t('fd_color_ph')}"></div>`;
   const fTag = `<div class="field"><label>${t('fd_tag')}</label>
       <div class="field-row">
-        <input type="text" id="adTagNum" placeholder="${t('fd_tag_ph')}" value="${escapeAttr(d.tagNumber || '')}">
+        <input type="text" id="adTagNum" placeholder="${t('fd_tag_ph')}" value="${escapeAttr(d.tagNumber || '')}"
+               onblur="onTagBlur(this)">
         <select id="adTagColor" style="max-width:42%">${selOpts(TAG_COLOR_OPTIONS, d.tagColor, t('fd_tagcolor'))}</select>
       </div></div>`;
   const fBreed = `<div class="field"><label>${t('fd_breed')}</label>
@@ -3533,7 +3546,18 @@ function openAddDogSheet(draft) {
          <label class="switch"><input type="checkbox" id="adAnnounce" ${d.announce ? 'checked' : ''} onchange="onFoundAnnounceToggle(this)"><span class="slider-t"></span></label>
        </div>`;
   } else if (street) {
-    body = fTag + fName + fMemo + fGeo + more([fColor, fBreed, fSex, fAge, fRegion, fSter].join('')) +
+    // «Ищет новый дом» — сразу в форме, а не отметкой в карточке потом: человек,
+    // подобравший ничью собаку, именно за этим и пришёл. Собаке с биркой отметка
+    // недоступна: она уже в муниципальной программе, и пристраивают её официально.
+    const seekBlocked = !!(d.tagNumber || '').trim();
+    body = fTag + fName + fMemo + fGeo +
+      `<div class="field-row" style="justify-content:space-between;margin:0 0 6px">
+         <span style="font-size:14px;font-weight:600">${t('ad_seek')}</span>
+         <label class="switch"><input type="checkbox" id="adSeek" ${d.seekingHome && !seekBlocked ? 'checked' : ''}
+           ${seekBlocked ? 'disabled' : ''} onchange="onSeekToggle(this)"><span class="slider-t"></span></label>
+       </div>
+       <div class="hint" style="margin:0 0 12px">${seekBlocked ? t('ad_seek_tag') : t('ad_seek_hint')}</div>` +
+      more([fColor, fBreed, fSex, fAge, fRegion, fSter].join('')) +
       '<div style="height:8px"></div>' + fPhoto;
   } else {
     body = fName + fPhoto + fGeo + more([fBreed, fColor, fSex, fAge, fRegion, fSter, fTag, fMemo].join(''));
@@ -3567,6 +3591,14 @@ function openAddDogSheet(draft) {
     addDogDraft.foundWithMe = Number(o.dataset.v);
     document.querySelectorAll('#adFoundWhere .opt').forEach(x => x.classList.toggle('active', x === o));
   });
+}
+
+// Отметка «ищет дом» открывает @username: без контакта карточку на пристройстве
+// некому написать. Говорим об этом сразу, а не меняем настройку молча.
+async function onSeekToggle(el) {
+  collectAddDogDraft();
+  if (el.checked && !(await uiConfirm(t('ad_seek_confirm')))) el.checked = false;
+  addDogDraft.seekingHome = !!el.checked;
 }
 
 // Что увидят люди о нашедшем. Берём из профиля: Telegram-ник и телефон.
@@ -3606,6 +3638,15 @@ function collectAddDogDraft() {
   });
   const an = document.getElementById('adAnnounce');
   if (an) addDogDraft.announce = !!an.checked;
+  const sk = document.getElementById('adSeek');
+  if (sk) addDogDraft.seekingHome = !!sk.checked && !sk.disabled;
+}
+// Бирку вписали — блокируем «ищет дом» тут же, а не на сохранении.
+function onTagBlur(el) {
+  const had = !!(addDogDraft && (addDogDraft.tagNumber || '').trim());
+  const now = !!el.value.trim();
+  collectAddDogDraft();
+  if (had !== now) openAddDogSheet();
 }
 async function addDogPickGeo() {
   collectAddDogDraft();
@@ -3659,7 +3700,8 @@ async function submitAddDog() {
       status: d.status, name: d.name.trim(), breed, color: d.color, sex: d.sex, age: d.age,
       region: d.region || '', sterilized: d.sterilized, tagNumber: d.tagNumber,
       tagColor: d.tagColor, memo: d.memo, lat: d.lat || '', lng: d.lng || '',
-      photoKey: d._photoKey || ''
+      photoKey: d._photoKey || '',
+      seekingHome: !!(street && d.seekingHome && !(d.tagNumber || '').trim())
     };
   }
 
@@ -3679,7 +3721,8 @@ async function submitAddDog() {
       }
       haptic(); addDogDraft = null; closeSheet();
       dataCache.dogs = null; await renderLayer(); renderDogsScreen();
-      if (res.photoAttached !== false) {
+      if (res.usernameOpened) uiAlert(t('ad_seek_opened'));
+      else if (res.photoAttached !== false) {
         setStatus(found ? (res.announced ? t('fo_ok_sent') : t('fo_ok')) : t('ad_ok'), 2600);
       }
     } else if (res.error === 'limit') uiAlert(t('ad_err_limit'));
@@ -3688,6 +3731,7 @@ async function submitAddDog() {
     else if (res.error === 'geo_required') uiAlert(found ? t('fo_err_geo') : t('ad_err_geo'));
     else if (res.error === 'photo_required') uiAlert(found ? t('fo_err_photo') : t('ad_err_photo'));
     else if (res.error === 'note_required') uiAlert(t('fo_err_note'));
+    else if (res.error === 'tagged_dog') uiAlert(t('ad_seek_tag'));
     else if (res.error === 'where_required') uiAlert(t('fo_err_where'));
     else if (res.error === 'tag_exists' && res.dogId) {
       // Такая бирка уже в базе — это почти наверняка тот же пёс. Предлагаем открыть его.
