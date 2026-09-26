@@ -1195,7 +1195,7 @@ const I18N = {
     b_seeking:'🏡 ищет новый дом',
     b_donor:'🩸 донор',
     b_approx:'≈ примерно район',
-    a_share:'↗️ Поделиться собакой',
+    a_share:'↗️ Переслать',
     a_here:'✅ Собака здесь',
     a_edit:'✏️ Редактировать анкету',
     a_comments:'💬 Комментарии',
@@ -1639,7 +1639,7 @@ const I18N = {
     b_seeking:'🏡 ეძებს ახალ სახლს',
     b_donor:'🩸 დონორი',
     b_approx:'≈ სავარაუდო რაიონი',
-    a_share:'↗️ ძაღლის გაზიარება',
+    a_share:'↗️ გადაგზავნა',
     a_here:'✅ ძაღლი აქ არის',
     a_edit:'✏️ ანკეტის რედაქტირება',
     a_comments:'💬 კომენტარები',
@@ -2086,7 +2086,7 @@ const I18N = {
     b_seeking:'🏡 needs a new home',
     b_donor:'🩸 donor',
     b_approx:'≈ approx. district',
-    a_share:'↗️ Share this dog',
+    a_share:'↗️ Forward',
     a_here:'✅ Dog is here',
     a_edit:'✏️ Edit profile',
     a_comments:'💬 Comments',
@@ -2239,6 +2239,9 @@ let me = null;              // профиль (getMe)
 // Раньше каждый из четырёх экранов держал свой набор эмодзи, и они разъехались:
 // уличная была 🌳 в фильтре и 🐕 на карте, а 🌳 при этом означало ещё и площадку
 // для выгула на соседнем слое.
+// Находка: сервер присылает отдельный флаг, потому что строка статуса в данных карты
+// у части анкет приходит как «Уличная». Одна проверка на весь мини-апп.
+function isFoundDog(d) { return !!(d && (d.found || d.status === 'Найдена')); }
 const DOG_ICONS = {
   home:    '🏠',
   street:  '🐕',
@@ -2348,7 +2351,7 @@ function pinIcon(kind, item) {
     // уличный. Потеряшка всё равно перекрывает — там счёт идёт на часы.
     // Находка стоит сразу после потеряшки: это тоже срочно, но смысл другой —
     // не «ищите собаку», а «узнайте свою». Поэтому отдельный цвет, а не красный.
-    else if (item.status === 'Найдена') { cls += ' found'; color = cssVar('--found'); emoji = DOG_ICONS.found; }
+    else if (isFoundDog(item)) { cls += ' found'; color = cssVar('--found'); emoji = DOG_ICONS.found; }
     else if (item.seekingHome) { cls += ' seeking'; color = cssVar('--green'); emoji = DOG_ICONS.seeking; }
     else emoji = item.status === 'У владельца' ? DOG_ICONS.home : DOG_ICONS.street;
   } else {
@@ -2487,7 +2490,7 @@ function filterDogsMap(list) {
   if (subFilter === 'home') return list.filter(d => d.status === 'У владельца');
   if (subFilter === 'street') return list.filter(d => d.status === 'Уличная');
   if (subFilter === 'lost') return list.filter(d => d.lost);
-  if (subFilter === 'found') return list.filter(d => d.status === 'Найдена');
+  if (subFilter === 'found') return list.filter(isFoundDog);
   if (subFilter === 'seeking') return list.filter(d => d.seekingHome);
   return list;
 }
@@ -2564,7 +2567,7 @@ async function renderLayer() {
     // Одиночные собаки
     singles.forEach(item => {
       if (!item.lat || !item.lng) return;
-      const urgent = !!item.lost || item.status === 'Найдена';
+      const urgent = !!item.lost || isFoundDog(item);
       const marker = L.marker([item.lat, item.lng], { icon: pinIcon('dogs', item), zIndexOffset: urgent ? 1000 : 0 });
       marker.on('click', () => openDogCard(item));
       (urgent ? urgentLayer : currentLayer).addLayer(marker);
@@ -2859,7 +2862,7 @@ async function donateStars(n) {
   }
   openTgLink(res.link);
 }
-async function shareDog(dogId, name) {
+async function shareDog(dogId, name, dog) {
   // Bot API 8.0: делимся ГОТОВЫМ сообщением с фото собаки и кнопкой, а не голой ссылкой
   // (по ссылке t.me/bot Telegram рисует превью бота, а не собаку — выглядело ущербно).
   if (tg && typeof tg.shareMessage === 'function' && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
@@ -2869,12 +2872,26 @@ async function shareDog(dogId, name) {
         tg.shareMessage(res.prepared_id, (ok) => { if (ok) haptic('success'); });
         return;
       }
-      if (res && res.error) setStatus(t('er_share') + res.error, 2500);
-    } catch (e) {}
+      // Раньше при ошибке сервера управление молча уходило в фолбэк, и человек
+      // пересылал голую ссылку без собаки. Теперь говорим, что не получилось.
+      if (res && res.error) { uiAlert(t('er_share') + res.error); return; }
+    } catch (e) { uiAlert(t('er_share')); return; }
   }
-  // Фолбэк для старых клиентов Telegram: ссылка + текст.
+  // Фолбэк для старых клиентов Telegram: ссылка + текст. Собираем его из того, что
+  // уже есть в карточке, иначе получателю приходит сообщение без единого слова о собаке.
+  const dd = dog || findDog(dogId) || {};
+  const ddFound = isFoundDog(dd);
+  const ddNote = ddFound ? splitFoundNote(dd.donorMemo) : null;
+  const facts = [dd.breed, dd.color, dd.sex, dd.tagNumber ? '№ ' + dd.tagNumber : ''].filter(Boolean).join(' · ');
+  const place = [dd.region, dd.city].filter(Boolean).join(', ');
   const deep = `https://t.me/${BOT_USERNAME}?start=dog_${dogId}`;
-  const shareText = `🐕 Познакомься с ${name}!\n\nЭто карточка из Love Dogs — живой карты собак района. Загляни, добавь своего пса или помоги найти чужого 🐾\n\nОткрыть 👇`;
+  const shareText = ddFound
+    ? `🔎 НАЙДЕНА СОБАКА — ИЩЕМ ХОЗЯИНА\n${facts ? facts + '\n' : ''}${place ? '📍 ' + place + '\n' : ''}${ddNote && ddNote.text ? '💬 ' + ddNote.text + '\n' : ''}\nУзнал собаку — открой карточку и напиши нашедшему. Не узнал — перешли дальше 🐾`
+    : dd.lost
+    ? `🚨 ПОТЕРЯЛАСЬ СОБАКА — ПОМОГИ НАЙТИ\n${name}${facts ? ' · ' + facts : ''}\n${place ? '📍 ' + place + '\n' : ''}\nВидел — сразу напиши хозяину, карточка по ссылке 🐾`
+    : dd.seekingHome
+    ? `🏡 ${name} ищет новый дом\n${facts ? facts + '\n' : ''}${place ? '📍 ' + place + '\n' : ''}\nПодробности в карточке 🐾`
+    : `🐕 ${name}${facts ? ' · ' + facts : ''}\n${place ? '📍 ' + place + '\n' : ''}\nКарточка из Love Dogs — живой карты собак района 🐾`;
   const share = `https://t.me/share/url?url=${encodeURIComponent(deep)}&text=${encodeURIComponent(shareText)}`;
   if (tg && tg.openTelegramLink) tg.openTelegramLink(share); else window.open(share, '_blank');
 }
@@ -2946,7 +2963,10 @@ async function openDogCard(d) {
   // дополнять анкету и добавлять фото может только нашедший, админ и модератор —
   // по этой карточке хозяин узнаёт свою собаку, и чужие правки его собьют.
   // Зеркало canEditDog_ на сервере.
-  const isFound = d.status === 'Найдена';
+  // Находку определяет флаг сервера, а не строка статуса: статус приходит из view
+  // карты и у части анкет оказывался «Уличная», из-за чего карточка находки
+  // выглядела как обычная уличная.
+  const isFound = isFoundDog(d);
   const isStreet = d.status === 'Уличная' || isFound;
   const isStaff = !!(me && me.profile && (me.profile.moderator || me.profile.isAdmin));
   // Описание находки и пометка «где собака сейчас» лежат в donorMemo одной строкой.
@@ -2957,7 +2977,9 @@ async function openDogCard(d) {
     d.age ? [t('d_age'), d.age] : null,
     d.sex ? [t('d_sex'), d.sex] : null,
     [isFound ? t('d_found_where') : t('d_region'), ((d.city || '') + (d.region ? ', ' + d.region : '')) || '—'],
-    [t('d_status'), d.status || '—']
+    // У находки строки статуса нет: бейдж сверху и блок «Собаку нашли» говорят то же
+    // самое, а сам статус в данных карты бывает неточным.
+    isFound ? null : [t('d_status'), d.status || '—']
   ].filter(Boolean);
   const extraRows = [
     d.color ? [t('d_color'), d.color] : null,
@@ -3007,7 +3029,7 @@ async function openDogCard(d) {
   // Кнопка «показать на карте» бессмысленна, когда карточку и открыли с карты —
   // человек уже смотрит на эту точку.
   if (d.lat && activeScreen !== 'map') actions += `<button class="pop-btn secondary" onclick="showDogOnMap('${d.id}')">${t('a_showmap')}</button>`;
-  actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}')">${t('a_share')}</button>`;
+  actions += `<button class="pop-btn secondary" onclick="shareDog('${d.id}','${escapeAttr(d.name || 'Собака')}', findDog('${d.id}'))">${t('a_share')}</button>`;
   // Фото грузится прямо здесь. Прежняя кнопка уводила в бота — она больше не нужна
   // и дублировала эту; права те же самые (canEditGallery).
   if (canEditGallery) actions += `<button class="pop-btn secondary" onclick="addPhotoFromCard('${d.id}')">${t('a_addphoto')}</button>`;
@@ -3050,7 +3072,8 @@ async function openDogCard(d) {
     // Находка: главное действие постороннего — узнать свою собаку. Правка — только
     // админу и модератору.
     if (isFound) {
-      actions += `<button class="pop-btn" onclick="claimFoundDog('${d.id}')">${t('a_found_mine')}</button>`;
+      // Кнопки «Это моя собака» здесь нет: контакты нашедшего показаны в карточке,
+      // и хозяину проще написать ему напрямую.
       if (isStaff) actions += `<button class="pop-btn secondary" onclick="openDogEditSheet(findDog('${d.id}'))">${t('a_edit')}</button>`;
     }
     // Уличную дополняет любой (первичные данные о найденном псе) — кроме той,
@@ -3064,7 +3087,9 @@ async function openDogCard(d) {
     }
     // Дубли и анкеты собак, которых давно нет во дворе, иначе вычистить некому.
     // Запрос уходит модератору — сам пользователь чужую анкету не сносит.
-    if (isStreet && !seekLocked) actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}', true)">${t('a_del_sug')}</button>`;
+    // Предложить удаление можно только уличную анкету: находку ведёт и закрывает
+    // нашедший, а сервер такой запрос и не принимал — кнопка отдавала ошибку.
+    if (isStreet && !isFound && !seekLocked) actions += `<button class="pop-btn secondary" onclick="askDeleteDog('${d.id}','${escapeAttr(d.name || '')}', true)">${t('a_del_sug')}</button>`;
   }
 
   openSheet(`
@@ -3494,7 +3519,7 @@ async function renderProfileMyDogs() {
   // Строка — как в подписках на собак: кличка и подробности слева, фото справа.
   // Сердечко «моя» здесь убрано: в разделе «Мои собаки» оно ничего не сообщало.
   const statusIco = d => d.status === 'У владельца' ? DOG_ICONS.home
-    : d.status === 'Найдена' ? DOG_ICONS.found : DOG_ICONS.street;
+    : isFoundDog(d) ? DOG_ICONS.found : DOG_ICONS.street;
   box.innerHTML = mine.map(d => {
     const url = photoUrlFromKey(d.photoKey);
     const status = d.lost ? `${DOG_ICONS.lost} ${t('pf_dog_lost')}` : `${statusIco(d)} ${escapeHtml(d.status || '')}`;
@@ -3926,7 +3951,7 @@ function renderDogsScreen() {
     if (dogSegment === 'street') filtered = scoped.filter(d => d.status === 'Уличная');
     if (dogSegment === 'home') filtered = scoped.filter(d => d.status === 'У владельца');
     if (dogSegment === 'lost') filtered = scoped.filter(d => d.lost);
-  if (dogSegment === 'found') filtered = scoped.filter(d => d.status === 'Найдена');
+  if (dogSegment === 'found') filtered = scoped.filter(isFoundDog);
     if (dogSegment === 'seeking') filtered = scoped.filter(d => d.seekingHome);
     if (dogSegment === 'donors') {
       const minW = +document.getElementById('donorWeight').value;
@@ -3978,13 +4003,21 @@ function renderDogsScreen() {
     box.innerHTML = addBtn + `<div class="empty"><div class="big">${st.ico}</div>${st.text}${st.btn}</div>`;
     return;
   }
-  const statusIco = s => s === 'У владельца' ? DOG_ICONS.home : s === 'Найдена' ? DOG_ICONS.found : DOG_ICONS.street;
+  // Новые анкеты сверху: человек чаще ищет то, что появилось недавно, а не то, что
+  // завели год назад. Дату берём с сервера (createdAt); у кого её нет — в конец, но
+  // относительный порядок таких анкет сохраняется.
+  filtered = filtered.slice().sort((a, b) => {
+    const ta = Date.parse(a.createdAt || '') || 0;
+    const tb = Date.parse(b.createdAt || '') || 0;
+    return tb - ta;
+  });
+  const statusIco = (st, dg) => st === 'У владельца' ? DOG_ICONS.home : (dg && isFoundDog(dg)) ? DOG_ICONS.found : DOG_ICONS.street;
   box.innerHTML = addBtn + filtered.map(d => `
     <div class="card tappable" onclick="openDogCard(findDog('${d.id}'))">
       <div class="row-between">
         <div>
           <div class="list-title">${d.lost ? '🚨 ' : ''}${escapeHtml(d.name || t('pf_noname'))}</div>
-          <div class="list-sub">${statusIco(d.status)} ${escapeHtml(d.status)} · ${escapeHtml(d.breed || t('ls_nobreed'))}${d.region ? ' · ' + escapeHtml(d.region) : (d.city && d.city !== 'Тбилиси' ? ' · ' + escapeHtml(d.city) : '')}</div>
+          <div class="list-sub">${statusIco(d.status, d)} ${escapeHtml(d.status)} · ${escapeHtml(d.breed || t('ls_nobreed'))}${d.region ? ' · ' + escapeHtml(d.region) : (d.city && d.city !== 'Тбилиси' ? ' · ' + escapeHtml(d.city) : '')}</div>
         </div>
         <div style="font-size:22px">${d.mine ? '💛' : '🐕'}</div>
       </div>
