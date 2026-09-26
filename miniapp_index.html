@@ -3652,7 +3652,7 @@ function openAddDogSheet(draft) {
       <input type="text" id="adBreedManual" placeholder="${t('fd_breed_ph')}" style="display:${d.breed === '__manual__' ? 'block' : 'none'};margin-top:6px" value="${escapeAttr(d.breedManual || '')}"></div>`;
   const fSex = `<div class="field"><label>${t('fd_sex')}</label><select id="adSex">${selOpts(SEX_OPTIONS, d.sex, '—')}</select></div>`;
   const fAge = `<div class="field"><label>${t('fd_age')}</label><select id="adAge">${ageOptsHtml(d.age, '—')}</select></div>`;
-  const fRegion = REGIONS_LIST.length ? `<div class="field"><label>${t('fd_region_tb')}</label><select id="adRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : '';
+  const fRegion = REGIONS_LIST.length ? `<div class="field"><label>${t('fd_region')}</label><select id="adRegion">${selOpts(REGIONS_LIST, d.region, '—')}</select></div>` : '';
   const fSter = `<div class="field"><label>${t('fd_ster')}</label><select id="adSter">${selOpts(TRISTATE, d.sterilized || t('fd_unknown'))}</select></div>`;
   const fMemo = `<div class="field"><label>${t('fd_notes')}</label><textarea id="adMemo" maxlength="200" oninput="updCount(this,200)" placeholder="${street ? t('ad_memo_home') : t('ad_memo_st')}">${escapeHtml(d.memo || '')}</textarea></div>`;
   const geoNote = d.lat ? `<div class="geo-note">✅ ${Number(d.lat).toFixed(5)}, ${Number(d.lng).toFixed(5)}</div>` : '';
@@ -4959,7 +4959,12 @@ async function saveProfileField(field, value) {
   setStatus(t('pf_saved'), 1600);
   // Язык и город меняют не только эту строку: язык — все надписи, город — центр карты.
   if (field === 'lang') { syncLangFromProfile(me.profile); applyStaticI18n(); renderProfile(); }
-  if (field === 'city') { centerMapByCity(value); dataCache.dogs = null; renderLayer(); }
+  if (field === 'city') {
+    centerMapByCity(value); dataCache.dogs = null; renderLayer();
+    // У каждого города свой справочник районов — перечитываем профиль, иначе в форме
+    // заведения останутся районы прежнего города.
+    loadProfileQuietly();
+  }
   if (field === 'name') {
     const titleEl = document.getElementById('profileTitle');
     if (titleEl) renderProfile();
@@ -5181,6 +5186,9 @@ async function prefetchSittersQuietly() {
 }
 
 function applyMePayload(res) {
+  // Справочник районов приходит вместе с профилем и зависит от города человека:
+  // у Тбилиси и Батуми он свой, у остальных городов его нет вовсе.
+  if (res && res.regions) REGIONS_LIST = res.regions;
   if (!res || !res.ok) return false;
   me = res;
   if (me.botUsername) BOT_USERNAME = me.botUsername;
