@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>Love Dogs · Тбилиси</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,7 +49,20 @@
     --r-ctl: 13px;
     --font-body: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --font-disp: "Unbounded", "Manrope", sans-serif;
-    --tabbar-h: calc(62px + env(safe-area-inset-bottom));
+    /* ---- Безопасные зоны ----
+       В полноэкранном режиме Telegram рисует поверх страницы две вещи: системную
+       строку устройства (время, батарея, вырез) и СВОИ кнопки «Закрыть» и «⋯».
+       Первое — safe-area, второе — content-safe-area; они складываются.
+       Берём большее из значений Telegram и браузера, а не одно из них: в обычном
+       (не полноэкранном) режиме Telegram может сообщать нули там, где env() знает
+       про индикатор «домой», и нижняя панель осталась бы без отступа. */
+    --sat: max(var(--ld-sat, var(--tg-safe-area-inset-top, 0px)), env(safe-area-inset-top, 0px));
+    --csat: var(--ld-csat, var(--tg-content-safe-area-inset-top, 0px));
+    --top-inset: calc(var(--sat) + var(--csat));
+    --sab: max(var(--ld-sab, var(--tg-safe-area-inset-bottom, 0px)), env(safe-area-inset-bottom, 0px));
+    --sal: max(var(--ld-sal, 0px), env(safe-area-inset-left, 0px));
+    --sar: max(var(--ld-sar, 0px), env(safe-area-inset-right, 0px));
+    --tabbar-h: calc(62px + var(--sab));
   }
   /* Тёмная тема. Telegram отдаёт свои цвета фона и текста, а фирменные подложки
      считаются от них выше. Здесь только то, что нельзя вывести автоматически:
@@ -94,7 +107,8 @@
 
   /* ================= КАРТА (главный экран) ================= */
   #map { position: absolute; inset: 0 0 var(--tabbar-h) 0; background: var(--bg); }
-  #map-topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 700; padding: 10px 12px 14px;
+  #map-topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 700;
+    padding: calc(10px + var(--top-inset)) calc(12px + var(--sar)) 14px calc(12px + var(--sal));
     pointer-events: none; }
   #map-topbar > * { pointer-events: auto; }
   #tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px;
@@ -113,7 +127,7 @@
   /* Зум Leaflet по умолчанию — белые квадраты с синей рамкой, чужие для этой темы.
      Приводим к тем же скруглениям, цветам и теням, что у остальных элементов. */
   .leaflet-control-zoom { border: none !important; box-shadow: var(--shadow-s) !important;
-    border-radius: 14px !important; overflow: hidden; margin-top: 116px !important; margin-left: 14px !important; }
+    border-radius: 14px !important; overflow: hidden; margin-top: calc(116px + var(--top-inset)) !important; margin-left: calc(14px + var(--sal)) !important; }
   .leaflet-control-zoom a { width: 38px !important; height: 38px !important; line-height: 38px !important;
     background: color-mix(in srgb, var(--bg) 92%, transparent) !important;
     -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
@@ -216,7 +230,7 @@
   .legend-pin .marker-pin span { font-size: 16px; }
   .legend-pin .marker-pin.lost { animation: none; }   /* в списке пульсация только отвлекает */
   .legend-pin .pack-badge { transform: scale(.8); white-space: nowrap; }
-  #legendBtn { position: absolute; bottom: calc(var(--tabbar-h) + 16px); left: 14px; z-index: 750;
+  #legendBtn { position: absolute; bottom: calc(var(--tabbar-h) + 16px); left: calc(14px + var(--sal)); z-index: 750;
     width: 38px; height: 38px; padding: 0; border-radius: 50%; display: none;
     align-items: center; justify-content: center;
     background: color-mix(in srgb, var(--bg) 92%, transparent);
@@ -237,12 +251,12 @@
   .chip.active { background: var(--accent, var(--paw)); color: #fff; border-color: transparent; }
   body[data-layer="dogs"] .chip.active { background: var(--paw); color: var(--btntx); }
   body[data-layer="places"] .chip.active { background: var(--vet); color: #fff; }
-  #status { position: absolute; top: 108px; left: 50%; transform: translateX(-50%); z-index: 750;
+  #status { position: absolute; top: calc(108px + var(--top-inset)); left: 50%; transform: translateX(-50%); z-index: 750;
     background: var(--text); color: var(--bg); font-size: 12.5px; font-weight: 600; padding: 8px 16px;
     border-radius: 999px; box-shadow: var(--shadow-m); pointer-events: none; opacity: 0;
     transition: opacity .2s ease; max-width: 86%; text-align: center; }
   #status.show { opacity: 1; }
-  #count-badge { position: absolute; bottom: calc(var(--tabbar-h) + 16px); left: 60px; z-index: 750;
+  #count-badge { position: absolute; bottom: calc(var(--tabbar-h) + 16px); left: calc(60px + var(--sal)); z-index: 750;
     cursor: pointer;
     background: rgba(248,244,236,.9);
     background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px) saturate(1.4);
@@ -252,7 +266,7 @@
   /* Кнопка добавления: раньше это был безымянный «+» в углу, который легко принять
      за элемент карты. Теперь — подпись, ощутимый размер и мягкое «дыхание» первые
      секунды после загрузки, чтобы её заметили, но она не мельтешила постоянно. */
-  #fab { position: absolute; bottom: calc(var(--tabbar-h) + 16px); right: 14px; z-index: 750;
+  #fab { position: absolute; bottom: calc(var(--tabbar-h) + 16px); right: calc(14px + var(--sar)); z-index: 750;
     /* Главное действие экрана красим акцентом, а не вторым зелёным: раньше кнопка,
        кластеры и маркеры мест были тремя разными цветами и спорили за внимание. */
     height: 52px; padding: 0 20px 0 16px; border-radius: 26px; background: var(--paw); color: var(--btntx);
@@ -326,7 +340,7 @@
   /* Режим выбора точки */
   #pick-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 800;
     font-size: 36px; pointer-events: none; display: none; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
-  #pick-bar { position: absolute; left: 14px; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 14px);
+  #pick-bar { position: absolute; left: calc(14px + var(--sal)); right: calc(14px + var(--sar)); bottom: calc(var(--sab) + 14px);
     z-index: 800; background: var(--card); border-radius: var(--r-card); padding: 14px;
     box-shadow: var(--shadow-m); display: none; border: 1px solid var(--line); }
   #pick-bar .pick-hint { font-size: 12.5px; color: var(--hint); margin-bottom: 10px; text-align: center; }
@@ -345,7 +359,8 @@
 
   /* ================= ЭКРАНЫ-СПИСКИ ================= */
   .screen { position: absolute; inset: 0 0 var(--tabbar-h) 0; background: var(--bg); z-index: 650;
-    overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; padding: 18px 16px 28px; }
+    overflow-y: auto; -webkit-overflow-scrolling: touch; display: none;
+    padding: calc(18px + var(--top-inset)) calc(16px + var(--sar)) 28px calc(16px + var(--sal)); }
   .screen.show { display: block; }
   .screen h2 { font-family: var(--font-disp); font-size: 19px; font-weight: 600; letter-spacing: -.01em;
     margin: 2px 0 14px; }
@@ -496,7 +511,7 @@
     background: rgba(248,244,236,.92);
     background: color-mix(in srgb, var(--bg) 88%, transparent);
     backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4);
-    border-top: 1px solid var(--line); display: flex; padding-bottom: env(safe-area-inset-bottom); }
+    border-top: 1px solid var(--line); display: flex; padding: 0 var(--sar) var(--sab) var(--sal); }
   /* Навигация без подписей: иконки самодостаточны, а подписи съедали высоту
      и мешали на маленьких экранах. Активный пункт выделяем «таблеткой».
      Таблетка — фон самой иконки, а не псевдоэлемент с z-index:-1: тот уезжал
@@ -521,9 +536,9 @@
   #sheet-overlay.show { display: block; }
   #sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg);
     border-radius: 22px 22px 0 0; z-index: 1001;
-    padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
+    padding: 10px calc(18px + var(--sar)) calc(18px + var(--sab)) calc(18px + var(--sal));
     transform: translateY(105%); transition: transform .24s cubic-bezier(.32,.72,.33,1);
-    max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    max-height: 88vh; max-height: min(88vh, calc(100dvh - var(--top-inset) - 12px)); overflow-y: auto; -webkit-overflow-scrolling: touch;
     box-shadow: 0 -8px 40px rgba(30,25,17,.25); }
   #sheet.show { transform: translateY(0); }
   #sheet:before { content: ""; display: block; width: 40px; height: 4px; border-radius: 999px;
@@ -617,11 +632,11 @@
   .hint-p { color: var(--hint); font-size: 13px; margin: 0 0 10px; }
   .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.93); z-index: 9999; display: none; align-items: center; justify-content: center; }
   .lightbox.show { display: flex; }
-  .lb-img { max-width: 96vw; max-height: 86vh; border-radius: 8px; object-fit: contain; }
-  .lb-close { position: absolute; top: 14px; right: 16px; background: rgba(255,255,255,.15); color: #fff; border: none; width: 38px; height: 38px; border-radius: 50%; font-size: 20px; cursor: pointer; }
+  .lb-img { max-width: 96vw; max-height: calc(100dvh - var(--top-inset) - var(--sab) - 40px); max-height: min(86vh, calc(100dvh - var(--top-inset) - var(--sab) - 40px)); border-radius: 8px; object-fit: contain; }
+  .lb-close { position: absolute; top: calc(14px + var(--top-inset)); right: calc(16px + var(--sar)); background: rgba(255,255,255,.15); color: #fff; border: none; width: 38px; height: 38px; border-radius: 50%; font-size: 20px; cursor: pointer; }
   .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.15); color: #fff; border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 28px; line-height: 1; cursor: pointer; }
   .lb-prev { left: 10px; } .lb-next { right: 10px; }
-  .lb-dots { position: absolute; bottom: 18px; left: 0; right: 0; display: flex; gap: 6px; justify-content: center; }
+  .lb-dots { position: absolute; bottom: calc(18px + var(--sab)); left: 0; right: 0; display: flex; gap: 6px; justify-content: center; }
   .lb-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.4); }
   .lb-dot.on { background: #fff; }
   .dog-memo { background: rgba(39,34,25,.05);
@@ -759,6 +774,33 @@ let BOT_USERNAME = "ВАШ_БОТ_USERNAME"; // подхватится из getM
 
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
+
+// Безопасные зоны из API Telegram. CSS-переменные --tg-safe-area-inset-* Telegram
+// проставляет сам, но делает это не на всех клиентах и с задержкой; здесь читаем
+// значения напрямую и обновляем при каждом изменении (поворот экрана, вход в
+// полноэкранный режим и выход из него).
+function applyTgInsets() {
+  if (!tg) return;
+  const root = document.documentElement.style;
+  const sa = tg.safeAreaInset, ca = tg.contentSafeAreaInset;
+  const px = (v) => (Number(v) || 0) + 'px';
+  if (sa) {
+    root.setProperty('--ld-sat', px(sa.top));
+    root.setProperty('--ld-sab', px(sa.bottom));
+    root.setProperty('--ld-sal', px(sa.left));
+    root.setProperty('--ld-sar', px(sa.right));
+  }
+  if (ca) root.setProperty('--ld-csat', px(ca.top));
+  // Карта считает размер контейнера сама — после смены отступов её надо пересчитать.
+  try { if (map) setTimeout(() => map.invalidateSize(), 80); } catch (e) { /* карта ещё не создана */ }
+}
+if (tg) {
+  applyTgInsets();
+  ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged', 'viewportChanged'].forEach(ev => {
+    try { tg.onEvent(ev, applyTgInsets); } catch (e) {}
+  });
+  window.addEventListener('orientationchange', () => setTimeout(applyTgInsets, 200));
+}
 // Telegram знает схему точнее браузера (пользователь мог включить тёмную только в
 // приложении). Вешаем класс и слушаем смену темы — цвета пересчитаются сами через CSS.
 function applyTgColorScheme() {

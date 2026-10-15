@@ -25,6 +25,14 @@
     --font-body: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --font-disp: "Unbounded", "Manrope", sans-serif;
     color-scheme: light dark;
+    /* Безопасные зоны полноэкранного режима Telegram: системная строка + кнопки
+       «Закрыть» и «⋯» (см. комментарий в index.html мини-аппа). */
+    --sat: max(var(--ld-sat, var(--tg-safe-area-inset-top, 0px)), env(safe-area-inset-top, 0px));
+    --csat: var(--ld-csat, var(--tg-content-safe-area-inset-top, 0px));
+    --top-inset: calc(var(--sat) + var(--csat));
+    --sab: max(var(--ld-sab, var(--tg-safe-area-inset-bottom, 0px)), env(safe-area-inset-bottom, 0px));
+    --sal: max(var(--ld-sal, 0px), env(safe-area-inset-left, 0px));
+    --sar: max(var(--ld-sar, 0px), env(safe-area-inset-right, 0px));
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: var(--tg-theme-bg-color, #17140f); --text: var(--tg-theme-text-color, #efe7d8);
@@ -33,7 +41,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body);
     -webkit-font-smoothing: antialiased; }
-  body { padding: calc(14px + env(safe-area-inset-top, 0px)) 14px calc(28px + env(safe-area-inset-bottom, 0px)); }
+  body { padding: calc(14px + var(--top-inset)) calc(14px + var(--sar)) calc(28px + var(--sab)) calc(14px + var(--sal)); }
   .wrap { max-width: 1080px; margin: 0 auto; }
 
   /* Шапка: название и одна строка статуса. Кнопка обновления — справа. */
@@ -145,6 +153,20 @@ const tg = window.Telegram && window.Telegram.WebApp;
 // доступ по секретному ключу из ссылки «🔗 Дашборд в браузере» (админ-панель бота).
 const inTelegram = !!(tg && tg.initData);
 if (inTelegram) { try { tg.ready(); tg.expand(); } catch (e) {} }
+
+// Безопасные зоны из API Telegram — читаем напрямую и обновляем при изменениях.
+function applyTgInsets() {
+  if (!inTelegram) return;
+  const root = document.documentElement.style, px = (v) => (Number(v) || 0) + 'px';
+  const sa = tg.safeAreaInset, ca = tg.contentSafeAreaInset;
+  if (sa) { root.setProperty('--ld-sat', px(sa.top)); root.setProperty('--ld-sab', px(sa.bottom));
+            root.setProperty('--ld-sal', px(sa.left)); root.setProperty('--ld-sar', px(sa.right)); }
+  if (ca) root.setProperty('--ld-csat', px(ca.top));
+}
+if (inTelegram) {
+  applyTgInsets();
+  ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged'].forEach(ev => { try { tg.onEvent(ev, applyTgInsets); } catch (e) {} });
+}
 
 // Ключ приходит в ссылке после «#key=» — эта часть не уходит на хостинг. Запоминаем
 // его в браузере и убираем из адресной строки, чтобы не светился на экране и в истории.
